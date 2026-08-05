@@ -1,18 +1,16 @@
 # CONTENT — Copy final por página
 
-> Preencher com texto real antes de o meter no código — nunca lançar com lorem ipsum, o layout tem de ser validado com o texto verdadeiro (tamanhos variam muito entre PT e "texto de preenchimento").
+> Preencher com texto real antes de o meter no código — nunca lançar com texto de preenchimento, o layout tem de ser validado com o texto verdadeiro.
 
 ## Home
 
-**Eyebrow (label pequena sobre o hero):** _(ex: "MAQUILHAGEM PROFISSIONAL")_
+**Eyebrow (label pequena sobre o hero):**
 
 **Headline (hero):**
-_(ex: "Maquilhagem que revela, não disfarça.")_
 
-**Subheadline:**
-_(1 frase, tom pessoal)_
+**Subheadline (1 frase, tom pessoal):**
 
-**CTA hero:** _(ex: "Ver portfólio" / "Pedir orçamento")_
+**CTA hero (ex: "Ver portfólio" / "Pedir orçamento"):**
 
 **Bloco de introdução (2-3 frases sobre quem é):**
 
@@ -65,12 +63,11 @@ Para cada serviço:
 - Nome
 - Email
 - Telefone (opcional)
-- Tipo de serviço (dropdown: Noiva / Editorial / Dia-a-dia / Evento / Outro)
+- Tipo de serviço (Noiva / Editorial / Dia-a-dia / Evento / Outro)
 - Data do evento (opcional)
 - Mensagem
 
 **Mensagem de confirmação (depois de enviar):**
-_(ex: "Obrigada pelo teu contacto! Respondo em até 48h.")_
 
 ---
 
