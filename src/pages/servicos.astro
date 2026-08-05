@@ -1,0 +1,62 @@
+---
+import Layout from '../layouts/Layout.astro';
+import SwatchDivider from '../components/SwatchDivider.astro';
+
+const servicos = [
+  { nome: 'Maquilhagem de Noiva', desc: 'Prova incluída + maquilhagem no dia, com produtos de longa duração.', preco: 'Sob consulta' },
+  { nome: 'Editorial / Produções', desc: 'Para sessões fotográficas, campanhas e projetos de moda.', preco: 'Sob consulta' },
+  { nome: 'Dia-a-dia / Eventos', desc: 'Looks naturais ou de noite para ocasiões casuais ou eventos.', preco: 'A partir de X€' },
+];
+
+const faqs = [
+  { q: 'Com quanta antecedência devo marcar?', a: 'Recomendo marcar com pelo menos [X semanas/meses] de antecedência, especialmente para casamentos.' },
+  { q: 'Fazem deslocação ao domicílio?', a: 'Sim, disponível mediante consulta prévia e disponibilidade de zona.' },
+  { q: 'Que produtos são usados?', a: 'Produtos profissionais adequados a todos os tipos de pele, incluindo peles sensíveis.' },
+];
+---
+
+<Layout
+  title="Serviços — [Nome]"
+  description="Serviços de maquilhagem para noivas, editorial, dia-a-dia e eventos."
+>
+  <section class="pt-40 pb-16 max-w-container mx-auto px-6 md:px-16 text-center">
+    <p class="eyebrow mb-4">Serviços</p>
+    <h1 class="text-display-l italic reveal">O que faço</h1>
+  </section>
+
+  <section class="max-w-container mx-auto px-6 md:px-16 pb-24">
+    <div class="grid md:grid-cols-3 gap-8">
+      {servicos.map((s) => (
+        <div class="border border-argila/20 rounded-sm p-8 flex flex-col reveal">
+          <h2 class="text-display-m italic mb-3">{s.nome}</h2>
+          <p class="text-argila text-sm flex-1">{s.desc}</p>
+          <p class="text-vinho font-semibold mt-6">{s.preco}</p>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <SwatchDivider />
+
+  <section class="max-w-container mx-auto px-6 md:px-16 py-24 max-w-3xl">
+    <p class="eyebrow text-center mb-4">Perguntas frequentes</p>
+    <h2 class="text-display-l italic text-center mb-14 reveal">FAQ</h2>
+    <div class="space-y-8">
+      {faqs.map((f) => (
+        <div class="reveal">
+          <h3 class="font-semibold text-espresso mb-2">{f.q}</h3>
+          <p class="text-argila text-sm">{f.a}</p>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <section class="bg-vinho text-creme py-20 text-center">
+    <div class="max-w-container mx-auto px-6 md:px-16">
+      <h2 class="text-display-l italic mb-6 reveal">Pronta para marcar?</h2>
+      <a href="/contacto" class="inline-block bg-creme text-vinho px-8 py-4 text-sm font-semibold rounded-sm hover:bg-opacity-90 transition">
+        Pedir orçamento
+      </a>
+    </div>
+  </section>
+</Layout>

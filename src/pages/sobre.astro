@@ -1,0 +1,71 @@
+---
+import Layout from '../layouts/Layout.astro';
+import SwatchDivider from '../components/SwatchDivider.astro';
+
+const valores = [
+  'Escuta antes de maquilhar — cada rosto e cada ocasião pedem uma abordagem diferente.',
+  'Produtos de qualidade profissional, adequados a todos os tipos de pele.',
+  'Pontualidade e organização — especialmente importante no dia de casamento.',
+  'Higiene rigorosa em todos os materiais e produtos.',
+];
+---
+
+<Layout
+  title="Sobre — [Nome]"
+  description="Conhece a história e a abordagem de [Nome] à maquilhagem profissional."
+>
+  <section class="pt-40 pb-20 max-w-container mx-auto px-6 md:px-16">
+    <div class="grid md:grid-cols-2 gap-16 items-center">
+      <div>
+        <p class="eyebrow mb-4">Sobre mim</p>
+        <h1 class="text-display-l italic mb-6 reveal">
+          <!-- TODO: título real, docs/CONTENT.md -->
+          A minha história começa com um pincel emprestado.
+        </h1>
+        <div class="text-argila space-y-4 reveal">
+          <p>
+            <!-- TODO: texto real de percurso/história -->
+            Há mais de X anos que me dedico à maquilhagem profissional, com formação em [...]
+            e experiência em noivas, editorial e produções fotográficas.
+          </p>
+          <p>
+            Acredito que a maquilhagem certa não esconde — realça o que já está lá.
+          </p>
+        </div>
+      </div>
+
+      <!-- Placeholder de retrato — substituir por foto real -->
+      <div class="aspect-[4/5] rounded-sm portrait-placeholder"></div>
+    </div>
+  </section>
+
+  <SwatchDivider />
+
+  <section class="max-w-container mx-auto px-6 md:px-16 py-24">
+    <p class="eyebrow text-center mb-4">Abordagem</p>
+    <h2 class="text-display-l italic text-center mb-14 reveal">Como trabalho</h2>
+    <div class="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+      {valores.map((v) => (
+        <div class="flex gap-4 reveal">
+          <span class="w-2 h-2 rounded-full bg-ouro mt-2 shrink-0"></span>
+          <p class="text-argila">{v}</p>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <section class="bg-espresso text-creme py-20 text-center">
+    <div class="max-w-container mx-auto px-6 md:px-16">
+      <h2 class="text-display-l italic mb-6 reveal">Queres marcar uma sessão?</h2>
+      <a href="/contacto" class="inline-block bg-vinho text-creme px-8 py-4 text-sm font-semibold rounded-sm hover:bg-opacity-90 transition">
+        Entrar em contacto
+      </a>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .portrait-placeholder {
+    background: linear-gradient(160deg, #EFE1D6 0%, #D9C4B0 50%, #8C6F5E 100%);
+  }
+</style>

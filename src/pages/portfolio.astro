@@ -1,0 +1,21 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Gallery from '../components/Gallery.astro';
+---
+
+<Layout
+  title="Portfólio — [Nome]"
+  description="Portfólio de trabalhos de maquilhagem: noivas, editorial, dia-a-dia e eventos."
+>
+  <section class="pt-40 pb-16 max-w-container mx-auto px-6 md:px-16 text-center">
+    <p class="eyebrow mb-4">Portfólio</p>
+    <h1 class="text-display-l italic reveal">Trabalhos</h1>
+    <p class="text-argila mt-4 max-w-lg mx-auto reveal">
+      Uma seleção de sessões recentes — noivas, editorial, dia-a-dia e eventos.
+    </p>
+  </section>
+
+  <section class="max-w-container mx-auto px-6 md:px-16 pb-24">
+    <Gallery />
+  </section>
+</Layout>

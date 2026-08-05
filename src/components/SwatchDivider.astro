@@ -1,0 +1,34 @@
+---
+// Elemento assinatura — ver docs/DESIGN.md.
+// Os nomes dos tons devem, idealmente, vir de paletas reais usadas pela maquilhadora (perguntar no BRIEF).
+interface Swatch {
+  color: string;
+  name: string;
+}
+
+interface Props {
+  swatches?: Swatch[];
+  dark?: boolean;
+}
+
+const defaultSwatches: Swatch[] = [
+  { color: '#B8637A', name: 'Terracota 02' },
+  { color: '#C9A9A6', name: 'Rosa Antigo' },
+  { color: '#B8935A', name: 'Âmbar' },
+  { color: '#7A2E3B', name: 'Vinho Fosco' },
+  { color: '#D9C4B0', name: 'Nude 01' },
+];
+
+const { swatches = defaultSwatches, dark = false } = Astro.props;
+---
+
+<div class:list={['flex flex-wrap justify-center gap-6 md:gap-10 py-10', dark ? 'bg-espresso' : 'bg-poudre']}>
+  {swatches.map((s) => (
+    <div class="flex flex-col items-center gap-2">
+      <span class="block w-10 h-10 rounded-sm" style={`background-color:${s.color}`}></span>
+      <span class:list={['text-[0.65rem] uppercase tracking-widest', dark ? 'text-creme/70' : 'text-argila']}>
+        {s.name}
+      </span>
+    </div>
+  ))}
+</div>

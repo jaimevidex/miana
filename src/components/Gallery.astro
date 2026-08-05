@@ -1,0 +1,92 @@
+---
+// Substituir os placeholders por <Image> de astro:assets ligadas a ficheiros reais em public/images.
+// Ver docs/IMAGES.md para o inventário e convenção de nomes.
+
+interface Item {
+  category: string;
+  alt: string;
+  tall?: boolean;
+}
+
+interface Props {
+  items?: Item[];
+  showFilters?: boolean;
+}
+
+const defaultItems: Item[] = [
+  { category: 'Noivas', alt: 'Maquilhagem de noiva com acabamento natural', tall: true },
+  { category: 'Editorial', alt: 'Look editorial com sombra gráfica em tom vinho' },
+  { category: 'Dia-a-dia', alt: 'Maquilhagem natural para o dia-a-dia' },
+  { category: 'Noivas', alt: 'Detalhe de olhos em tons dourados', tall: true },
+  { category: 'Eventos', alt: 'Maquilhagem para evento noturno' },
+  { category: 'Editorial', alt: 'Composição editorial em tons terrosos', tall: true },
+];
+
+const { items = defaultItems, showFilters = true } = Astro.props;
+const categories = ['Todos', ...new Set(items.map((i) => i.category))];
+---
+
+<div>
+  {showFilters && (
+    <div class="flex flex-wrap gap-3 justify-center mb-10" id="gallery-filters">
+      {categories.map((cat, i) => (
+        <button
+          class:list={[
+            'text-sm px-4 py-2 rounded-full border transition',
+            i === 0 ? 'bg-vinho text-creme border-vinho' : 'border-argila/40 text-argila hover:border-vinho hover:text-vinho',
+          ]}
+          data-filter={cat}
+        >
+          {cat}
+        </button>
+      ))}
+    </div>
+  )}
+
+  <div class="columns-1 sm:columns-2 lg:columns-3 gap-5 space-y-5" id="gallery-grid">
+    {items.map((item) => (
+      <button
+        class="gallery-item block w-full break-inside-avoid relative overflow-hidden rounded-sm group"
+        data-category={item.category}
+        aria-label={`Ver ${item.alt} em tamanho maior`}
+      >
+        <!-- Placeholder — substituir por <Image src={...} alt={item.alt} /> -->
+        <div class:list={['gallery-placeholder w-full', item.tall ? 'aspect-[4/5]' : 'aspect-square']}></div>
+        <span class="absolute inset-0 bg-espresso/0 group-hover:bg-espresso/10 transition-colors"></span>
+      </button>
+    ))}
+  </div>
+</div>
+
+<style>
+  .gallery-placeholder {
+    background: linear-gradient(160deg, #EFE1D6 0%, #D9C4B0 55%, #B8935A 100%);
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .gallery-item:hover .gallery-placeholder {
+    transform: scale(1.03);
+  }
+</style>
+
+<script>
+  const buttons = document.querySelectorAll('#gallery-filters button');
+  const items = document.querySelectorAll('.gallery-item');
+
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      buttons.forEach((b) => {
+        b.classList.remove('bg-vinho', 'text-creme', 'border-vinho');
+        b.classList.add('border-argila/40', 'text-argila');
+      });
+      btn.classList.add('bg-vinho', 'text-creme', 'border-vinho');
+
+      const filter = btn.getAttribute('data-filter');
+      items.forEach((item) => {
+        const show = filter === 'Todos' || item.getAttribute('data-category') === filter;
+        (item as HTMLElement).style.display = show ? '' : 'none';
+      });
+    });
+  });
+
+  // Nota: adicionar lightbox real (ex: PhotoSwipe/GLightbox) quando houver imagens finais.
+</script>
