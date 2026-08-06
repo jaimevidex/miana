@@ -1,38 +1,41 @@
 # IMAGENS — Inventário e Regras
 
-> A preencher com a cliente. Confirmar sempre que tem direitos/autorização (incluindo RGPD, se houver clientes reais identificáveis) para todas as imagens.
-
 ## Categorias
-
-**Como quer organizar o portfólio? (categorias que quer usar)**
 
 | Categoria | Usar? |
 |---|---|
-| Noivas | ☐ |
+| Noivas | ☑ |
+| Beauty | ☑ |
+| Workshops | ☑ |
+| Skincare | ☑ |
 | Editorial / Moda | ☐ |
 | Dia-a-dia | ☐ |
 | Eventos | ☐ |
 | Antes/Depois | ☐ |
-| Outra (qual?) | ☐ |
 
 ## Inventário
 
-**Listar as imagens que vai disponibilizar (uma linha por imagem):**
+*(A preencher com os ficheiros finais a disponibilizar para o site)*
 
 | Ficheiro original | Categoria | Onde é usada | Dimensão original | Licença/autorização | Alt text (PT) | Estado |
 |---|---|---|---|---|---|---|
-| | | | | | | |
-| | | | | | | |
+| *A indicar* | Noivas / Beauty / Workshops / Skincare | Galeria / Serviços | Alta Resolução | Autorização verbal obtida | *A definir* | Em recolha |
 
 ## Questões
 
 **Tem ficheiros originais em alta resolução (não versões comprimidas do Instagram)?**
+- **Sim**, os ficheiros estão disponíveis em alta resolução.
 
 **Precisa de uma sessão fotográfica nova (ex: retrato "sobre mim")?**
+- **Não**, a sessão fotográfica de apoio já foi realizada ("Sessão de Lisboa").
 
 **Tem vídeos/reels a incluir?**
+- **Sim** (a confirmar/selecionar conteúdos de formato vídeo/reels para integração).
 
-## Regras técnicas (definidas por nós, não precisam de input)
+**Autorização de imagem / RGPD:**
+- **Sim**, autorizações verbais obtidas com os clientes para utilização de imagem.
+
+## Regras técnicas
 
 - Pedir sempre o ficheiro **original**, nunca a versão já comprimida do Instagram (perde qualidade irreversivelmente).
 - Nome de ficheiro consistente: `categoria-cliente-numero.ext` (ex: `noiva-joana-01.jpg`).
