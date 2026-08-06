@@ -3,7 +3,8 @@ import tailwind from '@astrojs/tailwind';
 import sitemap from '@astrojs/sitemap';
 
 // Substituir pelo domínio real antes do deploy — usado no sitemap e em meta tags Open Graph.
-const SITE_URL = 'https://exemplo-maquilhadora.pt';
+// Definir PUBLIC_SITE_URL em .env quando o domínio existir (ver .env.example e docs/PLAN.md fase deferred).
+const SITE_URL = process.env.PUBLIC_SITE_URL ?? 'https://exemplo-mariana.pt';
 
 export default defineConfig({
   site: SITE_URL,
@@ -12,7 +13,6 @@ export default defineConfig({
     sitemap(),
   ],
   image: {
-    // Gera automaticamente variantes responsivas de imagem via astro:assets
     domains: [],
   },
 });

@@ -1,70 +1,88 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import Hero from '../components/Hero.astro';
-import SwatchDivider from '../components/SwatchDivider.astro';
 import Gallery from '../components/Gallery.astro';
 
 const servicos = [
-  { title: 'Noivas', desc: 'Prova + dia do casamento, maquilhagem que dura o dia todo.' },
-  { title: 'Editorial', desc: 'Para produções fotográficas, campanhas e moda.' },
-  { title: 'Dia-a-dia', desc: 'Looks naturais para o quotidiano ou eventos casuais.' },
+  {
+    num: '01',
+    title: 'Skin Analysis & Routine Design',
+    desc: 'Consultorias 1:1 focadas em descomplicar a tua rotina.',
+    href: '/servicos/skin-call',
+  },
+  {
+    num: '02',
+    title: 'Bridal & Beauty On Demand',
+    desc: 'Maquilhagem luminosa e sunkissed para o teu dia especial.',
+    href: '/servicos/bridal',
+  },
+  {
+    num: '03',
+    title: 'Beauty Education',
+    desc: 'Workshops práticos para dominares o teu skincare e a tua makeup.',
+    href: '/servicos/education',
+  },
 ];
 ---
 
-<Layout
-  title="[Nome] — Maquilhagem Profissional"
-  description="Maquilhagem profissional para noivas, editorial e dia-a-dia. Marca já a tua sessão."
->
+<Layout title="Mariana — Science-Led Skincare & Effortless Beauty" description="Unimos a ciência da pele à arte da maquilhagem. Rituais de skincare personalizados e maquilhagem glowy e sunkissed para noivas, eventos e educação." hasHero>
   <Hero />
 
-  <SwatchDivider />
-
-  <section class="max-w-container mx-auto px-6 md:px-16 py-24 text-center">
-    <p class="eyebrow mb-4">Sobre</p>
-    <h2 class="text-display-l italic max-w-2xl mx-auto reveal">
-      <!-- TODO: substituir por texto real, docs/CONTENT.md -->
-      Cada rosto tem a sua própria paleta — o meu trabalho é encontrá-la.
-    </h2>
-    <p class="text-argila mt-6 max-w-xl mx-auto reveal">
-      Com anos de experiência em noivas, editorial e produções fotográficas, trago uma
-      abordagem cuidada e pessoal a cada sessão.
-    </p>
-    <a href="/sobre" class="inline-block mt-8 text-vinho font-semibold text-sm hover:underline">
-      Conhecer a minha história →
-    </a>
+  <section class="max-w-container mx-auto px-6 md:px-16 py-24">
+    <div class="max-w-2xl mx-auto text-center reveal">
+      <p class="eyebrow mb-6">Skin &amp; Beauty</p>
+      <blockquote class="text-display-m italic font-display leading-relaxed">
+        Unimos a ciência da pele à arte da maquilhagem. Acreditamos que uma pele saudável
+        e equilibrada é o ponto de partida para qualquer look radiante.
+      </blockquote>
+      <a href="/sobre" class="inline-block mt-8 text-burgundy font-semibold text-sm underline-offset-4 hover:underline">
+        Meet Mariana →
+      </a>
+    </div>
   </section>
 
-  <section class="bg-espresso text-creme py-24">
+  <section class="max-w-container mx-auto px-6 md:px-16 py-16">
+    <p class="eyebrow text-center mb-4">O que fazemos</p>
+    <h2 class="text-display-l font-script text-center mb-14 reveal">Os nossos universos</h2>
+    <div class="grid md:grid-cols-3 gap-8">
+      {servicos.map((s) => (
+        <a href={s.href} class="group border border-darkbrown/10 rounded-sm p-8 reveal hover:border-burgundy/40 transition">
+          <span class="text-eyebrow text-burgundy/60 font-semibold">{s.num}</span>
+          <h3 class="font-display text-2xl mt-3 mb-3 group-hover:text-burgundy transition">{s.title}</h3>
+          <p class="text-darkbrown/65 text-sm">{s.desc}</p>
+          <span class="inline-block mt-6 text-burgundy font-semibold text-sm">Descobrir →</span>
+        </a>
+      ))}
+    </div>
+  </section>
+
+  <section class="bg-darkbrown text-offwhite py-24">
     <div class="max-w-container mx-auto px-6 md:px-16">
-      <p class="eyebrow text-ouro mb-4 text-center">Portfólio</p>
+      <p class="eyebrow text-powder mb-4 text-center">Portfólio</p>
       <h2 class="text-display-l italic text-center mb-14 reveal">Trabalhos recentes</h2>
       <Gallery showFilters={false} />
       <div class="text-center mt-12">
-        <a href="/portfolio" class="border border-creme/40 text-creme px-6 py-3 text-sm font-semibold rounded-sm hover:border-ouro hover:text-ouro transition">
-          Ver portfólio completo
+        <a href="/servicos/bridal" class="border border-offwhite/40 text-offwhite px-6 py-3 text-sm font-semibold rounded-full hover:border-powder hover:text-powder transition">
+          Ver Portfólio por Serviço
         </a>
       </div>
     </div>
   </section>
 
   <section class="max-w-container mx-auto px-6 md:px-16 py-24">
-    <p class="eyebrow text-center mb-4">Serviços</p>
-    <h2 class="text-display-l italic text-center mb-14 reveal">O que faço</h2>
-    <div class="grid md:grid-cols-3 gap-8">
-      {servicos.map((s) => (
-        <div class="border border-argila/20 rounded-sm p-8 reveal">
-          <h3 class="text-display-m italic mb-3">{s.title}</h3>
-          <p class="text-argila text-sm">{s.desc}</p>
-        </div>
-      ))}
-    </div>
+    <p class="eyebrow text-center mb-4">Testemunhos</p>
+    <h2 class="text-display-l italic text-center mb-4 reveal">As nossas noivas &amp; clientes</h2>
+    <p class="text-darkbrown/60 text-center max-w-md mx-auto text-sm reveal">
+      Espaço reservado para as reviews das nossas clientes e noivas.
+    </p>
   </section>
 
-  <section class="bg-vinho text-creme py-20 text-center">
+  <section id="contacto-home" class="bg-burgundy text-offwhite py-24 text-center">
     <div class="max-w-container mx-auto px-6 md:px-16">
-      <h2 class="text-display-l italic mb-6 reveal">Vamos criar o teu look?</h2>
-      <a href="/contacto" class="inline-block bg-creme text-vinho px-8 py-4 text-sm font-semibold rounded-sm hover:bg-opacity-90 transition">
-        Pedir orçamento
+      <p class="font-script text-3xl mb-4 reveal">Let's book your glow</p>
+      <h2 class="text-display-l italic mb-8 reveal">Pronta para começar?</h2>
+      <a href="/contacto#contacto" class="inline-block bg-offwhite text-burgundy px-8 py-4 text-sm font-semibold rounded-full hover:opacity-90 transition">
+        Agendar Consultoria
       </a>
     </div>
   </section>

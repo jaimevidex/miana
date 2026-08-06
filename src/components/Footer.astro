@@ -1,43 +1,45 @@
 ---
 const year = new Date().getFullYear();
 const navItems = [
-  { label: 'Sobre', href: '/sobre' },
-  { label: 'Portfólio', href: '/portfolio' },
-  { label: 'Serviços', href: '/servicos' },
+  { label: 'Home', href: '/' },
+  { label: 'Meet Mariana', href: '/sobre' },
+  { label: 'Bridal & Beauty', href: '/servicos/bridal' },
+  { label: 'The Skin Call', href: '/servicos/skin-call' },
+  { label: 'Beauty Education', href: '/servicos/education' },
   { label: 'Contacto', href: '/contacto' },
 ];
 ---
 
-<footer class="bg-espresso text-creme">
-  <div class="max-w-container mx-auto px-6 md:px-16 py-16 grid gap-12 md:grid-cols-3">
-    <div>
-      <p class="font-display italic text-2xl mb-3">[Nome]</p>
-      <p class="text-argila text-sm max-w-xs">
-        <!-- TODO: tagline curta, ver docs/CONTENT.md -->
-        Maquilhagem profissional para o dia mais importante — e para todos os outros.
+<footer class="bg-darkbrown text-offwhite">
+  <div class="max-w-container mx-auto px-6 md:px-16 py-16 grid gap-12 md:grid-cols-4">
+    <div class="md:col-span-2">
+      <p class="font-script text-4xl mb-3">Mariana</p>
+      <p class="text-sm text-offwhite/60 max-w-xs">
+        Science-Led Skincare &amp; Effortless Beauty
       </p>
     </div>
 
     <nav class="flex flex-col gap-3">
-      <span class="eyebrow text-ouro mb-1">Navegação</span>
+      <span class="eyebrow text-powder mb-1">Navegação</span>
       {navItems.map((item) => (
-        <a href={item.href} class="text-sm text-creme/80 hover:text-ouro">{item.label}</a>
+        <a href={item.href} class="text-sm text-offwhite/80 hover:text-powder">{item.label}</a>
       ))}
     </nav>
 
     <div class="flex flex-col gap-3">
-      <span class="eyebrow text-ouro mb-1">Contacto</span>
-      <a href="mailto:ola@exemplo-maquilhadora.pt" class="text-sm text-creme/80 hover:text-ouro">
-        ola@exemplo-maquilhadora.pt
+      <span class="eyebrow text-powder mb-1">Contacto</span>
+      <a href="mailto:mpitamakeup@gmail.com" class="text-sm text-offwhite/80 hover:text-powder">
+        mpitamakeup@gmail.com
       </a>
-      <div class="flex gap-4 mt-2">
-        <a href="#" aria-label="Instagram" class="text-creme/80 hover:text-ouro">Instagram</a>
-        <a href="#" aria-label="WhatsApp" class="text-creme/80 hover:text-ouro">WhatsApp</a>
-      </div>
+      <a href="https://instagram.com/marianapita_makeup" target="_blank" rel="noopener" class="text-sm text-offwhite/80 hover:text-powder">
+        @marianapita_makeup
+      </a>
+      <p class="text-sm text-offwhite/60">Lisboa &amp; Santarém</p>
     </div>
   </div>
 
-  <div class="border-t border-creme/10 py-6 text-center text-xs text-argila">
-    © {year} [Nome]. Todos os direitos reservados.
+  <div class="border-t border-offwhite/10 py-6 text-center text-xs text-offwhite/50">
+    <p>© {year} MARIANA. Todos os direitos reservados.</p>
+    <p class="mt-2"><a href="/politica-privacidade" class="underline hover:text-powder">Política de Privacidade &amp; Cookies (RGPD)</a></p>
   </div>
 </footer>

@@ -8,11 +8,11 @@
   }
 
   body {
-    @apply bg-poudre text-espresso font-body antialiased;
+    @apply bg-offwhite text-darkbrown font-body antialiased;
   }
 
   h1, h2, h3 {
-    @apply font-display text-espresso;
+    @apply font-display text-darkbrown;
   }
 
   a {
@@ -20,11 +20,11 @@
   }
 
   ::selection {
-    @apply bg-vinho text-creme;
+    @apply bg-burgundy text-offwhite;
   }
 
   :focus-visible {
-    outline: 2px solid #B8935A;
+    outline: 2px solid #59010B;
     outline-offset: 2px;
   }
 
@@ -40,7 +40,7 @@
 
 @layer utilities {
   .eyebrow {
-    @apply text-label uppercase tracking-widest text-argila font-semibold;
+    @apply text-eyebrow uppercase tracking-widest text-burgundy font-semibold;
   }
 
   .reveal {

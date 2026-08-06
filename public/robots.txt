@@ -1,4 +1,5 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://exemplo-maquilhadora.pt/sitemap-index.xml
+# Substituir pelo domínio real do deploy (ver: PUBLIC_SITE_URL no .env)
+Sitemap: https://exemplo-mariana.pt/sitemap-index.xml

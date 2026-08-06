@@ -5,22 +5,21 @@ export default {
     extend: {
       colors: {
         // Ver docs/DESIGN.md — não adicionar cores fora deste sistema sem atualizar o documento.
-        espresso: '#2B1F1C',
-        poudre: '#F1E8E1',
-        vinho: '#7A2E3B',
-        ouro: '#B8935A',
-        argila: '#8C6F5E',
-        creme: '#F7F2EC',
+        burgundy: '#59010B',
+        powder: '#BDDAF4',
+        offwhite: '#FFFDF7',
+        darkbrown: '#2D1918',
       },
       fontFamily: {
-        display: ['Fraunces', 'ui-serif', 'Georgia', 'serif'],
-        body: ['Manrope', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['"Playfair Display"', 'ui-serif', 'Georgia', 'serif'],
+        script: ['"Pinyon Script"', 'cursive'],
+        body: ['"Open Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       fontSize: {
         'display-xl': ['4.5rem', { lineHeight: '1.05', letterSpacing: '-0.01em' }],
         'display-l': ['3rem', { lineHeight: '1.1', letterSpacing: '-0.01em' }],
         'display-m': ['2rem', { lineHeight: '1.2' }],
-        label: ['0.8rem', { lineHeight: '1.4', letterSpacing: '0.12em' }],
+        eyebrow: ['0.8rem', { lineHeight: '1.4', letterSpacing: '0.18em' }],
       },
       maxWidth: {
         container: '1280px',

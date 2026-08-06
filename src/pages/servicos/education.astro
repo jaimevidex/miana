@@ -1,0 +1,81 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import EducationForm from '../../components/forms/EducationForm.astro';
+import Gallery from '../../components/Gallery.astro';
+
+const workshops = [
+  {
+    num: '#1',
+    titulo: 'Automaquilhagem 1:1',
+    modo: 'Presencial',
+    desc: 'Uma sessão exclusiva dedicada às características do teu rosto, aos teus gostos, ao teu estilo de vida e aos produtos que já tens em casa. Aprendes a criar desde looks do dia a dia ao glam de noite, descobrindo as técnicas, pincéis e tons certos para uma makeup que realce a tua beleza.',
+  },
+  {
+    num: '#2',
+    titulo: 'Skincare Education',
+    modo: 'Individual, grupos, eventos de marcas ou corporativo',
+    desc: 'Sessões focadas em desmistificar a cosmetologia, ensinar a ler rótulos e entender os ativos certos para a tua pele. Uma abordagem prática e fundamentada na ciência.',
+  },
+  {
+    num: '#3',
+    titulo: 'Group Sessions & Bachelorette Parties',
+    modo: 'Presencial · Foco em Makeup ou Skincare',
+    desc: 'Workshops presenciais em grupo desenhados para festas de despedida de solteira, eventos especiais ou momentos de convívio entre amigas. Uma experiência leve, divertida e prática, cheia de dicas e aprendizagem.',
+  },
+];
+---
+
+<Layout title="Beauty Education — Workshops de Makeup & Skincare | Mariana" description="Workshops de automaquilhagem 1:1, skincare education e group sessions. Aprende a dominar a tua rotina e a tua maquilhagem com base científica.">
+  <section class="pt-32 pb-16 max-w-container mx-auto px-6 md:px-16 text-center">
+    <p class="eyebrow mb-4">Workshops &amp; Masterclasses</p>
+    <h1 class="text-display-l italic max-w-3xl mx-auto reveal">Beauty Education</h1>
+    <p class="text-darkbrown/70 mt-5 max-w-xl mx-auto reveal">
+      Aprende a dominar a tua rotina e a tua maquilhagem. Conhecimento, autonomia e técnica com
+      base científica e prática descomplicada.
+    </p>
+  </section>
+
+  <section class="max-w-container mx-auto px-6 md:px-16 pb-16">
+    <div class="max-w-2xl mx-auto reveal">
+      <blockquote class="font-display text-lg md:text-xl leading-relaxed text-center italic">
+        Acreditamos que o maior segredo para uma pele bonita e uma maquilhagem impecável é a
+        educação. Mais do que seguir tendências, queremos ensinar-te a entender as necessidades
+        da tua pele e a usar a maquilhagem para realçar o que tens de melhor.
+      </blockquote>
+    </div>
+  </section>
+
+  <section class="max-w-container mx-auto px-6 md:px-16 pb-16 grid gap-8">
+    {workshops.map((w) => (
+      <div class="border border-darkbrown/10 rounded-sm p-8 reveal">
+        <div class="flex items-baseline gap-4">
+          <span class="font-script text-2xl text-burgundy">{w.num}</span>
+          <div>
+            <h2 class="font-display text-2xl">{w.titulo}</h2>
+            <p class="text-burgundy text-xs font-semibold mt-1 uppercase tracking-wide">{w.modo}</p>
+          </div>
+        </div>
+        <p class="text-darkbrown/70 text-sm mt-4 max-w-3xl">{w.desc}</p>
+      </div>
+    ))}
+  </section>
+
+  <section class="bg-darkbrown text-offwhite py-24">
+    <div class="max-w-container mx-auto px-6 md:px-16">
+      <p class="eyebrow text-powder mb-4 text-center">Workshops gallery</p>
+      <h2 class="text-display-l italic text-center mb-14 reveal">Em ação</h2>
+      <Gallery showFilters={false} />
+    </div>
+  </section>
+
+  <section id="education-form" class="max-w-container mx-auto px-6 md:px-16 py-24">
+    <div class="grid md:grid-cols-2 gap-16">
+      <div>
+        <p class="eyebrow mb-4">Agendar workshop</p>
+        <h2 class="text-display-m mb-4">Ready to elevate your beauty knowledge?</h2>
+        <p class="text-darkbrown/70 text-sm">Escolhe o formato e agendamos a tua sessão.</p>
+      </div>
+      <EducationForm />
+    </div>
+  </section>
+</Layout>

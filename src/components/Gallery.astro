@@ -1,6 +1,6 @@
 ---
-// Substituir os placeholders por <Image> de astro:assets ligadas a ficheiros reais em public/images.
-// Ver docs/IMAGES.md para o inventário e convenção de nomes.
+// Galeria reutilizável. Imagens reais a entregar (ver docs/IMAGES.md) —
+// atualmente placeholders de cor por categoria, prontos a substituir por <Image> de astro:assets.
 
 interface Item {
   category: string;
@@ -14,16 +14,25 @@ interface Props {
 }
 
 const defaultItems: Item[] = [
-  { category: 'Noivas', alt: 'Maquilhagem de noiva com acabamento natural', tall: true },
-  { category: 'Editorial', alt: 'Look editorial com sombra gráfica em tom vinho' },
-  { category: 'Dia-a-dia', alt: 'Maquilhagem natural para o dia-a-dia' },
-  { category: 'Noivas', alt: 'Detalhe de olhos em tons dourados', tall: true },
-  { category: 'Eventos', alt: 'Maquilhagem para evento noturno' },
-  { category: 'Editorial', alt: 'Composição editorial em tons terrosos', tall: true },
+  { category: 'Noivas', alt: 'Maquilhagem de noiva com acabamento luminoso e natural', tall: true },
+  { category: 'Beauty', alt: 'Look editorial glowy e sunkissed' },
+  { category: 'Workshops', alt: 'Workshop de automaquilhagem em grupo', tall: true },
+  { category: 'Skincare', alt: 'Rotina de skincare personalizada' },
+  { category: 'Noivas', alt: 'Detalhe do glow de pele num dia de casamento' },
+  { category: 'Beauty', alt: 'Retrato elegante de maquilhagem premium', tall: true },
+  { category: 'Workshops', alt: 'Sessão 1:1 de automaquilhagem' },
+  { category: 'Skincare', alt: 'Análise de pele e produtos de skincare', tall: true },
 ];
 
 const { items = defaultItems, showFilters = true } = Astro.props;
 const categories = ['Todos', ...new Set(items.map((i) => i.category))];
+
+const toneByCategory: Record<string, string> = {
+  Noivas: 'linear-gradient(160deg, #FFF1EC 0%, #F3D9C8 60%, #C89B7A 100%)',
+  Beauty: 'linear-gradient(160deg, #FBEDF0 0%, #E5C1C8 55%, #A97B86 100%)',
+  Workshops: 'linear-gradient(160deg, #F4EFFB 0%, #D6C9EC 55%, #9B86C4 100%)',
+  Skincare: 'linear-gradient(160deg, #EAF4FA 0%, #C6E0F0 55%, #8FB8D8 100%)',
+};
 ---
 
 <div>
@@ -33,7 +42,7 @@ const categories = ['Todos', ...new Set(items.map((i) => i.category))];
         <button
           class:list={[
             'text-sm px-4 py-2 rounded-full border transition',
-            i === 0 ? 'bg-vinho text-creme border-vinho' : 'border-argila/40 text-argila hover:border-vinho hover:text-vinho',
+            i === 0 ? 'bg-burgundy text-offwhite border-burgundy' : 'border-darkbrown/25 text-darkbrown/70 hover:border-burgundy hover:text-burgundy',
           ]}
           data-filter={cat}
         >
@@ -51,8 +60,14 @@ const categories = ['Todos', ...new Set(items.map((i) => i.category))];
         aria-label={`Ver ${item.alt} em tamanho maior`}
       >
         <!-- Placeholder — substituir por <Image src={...} alt={item.alt} /> -->
-        <div class:list={['gallery-placeholder w-full', item.tall ? 'aspect-[4/5]' : 'aspect-square']}></div>
-        <span class="absolute inset-0 bg-espresso/0 group-hover:bg-espresso/10 transition-colors"></span>
+        <div
+          class:list={['gallery-placeholder w-full', item.tall ? 'aspect-[4/5]' : 'aspect-square']}
+          style={`background:${toneByCategory[item.category] ?? '#EFE7E0'}`}
+        ></div>
+        <span class="absolute inset-0 bg-burgundy/0 group-hover:bg-burgundy/5 transition-colors"></span>
+        <span class="absolute bottom-3 left-3 text-[0.65rem] uppercase tracking-widest text-darkbrown/70 opacity-0 group-hover:opacity-100 transition-opacity">
+          {item.category}
+        </span>
       </button>
     ))}
   </div>
@@ -60,7 +75,6 @@ const categories = ['Todos', ...new Set(items.map((i) => i.category))];
 
 <style>
   .gallery-placeholder {
-    background: linear-gradient(160deg, #EFE1D6 0%, #D9C4B0 55%, #B8935A 100%);
     transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   }
   .gallery-item:hover .gallery-placeholder {
@@ -75,10 +89,10 @@ const categories = ['Todos', ...new Set(items.map((i) => i.category))];
   buttons.forEach((btn) => {
     btn.addEventListener('click', () => {
       buttons.forEach((b) => {
-        b.classList.remove('bg-vinho', 'text-creme', 'border-vinho');
-        b.classList.add('border-argila/40', 'text-argila');
+        b.classList.remove('bg-burgundy', 'text-offwhite', 'border-burgundy');
+        b.classList.add('border-darkbrown/25', 'text-darkbrown/70');
       });
-      btn.classList.add('bg-vinho', 'text-creme', 'border-vinho');
+      btn.classList.add('bg-burgundy', 'text-offwhite', 'border-burgundy');
 
       const filter = btn.getAttribute('data-filter');
       items.forEach((item) => {
@@ -87,6 +101,4 @@ const categories = ['Todos', ...new Set(items.map((i) => i.category))];
       });
     });
   });
-
-  // Nota: adicionar lightbox real (ex: PhotoSwipe/GLightbox) quando houver imagens finais.
 </script>

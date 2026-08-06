@@ -1,0 +1,65 @@
+---
+import { getAccessKey, submitWeb3Form } from '../../lib/web3form';
+
+const accessKey = getAccessKey();
+
+const inputCls =
+  'mt-1 w-full border border-darkbrown/20 rounded-sm px-4 py-3 bg-white focus:border-burgundy outline-none';
+const labelCls = 'block text-sm font-medium text-darkbrown';
+---
+
+<form id="form-contacto" action="https://api.web3forms.com/submit" method="POST" class="grid gap-5">
+  <input type="hidden" name="access_key" value={accessKey} />
+  <input type="hidden" name="subject" value="Mensagem de contacto — Site" />
+  <input type="checkbox" name="botcheck" class="hidden" style="display:none" />
+
+  <div class="grid sm:grid-cols-2 gap-5">
+    <div>
+      <label class={labelCls} for="c-name">Nome</label>
+      <input id="c-name" name="nome" type="text" required class={inputCls} />
+    </div>
+    <div>
+      <label class={labelCls} for="c-email">E-mail</label>
+      <input id="c-email" name="email" type="email" required class={inputCls} />
+    </div>
+  </div>
+
+  <div>
+    <label class={labelCls} for="c-phone">Telefone (opcional)</label>
+    <input id="c-phone" name="telefone" type="tel" class={inputCls} />
+  </div>
+
+  <div>
+    <label class={labelCls} for="c-service">Relativo a (opcional)</label>
+    <select id="c-service" name="servico" class={inputCls}>
+      <option value="">Selecionar...</option>
+      <option value="Bridal & Beauty">Bridal &amp; Beauty</option>
+      <option value="The Skin Call">The Skin Call</option>
+      <option value="Beauty Education">Beauty Education</option>
+      <option value="Outro">Outro</option>
+    </select>
+  </div>
+
+  <div>
+    <label class={labelCls} for="c-message-text">Mensagem</label>
+    <textarea id="c-message-text" name="mensagem" rows="5" required class={inputCls}></textarea>
+  </div>
+
+  <button type="submit" class="w-fit bg-burgundy text-offwhite px-8 py-3.5 text-sm font-semibold rounded-full hover:opacity-90 transition">
+    Enviar mensagem
+  </button>
+
+  <p id="form-contacto-status" class="mt-2" role="status" aria-live="polite"></p>
+</form>
+
+<script>
+  import { submitWeb3Form } from '../../lib/web3form';
+
+  const form = document.getElementById('form-contacto') as HTMLFormElement | null;
+  const status = document.getElementById('form-contacto-status');
+
+  form?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    void submitWeb3Form(form, status);
+  });
+</script>

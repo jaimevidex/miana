@@ -7,10 +7,13 @@ interface Props {
   title: string;
   description: string;
   ogImage?: string;
+  /** Marca a página com hero full-bleed escuro (header transparente por cima). */
+  hasHero?: boolean;
 }
 
-const { title, description, ogImage = '/images/og-default.jpg' } = Astro.props;
-const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+const { title, description, ogImage = '/images/og-default.jpg', hasHero = false } = Astro.props;
+const siteURL = new URL(Astro.site ?? 'https://exemplo-mariana.pt');
+const canonicalURL = new URL(Astro.url.pathname, siteURL);
 ---
 
 <!doctype html>
@@ -28,19 +31,19 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
     <meta property="og:type" content="website" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    <meta property="og:image" content={new URL(ogImage, Astro.site)} />
+    <meta property="og:image" content={new URL(ogImage, siteURL)} />
     <meta property="og:url" content={canonicalURL} />
     <meta name="twitter:card" content="summary_large_image" />
 
-    <!-- Fontes: Fraunces (display) + Manrope (corpo/utilitário) — ver docs/DESIGN.md -->
+    <!-- Fontes: Playfair Display + Open Sans (social), Pinyon Script (assinatura) — ver docs/DESIGN.md -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,400..600&family=Manrope:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Pinyon+Script&family=Open+Sans:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
   </head>
-  <body>
+  <body data-hero={hasHero ? 'true' : 'false'}>
     <Header />
     <main>
       <slot />
