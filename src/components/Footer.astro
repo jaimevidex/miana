@@ -9,24 +9,24 @@ const navItems = [
 ];
 ---
 
-<footer class="bg-darkbrown text-offwhite">
+<footer class="bg-burgundy text-offwhite">
   <div class="max-w-container mx-auto px-6 md:px-16 py-16 grid gap-12 md:grid-cols-4">
     <div class="md:col-span-2">
-      <p class="font-script text-4xl mb-3">Mariana</p>
-      <p class="text-sm text-offwhite/60 max-w-xs">
+      <p class="font-script text-4xl mb-3">Mariana Pita</p>
+      <p class="text-sm text-offwhite/70 max-w-xs">
         Science-Led Skincare &amp; Effortless Beauty
       </p>
     </div>
 
     <nav class="flex flex-col gap-3">
-      <span class="eyebrow text-powder mb-1">Navegação</span>
+      <span class="eyebrow !text-white mb-1">Navegação</span>
       {navItems.map((item) => (
         <a href={item.href} class="text-sm text-offwhite/80 hover:text-powder">{item.label}</a>
       ))}
     </nav>
 
     <div class="flex flex-col gap-3">
-      <span class="eyebrow text-powder mb-1">Contacto</span>
+      <span class="eyebrow !text-white mb-1">Contacto</span>
       <a href="mailto:mpitamakeup@gmail.com" class="text-sm text-offwhite/80 hover:text-powder">
         mpitamakeup@gmail.com
       </a>

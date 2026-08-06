@@ -1,31 +1,23 @@
 ---
 // Imagem de fundo: substituir o placeholder por <Image> de astro:assets quando a foto real existir
 // (retrato "Sessão de Lisboa" — ver docs/IMAGES.md e docs/PLAN.md fase deferred).
-// import { Image } from 'astro:assets';
-// import heroImg from '../../public/images/hero.jpg';
+const {
+  eyebrow = 'Healthy Skin, Makeup that makes you glow',
+  title = 'Skincare & Makeup',
+  sub = 'Where skin science meets beauty. Maquilhagem que realça a tua beleza natural e uma rotina de skincare desenhada à medida da tua pele.',
+} = Astro.props;
 ---
 
-<section class="relative h-screen min-h-[640px] flex items-end overflow-hidden">
+<section class="relative h-screen min-h-[640px] flex items-center overflow-hidden">
   <div class="absolute inset-0 hero-placeholder"></div>
   <div class="absolute inset-0 bg-gradient-to-t from-darkbrown/90 via-darkbrown/30 to-darkbrown/40"></div>
 
-  <div class="relative z-10 max-w-container mx-auto w-full px-6 md:px-16 pb-28">
-    <p class="eyebrow text-powder mb-4 reveal">Science-led skincare &amp; effortless beauty</p>
-    <h1 class="text-display-l md:text-display-xl font-script text-offwhite max-w-3xl reveal">
-      Science-led skincare<br />&amp; effortless beauty.
+  <div class="relative z-10 max-w-container mx-auto w-full px-6 md:px-16 text-center">
+    <p class="eyebrow !text-offwhite mb-4 reveal">{eyebrow}</p>
+    <h1 class="mx-auto text-2xl md:text-display-xl font-display font-bold text-offwhite whitespace-nowrap reveal">
+      {title}
     </h1>
-    <p class="text-offwhite/85 text-lg mt-6 max-w-xl reveal">
-      Descomplicamos a cosmética e elevamos a tua beleza natural. Rituais de skincare
-      personalizados e maquilhagem para quem procura um glow autêntico e intemporal.
-    </p>
-    <div class="flex flex-wrap gap-4 mt-8 reveal">
-      <a href="/servicos/skin-call" class="bg-burgundy text-offwhite px-6 py-3 text-sm font-semibold rounded-full hover:opacity-90 transition">
-        Agendar Consultoria
-      </a>
-      <a href="/servicos/bridal" class="border border-offwhite/40 text-offwhite px-6 py-3 text-sm font-semibold rounded-full hover:border-powder hover:text-powder transition">
-        Ver Serviços
-      </a>
-    </div>
+    <p class="text-offwhite/85 text-base mt-5 max-w-xl mx-auto reveal">{sub}</p>
   </div>
 </section>
 

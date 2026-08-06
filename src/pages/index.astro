@@ -1,27 +1,28 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import Hero from '../components/Hero.astro';
-import Gallery from '../components/Gallery.astro';
 
 const servicos = [
   {
-    num: '01',
-    title: 'Skin Analysis & Routine Design',
-    desc: 'Consultorias 1:1 focadas em descomplicar a tua rotina.',
+    titulo: 'The Skin Call',
+    desc: 'Consultoria 1:1 focada na biologia e química da tua pele. O teu plano de skincare personalizado, sem complicações.',
     href: '/servicos/skin-call',
   },
   {
-    num: '02',
-    title: 'Bridal & Beauty On Demand',
-    desc: 'Maquilhagem luminosa e sunkissed para o teu dia especial.',
+    titulo: 'Bridal & Beauty',
+    desc: 'Maquilhagem luminosa e sunkissed, desenhada à tua medida para os momentos mais especiais.',
     href: '/servicos/bridal',
   },
   {
-    num: '03',
-    title: 'Beauty Education',
-    desc: 'Workshops práticos para dominares o teu skincare e a tua makeup.',
+    titulo: 'Beauty Education',
+    desc: 'Workshops e masterclasses de makeup e skincare para aprenderes a dominar a tua rotina e o teu glow.',
     href: '/servicos/education',
   },
+];
+const phTones = [
+  'linear-gradient(135deg, #7a2430 0%, #59010b 60%, #2d1918 100%)',
+  'linear-gradient(135deg, #bddaF4 0%, #8fb8d8 60%, #5d88ab 100%)',
+  'linear-gradient(135deg, #f6e7e0 0%, #e8c9bc 60%, #a97b86 100%)',
 ];
 ---
 
@@ -30,11 +31,14 @@ const servicos = [
 
   <section class="max-w-container mx-auto px-6 md:px-16 py-24">
     <div class="max-w-2xl mx-auto text-center reveal">
-      <p class="eyebrow mb-6">Skin &amp; Beauty</p>
-      <blockquote class="text-display-m italic font-display leading-relaxed">
-        Unimos a ciência da pele à arte da maquilhagem. Acreditamos que uma pele saudável
-        e equilibrada é o ponto de partida para qualquer look radiante.
-      </blockquote>
+      <p class="eyebrow mb-6">SKIN &amp; MAKEUP</p>
+      <p class="text-lg md:text-xl leading-relaxed text-darkbrown/85">
+        Acreditamos que a verdadeira beleza começa na saúde da pele. Guiada pela ciência da
+        Bioquímica e da Cosmetologia, a nossa filosofia rejeita o excesso de produtos e as
+        tendências. Descomplicamos a química do skincare para entregar rituais personalizados e
+        criar a tela ideal para uma maquilhagem luminosa, sunkissed e pensada para realçar a tua
+        beleza natural. Um glow que te faz sentir tu própria, effortlessly.
+      </p>
       <a href="/sobre" class="inline-block mt-8 text-burgundy font-semibold text-sm underline-offset-4 hover:underline">
         Meet Mariana →
       </a>
@@ -42,48 +46,39 @@ const servicos = [
   </section>
 
   <section class="max-w-container mx-auto px-6 md:px-16 py-16">
-    <p class="eyebrow text-center mb-4">O que fazemos</p>
-    <h2 class="text-display-l font-script text-center mb-14 reveal">Os nossos universos</h2>
+    <p class="eyebrow text-center mb-12 reveal">O QUE FAZEMOS</p>
     <div class="grid md:grid-cols-3 gap-8">
-      {servicos.map((s) => (
-        <a href={s.href} class="group border border-darkbrown/10 rounded-sm p-8 reveal hover:border-burgundy/40 transition">
-          <span class="text-eyebrow text-burgundy/60 font-semibold">{s.num}</span>
-          <h3 class="font-display text-2xl mt-3 mb-3 group-hover:text-burgundy transition">{s.title}</h3>
-          <p class="text-darkbrown/65 text-sm">{s.desc}</p>
-          <span class="inline-block mt-6 text-burgundy font-semibold text-sm">Descobrir →</span>
+      {servicos.map((s, i) => (
+        <a href={s.href} class="group relative block rounded-sm overflow-hidden reveal border border-darkbrown/10 hover:border-burgundy/40 transition">
+          <div class="relative aspect-[3/4] w-full overflow-hidden">
+            <!-- Placeholder de imagem — substituir por <Image> de astro:assets quando houver foto real (docs/IMAGES.md) -->
+            <div class="absolute inset-0 service-ph" style={`background:${phTones[i]}`}></div>
+            <div class="absolute inset-0 flex items-center justify-center bg-gradient-to-t from-darkbrown/70 via-transparent to-darkbrown/15">
+              <div class="flex flex-col items-center text-center px-6">
+                <h3 class="font-display text-3xl text-offwhite leading-tight">{s.titulo}</h3>
+                <span class="mt-2 text-[0.7rem] uppercase tracking-widest text-powder border-b border-powder/60 pb-1">Descobre mais</span>
+              </div>
+            </div>
+          </div>
+          <p class="text-darkbrown/75 text-sm text-center leading-relaxed py-6 px-6">{s.desc}</p>
         </a>
       ))}
     </div>
   </section>
 
-  <section class="bg-darkbrown text-offwhite py-24">
-    <div class="max-w-container mx-auto px-6 md:px-16">
-      <p class="eyebrow text-powder mb-4 text-center">Portfólio</p>
-      <h2 class="text-display-l italic text-center mb-14 reveal">Trabalhos recentes</h2>
-      <Gallery showFilters={false} />
-      <div class="text-center mt-12">
-        <a href="/servicos/bridal" class="border border-offwhite/40 text-offwhite px-6 py-3 text-sm font-semibold rounded-full hover:border-powder hover:text-powder transition">
-          Ver Portfólio por Serviço
-        </a>
-      </div>
-    </div>
-  </section>
-
   <section class="max-w-container mx-auto px-6 md:px-16 py-24">
-    <p class="eyebrow text-center mb-4">Testemunhos</p>
-    <h2 class="text-display-l italic text-center mb-4 reveal">As nossas noivas &amp; clientes</h2>
+    <p class="eyebrow text-center mb-4 reveal">What they say</p>
     <p class="text-darkbrown/60 text-center max-w-md mx-auto text-sm reveal">
       Espaço reservado para as reviews das nossas clientes e noivas.
     </p>
   </section>
-
-  <section id="contacto-home" class="bg-burgundy text-offwhite py-24 text-center">
-    <div class="max-w-container mx-auto px-6 md:px-16">
-      <p class="font-script text-3xl mb-4 reveal">Let's book your glow</p>
-      <h2 class="text-display-l italic mb-8 reveal">Pronta para começar?</h2>
-      <a href="/servicos/bridal" class="inline-block bg-offwhite text-burgundy px-8 py-4 text-sm font-semibold rounded-full hover:opacity-90 transition">
-        Bridal &amp; Beauty
-      </a>
-    </div>
-  </section>
 </Layout>
+
+<style>
+  .service-ph {
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .group:hover .service-ph {
+    transform: scale(1.03);
+  }
+</style>

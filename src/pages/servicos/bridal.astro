@@ -2,61 +2,79 @@
 import Layout from '../../layouts/Layout.astro';
 import BridalForm from '../../components/forms/BridalForm.astro';
 import Gallery from '../../components/Gallery.astro';
+import Hero from '../../components/Hero.astro';
 
 const servicos = [
   {
     num: '01',
     title: 'The Bridal Experience',
     desc: 'O serviço de noiva desenhado à tua medida. Inclui a prova, a maquilhagem no dia do casamento e um touch-up kit.',
-    extra: 'Formatos: Makeup ou Makeup + Hair (feito pela nossa equipa de hairstylists especializados).',
-    addon: 'Add-on Skin Call: possibilidade de adicionar consultorias de skincare 1:1 nos meses anteriores para preparar a pele até ao grande dia. Inclui oferta especial.',
+    extra: 'Makeup | Hair | Pack Makeup + Hair',
+    addon: 'Add a Skin Call: Podes adicionar um plano de skincare 1:1 nos meses anteriores para preparar a pele até ao grande dia. Inclui oferta especial.',
   },
   {
     num: '02',
-    title: 'Bridal Party & Guests',
-    desc: 'Serviço de maquilhagem e glam completo para madrinhas, mães, noivos e hóspedes.',
-    extra: 'Formatos: Makeup ou Makeup + Hair.',
+    title: 'Guests & Events',
+    desc: 'Glam on demand para wedding guests, eventos, sessões fotográficas ou aqueles dias em que precisas simplesmente daquele glow extra.',
+    extra: 'Makeup | Hair | Pack Makeup + Hair',
   },
-  {
-    num: '03',
-    title: 'Event & Special Occasions',
-    desc: 'Glam on demand para eventos, sessões fotográficas ou dias em que precisas simplesmente daquele glow extra.',
-    extra: 'Formatos: Makeup ou Makeup + Hair.',
-  },
+];
+
+const phTones = [
+  'linear-gradient(135deg, #7a2430 0%, #59010b 60%, #2d1918 100%)',
+  'linear-gradient(135deg, #bddaF4 0%, #8fb8d8 60%, #5d88ab 100%)',
 ];
 ---
 
-<Layout title="Bridal & Beauty — Mariana" description="Maquilhagem de noiva e eventos com um acabamento luminoso e sunkissed. Bridal Experience, Bridal Party & Guests, Event & Special Occasions. Makeup ou Makeup + Hair.">
-  <section class="pt-32 pb-16 max-w-container mx-auto px-6 md:px-16 text-center">
-    <p class="eyebrow mb-4">Bridal &amp; beauty services on demand</p>
-    <h1 class="text-display-l italic max-w-3xl mx-auto reveal">Luminous, sunkissed &amp; effortlessly you.</h1>
-    <p class="text-darkbrown/70 mt-5 max-w-xl mx-auto reveal">
-      Maquilhagem desenhada à tua medida, pensada para durar o dia todo e fazer-te sentir a tua
-      melhor versão.
-    </p>
-  </section>
+<Layout title="Bridal & Beauty — Mariana" description="Maquilhagem de noiva e eventos com um acabamento luminoso e sunkissed. Bridal Experience, Bridal Party & Guests, Event & Special Occasions. Makeup ou Makeup + Hair." hasHero>
+  <Hero
+    eyebrow="Luminous, sunkissed & effortlessly you."
+    title="Bridal & beauty services on demand"
+    sub="Maquilhagem desenhada à tua medida, pensada para durar o dia todo e fazer-te sentir a tua melhor versão."
+  />
 
-  <section class="max-w-container mx-auto px-6 md:px-16 pb-16">
-    <div class="max-w-2xl mx-auto reveal">
-      <blockquote class="font-display text-lg md:text-xl leading-relaxed text-center italic">
+  <section class="max-w-container mx-auto px-6 md:px-16 py-24">
+    <div class="max-w-3xl mx-auto reveal">
+      <p class="eyebrow text-center mb-6">OUR ARTISTRY</p>
+      <blockquote class="text-lg md:text-xl leading-relaxed text-darkbrown/85 text-center">
         Acreditamos que a maquilhagem de noiva e de eventos deve celebrar a tua essência. Com um
         olhar focado na naturalidade, criamos looks glowy e sunkissed, pensados para fotografar
         impecavelmente e moverem-se de forma contigo do início ao fim. O nosso objetivo é mostrar
-        quem és através da tua makeup. Calma, fun ou bold: you name it, we make it!
+        quem és através da tua makeup. 
+      </blockquote>
+      <blockquote class="text-lg md:text-xl leading-relaxed text-darkbrown/85 text-center">
+        Calma, fun ou bold: you name it, we make it!
       </blockquote>
     </div>
   </section>
 
-  <section class="max-w-container mx-auto px-6 md:px-16 pb-16 grid md:grid-cols-3 gap-8">
-    {servicos.map((s) => (
-      <div class="border border-darkbrown/10 rounded-sm p-8 flex flex-col reveal">
-        <span class="text-eyebrow text-burgundy/60 font-semibold">{s.num}</span>
-        <h2 class="font-display text-2xl mt-3 mb-3">{s.title}</h2>
-        <p class="text-darkbrown/70 text-sm flex-1">{s.desc}</p>
-        {s.extra && <p class="text-darkbrown/55 text-xs mt-4">{s.extra}</p>}
-        {s.addon && <p class="text-burgundy text-xs mt-3">{s.addon}</p>}
+  <section class="max-w-container mx-auto px-6 md:px-16 pt-20 pb-16">
+    <div class="grid md:grid-cols-2 gap-32 max-w-6xl mx-auto">
+      {servicos.map((s, i) => (
+        <div class="group relative block rounded-sm overflow-hidden reveal">
+          <div class="relative aspect-video w-full overflow-hidden">
+            <div class="absolute inset-0 service-ph" style={`background:${phTones[i]}`}></div>
+            <div class="absolute inset-0 flex items-center justify-center bg-gradient-to-t from-darkbrown/70 via-transparent to-darkbrown/15">
+              <div class="flex flex-col items-center text-center px-6">
+                <h3 class="font-display font-bold text-3xl text-offwhite leading-tight">{s.title}</h3>
+                <span class="mt-2 text-[0.6rem] uppercase tracking-widest text-powder border-b border-powder/60 pb-1">{s.extra}</span>
+              </div>
+            </div>
+          </div>
+          <p class="text-darkbrown/75 text-sm text-center leading-relaxed py-6 px-6">{s.desc}</p>
+          {s.addon && <p class="text-burgundy text-xs text-center pb-6 px-6">{s.addon}</p>}
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <section class="max-w-container mx-auto px-6 md:px-16 pt-24 pb-40 text-center">
+<div class="max-w-3xl mx-auto">
+      <h2 class="text-2xl md:text-display-l font-display font-bold text-burgundy whitespace-nowrap mb-8 reveal">Pronta para o teu glow especial?</h2>
+      <div class="flex flex-wrap justify-center gap-4 reveal">
+        <a href="#orcamento" class="border border-burgundy bg-transparent text-burgundy px-6 py-3.5 text-sm font-bold uppercase rounded-full hover:bg-burgundy hover:text-offwhite transition">Let's book</a>
       </div>
-    ))}
+    </div>
   </section>
 
   <section class="bg-darkbrown text-offwhite py-24">
@@ -67,7 +85,7 @@ const servicos = [
     </div>
   </section>
 
-  <section class="max-w-container mx-auto px-6 md:px-16 py-24">
+  <section id="orcamento" class="max-w-container mx-auto px-6 md:px-16 py-24">
     <div class="grid md:grid-cols-2 gap-16">
       <div>
         <p class="eyebrow mb-4">Pedir orçamento</p>
@@ -80,3 +98,12 @@ const servicos = [
     </div>
   </section>
 </Layout>
+
+<style>
+  .service-ph {
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .group:hover .service-ph {
+    transform: scale(1.03);
+  }
+</style>

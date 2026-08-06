@@ -1,28 +1,27 @@
 ---
 const navItems = [
-  { label: 'Home', href: '/' },
   { label: 'Meet Mariana', href: '/sobre' },
   { label: 'Bridal & Beauty', href: '/servicos/bridal' },
   { label: 'The Skin Call', href: '/servicos/skin-call' },
   { label: 'Beauty Education', href: '/servicos/education' },
 ];
-const currentPath = Astro.url.pathname;
+const currentPath = Astro.url.pathname.replace(/\/+$/, '') || '/';
 const isHome = currentPath === '/';
 ---
 
 <header class="fixed top-0 left-0 right-0 z-50 header-scroll" id="site-header">
   <div class="max-w-container mx-auto px-6 md:px-16 flex items-center justify-between h-20">
-    <a href="/" class="font-script text-3xl header-text">
-      Mariana
-    </a>
+    <a href="/" class="font-script text-4xl header-text">
+Mariana Pita
+      </a>
 
     <nav class="hidden lg:flex items-center gap-7">
       {navItems.map((item) => (
-        <a
+<a
           href={item.href}
           class:list={[
-            'text-sm font-medium header-text hover:text-powder transition-colors',
-            currentPath === item.href && 'text-powder',
+            'text-xs font-semibold uppercase tracking-wide header-text hover:text-powder transition-colors pb-1 border-b-2 border-transparent hover:border-powder',
+            currentPath === item.href && '!border-powder !text-powder',
           ]}
         >
           {item.label}
