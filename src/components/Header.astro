@@ -5,7 +5,6 @@ const navItems = [
   { label: 'Bridal & Beauty', href: '/servicos/bridal' },
   { label: 'The Skin Call', href: '/servicos/skin-call' },
   { label: 'Beauty Education', href: '/servicos/education' },
-  { label: 'Contacto', href: '/contacto' },
 ];
 const currentPath = Astro.url.pathname;
 const isHome = currentPath === '/';
@@ -31,16 +30,10 @@ const isHome = currentPath === '/';
       ))}
     </nav>
 
-    <div class="flex items-center gap-4">
-      <a
-        href="/contacto#contacto"
-        class="hidden sm:inline-block text-sm font-semibold bg-burgundy text-offwhite px-5 py-2.5 rounded-full hover:opacity-90 transition"
-      >
-        Let's Book Your Glow
-      </a>
+    <div class="flex items-center gap-4 lg:hidden">
       <button
         id="menu-toggle"
-        class="lg:hidden header-text"
+        class="header-text"
         aria-label="Abrir menu"
         aria-expanded="false"
       >
@@ -61,9 +54,6 @@ const isHome = currentPath === '/';
         {item.label}
       </a>
     ))}
-    <a href="/contacto#contacto" class="text-sm font-semibold bg-burgundy text-offwhite px-6 py-3 rounded-full mt-4">
-      Let's Book Your Glow
-    </a>
   </div>
 </header>
 
