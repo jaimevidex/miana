@@ -2,43 +2,48 @@
 
 ## Stack de hosting
 - **Build:** Astro (`npm run build` → gera `/dist` estático)
-- **Hosting:** Cloudflare Pages (ou Netlify — instruções equivalentes)
-- **DNS/Domínio:** Cloudflare Registrar (ou onde já estiver comprado, com nameservers apontados para Cloudflare)
-- **Formulário:** Web3Forms (endpoint gratuito, sem backend) — ver `src/components/ContactForm.astro`
+- **Hosting:** Cloudflare (Worker com Static Assets via Wrangler) — subdomínio: `miana.maquiadora-site.workers.dev`
+- **DNS/Domínio:** `marianapita.pt` registado no OVH, nameservers apontados para Cloudflare (`julian.ns.cloudflare.com` / `lucy.ns.cloudflare.com`)
+- **Formulário:** Web3Forms (endpoint gratuito, sem backend) — ver `src/lib/web3form.ts` e `.env`
 
-## Passos — Cloudflare Pages
+## Deploy (Wrangler — já executado)
 
-1. Criar repositório git (GitHub/GitLab) e fazer push do projeto.
-2. Em Cloudflare Dashboard → **Workers & Pages** → **Create** → **Pages** → **Connect to Git**.
-3. Selecionar o repositório.
-4. Build settings:
-   - Framework preset: `Astro`
-   - Build command: `npm run build`
-   - Output directory: `dist`
-5. Deploy. Cloudflare dá um subdomínio `*.pages.dev` para testar.
-6. Domínio próprio: **Custom domains** → adicionar o domínio → seguir instruções de DNS (CNAME automático se o domínio já estiver na Cloudflare).
-7. SSL é automático (Cloudflare Universal SSL).
+Pré-requisitos:
+- `npx wrangler login` (fluxo OAuth, uma vez)
+- `.env` com `PUBLIC_WEB3FORMS_KEY` e `PUBLIC_SITE_URL` (não commitar)
 
-## Passos — Formulário (Web3Forms)
+Passos:
+1. `npm run build` (gera/destino `dist`)
+2. `npx wrangler deploy` — usa `wrangler.toml` (`[assets] directory = "./dist"`)
+
+Nota: nestes versão, Pages é delegado para Workers. O domínio custom liga-se com `wrangler domains` depois de o domínio ficar **Active** no Cloudflare.
+
+## DNS / Domínio
+
+1. Dominio `marianapita.pt` comprado no OVH (Cloudflare Registrar não suporta `.pt`).
+2. Em Cloudflare: **Add a site** → plano Free → guardar os 2 nameservers.
+3. No OVH (**Servidores DNS / Nameservers**, não a Zona DNS): substituir pelos 2 do Cloudflare.
+4. Aguardar propagação (Cloudflare passa de Pending → Active).
+5. Após Active: adicionar CNAME `marianapita.pt` → `miana.maquiadora-site.workers.dev` e ligar domínio custom ao projeto.
+6. SSL automático (Cloudflare Universal SSL).
+
+## Formulário (Web3Forms)
 
 1. Criar conta gratuita em https://web3forms.com e gerar uma **Access Key**.
-2. Colocar a key em `src/components/ContactForm.astro` (variável `WEB3FORMS_KEY`, ou idealmente como variável de ambiente pública do Astro — ver `.env.example`).
-3. Testar o envio em produção (o Web3Forms só valida domínios depois do 1º submit real).
+2. Colocar a key no `.env` → `import.meta.env.PUBLIC_WEB3FORMS_KEY`.
+3. Uma key serve todos os formulários (diferenciados por `subject`). Orar em `CLOUDFLARE_PAGES`.
+4. No deploy (Cloudflare): definir as variáveis `PUBLIC_WEB3FORMS_KEY` e `PUBLIC_SITE_URL` (o `.env` não vai para o deploy).
+5. Após o 1º submit real, o Web3Forms valida o domínio/remetente.
 
 ## Checklist pré-lançamento
 
-- [ ] Todas as imagens otimizadas (ver `IMAGES.md`)
-- [ ] Meta tags de SEO preenchidas por página (title, description, Open Graph)
-- [ ] `sitemap.xml` gerado (`@astrojs/sitemap`)
-- [ ] `robots.txt` presente
-- [ ] Favicon e ícone para partilha (OG image) configurados
-- [ ] Formulário testado end-to-end (email chega mesmo)
-- [ ] Testado em mobile real (não só DevTools)
-- [ ] Lighthouse ≥ 90 em Performance, Accessibility, SEO
-- [ ] Links de redes sociais corretos
-- [ ] Google Search Console configurado e sitemap submetido
-- [ ] (Opcional) Google Analytics / Meta Pixel
-
-## Variáveis de ambiente
-
-Ver `.env.example` na raiz — copiar para `.env` e preencher localmente (nunca commitar `.env`).
+- [x] Build ok, 6+ páginas
+- [x] Formulários ligados (key no `.env` + injetada no build)
+- [x] Política de Privacidade & Cookies (RGPD)
+- [x] Sitemap + robots.txt (com domínio real)
+- [x] Meta/OG por página
+- [ ] Trocar placeholders por imagens reais (ver `IMAGES.md`)
+- [ ] Ligar domínio custom `marianapita.pt` (após Active no Cloudflare)
+- [ ] Testar envio real do formulário até ao email
+- [ ] Google Search Console + sitemap submetido
+- [ ] Google Analytics / Meta Pixel (ver deferred)
