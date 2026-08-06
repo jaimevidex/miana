@@ -1,0 +1,42 @@
+---
+// Componente de vídeo otimizado para performance (ver docs/IMAGES.md "Regras de performance (vídeo)").
+// Boas práticas aplicadas: poster + preload=metadata (lazy), mute/loop/playsinline,
+// fontes WebM/MP4 com H.264, carregar apenas sob demanda.
+
+interface Props {
+  sources: { src: string; type: string }[];
+  poster?: string;
+  /** Loop silencioso (reels verticais, destaques). Sempre sem áudio. */
+  loop?: boolean;
+  /** Se verdadeiro (default), começa a carregar só quando o utilizador der play (lazy). */
+  lazy?: boolean;
+  /** Largura/aspeto em que o poster se apresenta antes do play (evita saltos de layout). */
+  aspect?: string;
+  caption?: string;
+}
+
+const { sources, poster, loop = false, lazy = true, aspect = 'aspect-video', caption } = Astro.props;
+const lazyProps = lazy ? { 'preload': 'metadata', 'poster': poster } : { controls: true };
+---
+
+<figure class="overflow-hidden rounded-sm">
+  <video
+    class:list={['w-full object-cover', aspect]}
+    controls
+    muted={loop ? true : undefined}
+    loop={loop ? true : undefined}
+    playsinline
+    {...lazyProps}
+  >
+    {sources.map((s) => (
+      <source src={s.src} type={s.type} />
+    ))}
+  </video>
+  {caption && <figcaption class="mt-2 text-xs text-center text-darkbrown/60">{caption}</figcaption>}
+</figure>
+
+<style>
+  video {
+    background: #2D1918;
+  }
+</style>

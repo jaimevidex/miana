@@ -12,7 +12,7 @@ interface Props {
 }
 
 const { title, description, ogImage = '/images/og-default.jpg', hasHero = false } = Astro.props;
-const siteURL = new URL(Astro.site ?? 'https://exemplo-mariana.pt');
+const siteURL = new URL(Astro.site ?? 'https://marianapita.pt');
 const canonicalURL = new URL(Astro.url.pathname, siteURL);
 ---
 
