@@ -1,0 +1,7 @@
+# Configuração do Cloudflare Pages via Wrangler (nova versão, Pages on Workers).
+# O site é um build estático do Astro (output: dist).
+name = "miana"
+compatibility_date = "2026-08-06"
+
+[assets]
+directory = "./dist"
