@@ -11,6 +11,8 @@ interface Item {
 interface Props {
   items?: Item[];
   showFilters?: boolean;
+  /** Padrão "tijolo": alturas variadas, com topo e fundo alinhados. */
+  brick?: boolean;
 }
 
 const defaultItems: Item[] = [
@@ -22,10 +24,15 @@ const defaultItems: Item[] = [
   { category: 'Beauty', alt: 'Retrato elegante de maquilhagem premium', tall: true },
   { category: 'Workshops', alt: 'Sessão 1:1 de automaquilhagem' },
   { category: 'Skincare', alt: 'Análise de pele e produtos de skincare', tall: true },
+  { category: 'Noivas', alt: 'Celebração final de um grande dia com glow natural', tall: true },
+  { category: 'Beauty', alt: 'Pormenor de maquilhagem editorial com brilho' },
 ];
 
-const { items = defaultItems, showFilters = true } = Astro.props;
+const { items = defaultItems, showFilters = true, brick = false } = Astro.props;
 const categories = ['Todos', ...new Set(items.map((i) => i.category))];
+// Padrão "tijolo" 5×3 do cliente: cada letra é um tile, topo e fundo alinhados (cada coluna soma 5 filas).
+const brickLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+const brickAreas = '"A B B" "C D E" "C F G" "H F I" "J J I"';
 
 const toneByCategory: Record<string, string> = {
   Noivas: 'linear-gradient(160deg, #FFF1EC 0%, #F3D9C8 60%, #C89B7A 100%)',
@@ -52,16 +59,27 @@ const toneByCategory: Record<string, string> = {
     </div>
   )}
 
-  <div class="columns-1 sm:columns-2 lg:columns-3 gap-5 space-y-5" id="gallery-grid">
-    {items.map((item) => (
+  <div
+    class:list={[brick ? 'grid grid-cols-3 gap-3 md:gap-4' : 'columns-1 sm:columns-2 lg:columns-3 gap-5 space-y-5']}
+    id="gallery-grid"
+    style={brick ? { gridTemplateAreas: brickAreas, gridTemplateRows: 'repeat(5, 1fr)', aspectRatio: '3 / 5' } : undefined}
+  >
+    {items.map((item, i) => (
       <button
-        class="gallery-item block w-full break-inside-avoid relative overflow-hidden rounded-sm group"
+        class:list={[
+          'gallery-item block w-full break-inside-avoid relative overflow-hidden rounded-sm group',
+          brick && 'h-full',
+        ]}
+        style={brick ? { gridArea: brickLetters[i % brickLetters.length] } : undefined}
         data-category={item.category}
         aria-label={`Ver ${item.alt} em tamanho maior`}
       >
         <!-- Placeholder — substituir por <Image src={...} alt={item.alt} /> -->
         <div
-          class:list={['gallery-placeholder w-full', item.tall ? 'aspect-[4/5]' : 'aspect-square']}
+          class:list={[
+            'gallery-placeholder w-full',
+            brick ? 'h-full' : item.tall ? 'aspect-[4/5]' : 'aspect-square',
+          ]}
           style={`background:${toneByCategory[item.category] ?? '#EFE7E0'}`}
         ></div>
         <span class="absolute inset-0 bg-burgundy/0 group-hover:bg-burgundy/5 transition-colors"></span>
