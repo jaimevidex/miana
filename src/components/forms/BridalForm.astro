@@ -21,18 +21,18 @@ const radioCls = 'accent-burgundy';
 
   <div class="grid sm:grid-cols-2 gap-5">
     <div>
-      <label class={labelCls} for="b-name">Nome completo</label>
+      <label class={labelCls} for="b-name">Nome completo <span class="text-burgundy">*</span></label>
       <input id="b-name" name="nome" type="text" required class={inputCls} />
     </div>
     <div>
       <label class={labelCls} for="b-phone">Contacto telefónico</label>
-      <input id="b-phone" name="telefone" type="tel" required class={inputCls} />
+      <input id="b-phone" name="telefone" type="tel" class={inputCls} />
     </div>
   </div>
 
   <div>
     <label class={labelCls} for="b-email">E-mail</label>
-    <input id="b-email" name="email" type="email" required class={inputCls} />
+    <input id="b-email" name="email" type="email" class={inputCls} />
   </div>
 
   <fieldset>
@@ -53,22 +53,22 @@ const radioCls = 'accent-burgundy';
   <div id="bride-fields" class="grid gap-5">
     <div class="grid sm:grid-cols-2 gap-5">
       <div>
-        <label class={labelCls} for="b-wedding-date">Data do casamento</label>
-        <input id="b-wedding-date" name="data_casamento" type="date" class={inputCls} />
+        <label class={labelCls} for="b-wedding-date">Data do casamento <span class="text-burgundy">*</span></label>
+        <input id="b-wedding-date" name="data_casamento" type="date" required class={inputCls} />
       </div>
       <div>
-        <label class={labelCls} for="b-ready-time">Hora a que tens de estar pronta</label>
-        <input id="b-ready-time" name="hora_pronta" type="time" class={inputCls} />
+        <label class={labelCls} for="b-ready-time">Hora a que tens de estar pronta <span class="text-burgundy">*</span></label>
+        <input id="b-ready-time" name="hora_pronta" type="time" required class={inputCls} />
       </div>
     </div>
     <div class="grid sm:grid-cols-2 gap-5">
       <div>
-        <label class={labelCls} for="b-prep-location">Local da preparação</label>
-        <input id="b-prep-location" name="local_preparacao" type="text" class={inputCls} />
+        <label class={labelCls} for="b-prep-location">Local da preparação <span class="text-burgundy">*</span></label>
+        <input id="b-prep-location" name="local_preparacao" type="text" required class={inputCls} />
       </div>
       <div>
-        <label class={labelCls} for="b-trial-location">Local da prova</label>
-        <input id="b-trial-location" name="local_prova" type="text" class={inputCls} />
+        <label class={labelCls} for="b-trial-location">Local da prova <span class="text-burgundy">*</span></label>
+        <input id="b-trial-location" name="local_prova" type="text" required class={inputCls} />
       </div>
     </div>
     <div class="grid sm:grid-cols-2 gap-5">
@@ -90,8 +90,8 @@ const radioCls = 'accent-burgundy';
         </div>
       </fieldset>
       <div>
-        <label class={labelCls} for="b-guests">Número de guests</label>
-        <input id="b-guests" name="numero_guests" type="number" min="0" class={inputCls} />
+        <label class={labelCls} for="b-guests">Número de guests <span class="text-burgundy">*</span></label>
+        <input id="b-guests" name="numero_guests" type="number" min="0" required class={inputCls} />
       </div>
     </div>
     <fieldset>
@@ -155,6 +155,8 @@ const radioCls = 'accent-burgundy';
     <textarea id="b-message" name="mensagem" rows="4" class={inputCls}></textarea>
   </div>
 
+  <p class="text-xs text-darkbrown/60"><span class="text-burgundy">*</span> Campos obrigatórios</p>
+
   <button type="submit" class="w-fit bg-burgundy text-offwhite px-8 py-3.5 text-sm font-semibold rounded-full hover:opacity-90 transition">
     Pedir Orçamento
   </button>
@@ -182,6 +184,12 @@ const radioCls = 'accent-burgundy';
 
   form?.addEventListener('submit', (e) => {
     e.preventDefault();
+    const phone = (form.querySelector<HTMLInputElement>('[name="telefone"]')?.value ?? '').trim();
+    const email = (form.querySelector<HTMLInputElement>('[name="email"]')?.value ?? '').trim();
+    if (!phone && !email) {
+      if (status) status.textContent = 'Coloca pelo menos um contacto para poder responder-te.';
+      return;
+    }
     void submitWeb3Form(form, status);
   });
 </script>

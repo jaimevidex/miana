@@ -2,6 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 import EducationForm from '../../components/forms/EducationForm.astro';
 import Gallery from '../../components/Gallery.astro';
+import Hero from '../../components/Hero.astro';
 
 const workshops = [
   {
@@ -25,15 +26,12 @@ const workshops = [
 ];
 ---
 
-<Layout title="Beauty Education — Workshops de Makeup & Skincare | Mariana" description="Workshops de automaquilhagem 1:1, skincare education e group sessions. Aprende a dominar a tua rotina e a tua maquilhagem com base científica.">
-  <section class="pt-32 pb-16 max-w-container mx-auto px-6 md:px-16 text-center">
-    <p class="eyebrow mb-4">Workshops &amp; Masterclasses</p>
-    <h1 class="text-display-l italic max-w-3xl mx-auto reveal">Beauty Education</h1>
-    <p class="text-darkbrown/70 mt-5 max-w-xl mx-auto reveal">
-      Aprende a dominar a tua rotina e a tua maquilhagem. Conhecimento, autonomia e técnica com
-      base científica e prática descomplicada.
-    </p>
-  </section>
+<Layout title="Beauty Education — Workshops de Makeup & Skincare | Mariana" description="Workshops de automaquilhagem 1:1, skincare education e group sessions. Aprende a dominar a tua rotina e a tua maquilhagem com base científica." hasHero>
+  <Hero
+    eyebrow="Workshops & Masterclasses"
+    title="Beauty Education"
+    sub="Aprende a dominar a tua rotina e a tua maquilhagem. Conhecimento, autonomia e técnica com base científica e prática descomplicada."
+  />
 
   <section class="max-w-container mx-auto px-6 md:px-16 pb-16">
     <div class="max-w-2xl mx-auto reveal">

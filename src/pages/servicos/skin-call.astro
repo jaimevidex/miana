@@ -1,6 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import SkinCallForm from '../../components/forms/SkinCallForm.astro';
+import Hero from '../../components/Hero.astro';
 
 const planos = [
   {
@@ -41,15 +42,12 @@ const processo = [
 ];
 ---
 
-<Layout title="The Skin Call — Consultoria de Skincare | Mariana" description="A tua pele analisada através da ciência. Consultorias 1:1 de skincare com planos de 3, 6, 9 ou 12 meses, guiadas por uma mestra em Cosmetologia Avançada.">
-  <section class="pt-32 pb-16 max-w-container mx-auto px-6 md:px-16 text-center">
-    <p class="eyebrow mb-4">Skin Analysis &amp; Skincare Routine Design</p>
-    <h1 class="text-display-l italic max-w-3xl mx-auto reveal">The Skin Call</h1>
-    <p class="text-darkbrown/70 mt-5 max-w-xl mx-auto reveal">
-      A tua pele analisada através da ciência. Uma rotina de skincare simplificada e intencional,
-      desenhada para o teu dia a dia e necessidades.
-    </p>
-  </section>
+<Layout title="The Skin Call — Consultoria de Skincare | Mariana" description="A tua pele analisada através da ciência. Consultorias 1:1 de skincare com planos de 3, 6, 9 ou 12 meses, guiadas por uma mestra em Cosmetologia Avançada." hasHero>
+  <Hero
+    eyebrow="Skin Analysis & Skincare Routine Design"
+    title="The Skin Call"
+    sub="A tua pele analisada através da ciência. Uma rotina de skincare simplificada e intencional, desenhada para o teu dia a dia e necessidades."
+  />
 
   <section class="max-w-container mx-auto px-6 md:px-16 pb-16">
     <div class="max-w-2xl mx-auto reveal">

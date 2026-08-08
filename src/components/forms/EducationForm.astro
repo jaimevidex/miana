@@ -16,16 +16,16 @@ const radioCls = 'accent-burgundy';
 
   <div class="grid sm:grid-cols-3 gap-5">
     <div>
-      <label class={labelCls} for="e-name">Nome completo</label>
+      <label class={labelCls} for="e-name">Nome completo <span class="text-burgundy">*</span></label>
       <input id="e-name" name="nome" type="text" required class={inputCls} />
     </div>
     <div>
       <label class={labelCls} for="e-phone">Contacto telefónico</label>
-      <input id="e-phone" name="telefone" type="tel" required class={inputCls} />
+      <input id="e-phone" name="telefone" type="tel" class={inputCls} />
     </div>
     <div>
       <label class={labelCls} for="e-email">E-mail</label>
-      <input id="e-email" name="email" type="email" required class={inputCls} />
+      <input id="e-email" name="email" type="email" class={inputCls} />
     </div>
   </div>
 
@@ -47,12 +47,12 @@ const radioCls = 'accent-burgundy';
 
   <div class="grid sm:grid-cols-2 gap-5">
     <div>
-      <label class={labelCls} for="e-location">Local do workshop</label>
-      <input id="e-location" name="local_workshop" type="text" class={inputCls} />
+      <label class={labelCls} for="e-location">Local do workshop <span class="text-burgundy">*</span></label>
+      <input id="e-location" name="local_workshop" type="text" required class={inputCls} />
     </div>
     <div>
-      <label class={labelCls} for="e-datetime">Data e hora propostas</label>
-      <input id="e-datetime" name="data_hora" type="datetime-local" class={inputCls} />
+      <label class={labelCls} for="e-datetime">Data e hora propostas <span class="text-burgundy">*</span></label>
+      <input id="e-datetime" name="data_hora" type="datetime-local" required class={inputCls} />
     </div>
   </div>
 
@@ -106,6 +106,8 @@ const radioCls = 'accent-burgundy';
     </div>
   </div>
 
+  <p class="text-xs text-darkbrown/60"><span class="text-burgundy">*</span> Campos obrigatórios</p>
+
   <button type="submit" class="w-fit bg-burgundy text-offwhite px-8 py-3.5 text-sm font-semibold rounded-full hover:opacity-90 transition">
     Agendar o teu Workshop
   </button>
@@ -129,6 +131,12 @@ const radioCls = 'accent-burgundy';
 
   form?.addEventListener('submit', (e) => {
     e.preventDefault();
+    const phone = (form.querySelector<HTMLInputElement>('[name="telefone"]')?.value ?? '').trim();
+    const email = (form.querySelector<HTMLInputElement>('[name="email"]')?.value ?? '').trim();
+    if (!phone && !email) {
+      if (status) status.textContent = 'Coloca pelo menos um contacto para poder responder-te.';
+      return;
+    }
     void submitWeb3Form(form, status);
   });
 </script>
