@@ -7,154 +7,67 @@ const inputCls =
   'mt-1 w-full border border-darkbrown/20 rounded-sm px-4 py-3 bg-white focus:border-burgundy outline-none';
 const labelCls = 'block text-sm font-medium text-darkbrown';
 const radioCls = 'accent-burgundy';
-
-interface PlanOption {
-  value: string;
-  label: string;
-}
-const planOptions: PlanOption[] = [
-  { value: 'One Time Call (Plano 3M)', label: 'One Time Call (Plano 3M)' },
-  { value: 'Duo Call (Plano 6M)', label: 'Duo Call (Plano 6M)' },
-  { value: 'Triple Call (Plano 9M)', label: 'Triple Call (Plano 9M)' },
-  { value: 'Full Year Call (Plano 12M)', label: 'Full Year Call (Plano 12M)' },
-  { value: 'Ainda não tenho a certeza', label: 'Ainda não tenho a certeza' },
-];
 ---
 
-<form id="form-skin-call" action="https://api.web3forms.com/submit" method="POST" class="grid gap-6">
+<form id="form-skin-call" action="https://api.web3forms.com/submit" method="POST" novalidate class="grid gap-6">
   <input type="hidden" name="access_key" value={accessKey} />
   <input type="hidden" name="subject" value="Quiz — The Skin Call" />
   <input type="checkbox" name="botcheck" class="hidden" style="display:none" />
-  <input type="hidden" name="plano_recomendado" id="plano-recomendado" />
 
-  <div class="grid sm:grid-cols-3 gap-5">
+  <div class="grid sm:grid-cols-2 gap-5">
     <div>
       <label class={labelCls} for="sc-name">Nome completo <span class="text-burgundy">*</span></label>
       <input id="sc-name" name="nome" type="text" required class={inputCls} />
     </div>
     <div>
-      <label class={labelCls} for="sc-phone">Contacto telefónico</label>
-      <input id="sc-phone" name="telefone" type="tel" class={inputCls} />
-    </div>
-    <div>
-      <label class={labelCls} for="sc-email">E-mail</label>
-      <input id="sc-email" name="email" type="email" class={inputCls} />
+      <label class={labelCls} for="sc-phone">Contacto telefónico <span class="text-burgundy">*</span></label>
+      <input id="sc-phone" name="telefone" type="tel" required class={inputCls} />
     </div>
   </div>
 
+  <div>
+    <label class={labelCls} for="sc-email">E-mail <span class="text-burgundy">*</span></label>
+    <input id="sc-email" name="email" type="email" required class={inputCls} />
+  </div>
+
   <fieldset>
-    <legend class={labelCls}><strong>1.</strong> Qual é o teu objetivo principal neste momento?</legend>
+    <legend class={labelCls}>Qual o plano que procuras? <span class="text-burgundy">*</span></legend>
     <div class="grid gap-2 mt-3">
       {[
-        { v: 'A', t: 'Ajustar a rotina básica e organizar os produtos que já tenho.' },
-        { v: 'B', t: 'Introduzir os meus primeiros ativos de tratamento (ex: ácidos/antioxidantes) e ver a evolução.' },
-        { v: 'C', t: 'Gerir variáveis mais persistentes que exigem protocolos mais elaborados.' },
-        { v: 'D', t: 'Fazer um acompanhamento de longo prazo, introduzir Retinol e adaptar a pele às 4 estações do ano.' },
-      ].map((q) => (
+        { v: 'One Time Call (Plano 3M)', t: 'One Time Call - Plano 3M' },
+        { v: 'Duo Call (Plano 6M)', t: 'Duo Call - Plano 6M' },
+        { v: 'Triple Call (Plano 9M)', t: 'Triple Call - Plano 9M' },
+        { v: 'Full Year Call (Plano 12M)', t: 'Full Year Call - Plano 12M' },
+        { v: 'Ainda não sei', t: 'Ainda não sei' },
+      ].map((p) => (
         <label class="inline-flex items-start gap-3 text-sm bg-white border border-darkbrown/10 rounded-sm px-4 py-3">
-          <input type="radio" name="objetivo" value={q.v} required class={`${radioCls} mt-0.5`} data-objetivo={q.v} />
-          <span>{q.t}</span>
+          <input type="radio" name="plano" value={p.v} required class={`${radioCls} mt-0.5`} />
+          <span>{p.t}</span>
         </label>
       ))}
     </div>
   </fieldset>
-
-  <fieldset>
-    <legend class={labelCls}><strong>2.</strong> Já usas ativos de tratamento na tua rotina atual?</legend>
-    <div class="flex flex-wrap gap-6 mt-2">
-      {['Sim', 'Não', 'Não sei'].map((o) => (
-        <label class="inline-flex items-center gap-2 text-sm">
-          <input type="radio" name="usas_ativos" value={o} required class={radioCls} />
-          {o}
-        </label>
-      ))}
-    </div>
-  </fieldset>
-
-  <fieldset>
-    <legend class={labelCls}><strong>3.</strong> Procuras um ajuste pontual ou um acompanhamento de evolução?</legend>
-    <div class="flex flex-wrap gap-6 mt-2">
-      <label class="inline-flex items-center gap-2 text-sm">
-        <input type="radio" name="tipo_acompanhamento" value="Ajuste pontual" required class={radioCls} />
-        Ajuste pontual
-      </label>
-      <label class="inline-flex items-center gap-2 text-sm">
-        <input type="radio" name="tipo_acompanhamento" value="Acompanhamento contínuo/evolução" class={radioCls} />
-        Acompanhamento contínuo/evolução
-      </label>
-    </div>
-  </fieldset>
-
-  <div>
-    <label class={labelCls} for="sc-plano"><strong>4.</strong> Que plano achas ser mais indicado para ti? <span class="text-burgundy">*</span></label>
-    <select id="sc-plano" name="plano_escolhido" required class={inputCls}>
-      {planOptions.map((p) => (
-        <option value={p.value}>{p.label}</option>
-      ))}
-    </select>
-    <p id="plano-sugestao" class="mt-2 text-sm text-burgundy font-medium"></p>
-  </div>
-
-  <div>
-    <label class={labelCls} for="sc-concerns"><strong>5.</strong> Quais as tuas principais preocupações com a pele?</label>
-    <textarea id="sc-concerns" name="preocupacoes" rows="4" class={inputCls}></textarea>
-  </div>
 
   <p class="text-xs text-darkbrown/60"><span class="text-burgundy">*</span> Campos obrigatórios</p>
 
-  <button type="submit" class="w-fit bg-burgundy text-offwhite px-8 py-3.5 text-sm font-semibold rounded-full hover:opacity-90 transition">
-    Escolhe o teu plano
-  </button>
-
-  <p id="form-skin-call-status" class="mt-2" role="status" aria-live="polite"></p>
+  <div class="flex flex-wrap items-center gap-4">
+    <button type="submit" class="bg-burgundy text-offwhite px-8 py-3.5 text-sm font-semibold rounded-full hover:opacity-90 transition">
+      Submeter Formulário
+    </button>
+    <p id="form-skin-call-status" class="mt-3 text-sm" role="status" aria-live="polite"></p>
+  </div>
 </form>
 
 <script>
-  import { submitWeb3Form } from '../../lib/web3form';
+  import { submitWeb3Form, validateRequiredFields, scrollFormIntoView } from '../../lib/web3form';
 
   const form = document.getElementById('form-skin-call') as HTMLFormElement | null;
   const status = document.getElementById('form-skin-call-status');
-  const select = document.getElementById('sc-plano') as HTMLSelectElement | null;
-  const sugestao = document.getElementById('plano-sugestao');
-  const recomendado = document.getElementById('plano-recomendado') as HTMLInputElement | null;
-
-  const recommendationByObjective: Record<string, string> = {
-    A: 'One Time Call (Plano 3M)',
-    B: 'Duo Call (Plano 6M)',
-    C: 'Triple Call (Plano 9M)',
-    D: 'Full Year Call (Plano 12M)',
-  };
-
-  function onChangeObjetivo() {
-    if (!form) return;
-    const checked = form.querySelector<HTMLInputElement>('input[name="objetivo"]:checked');
-    const value = checked?.getAttribute('data-objetivo') ?? '';
-    const rec = recommendationByObjective[value];
-    if (!rec) return;
-    if (recomendado) recomendado.value = rec;
-    if (sugestao) {
-      sugestao.textContent = `Sugestão: ${rec}`;
-    }
-    if (select) {
-      [...select.options].forEach((opt) => {
-        if (opt.value === rec) opt.selected = true;
-      });
-    }
-  }
-
-  form?.querySelectorAll<HTMLInputElement>('input[name="objetivo"]').forEach((radio) =>
-    radio.addEventListener('change', onChangeObjetivo)
-  );
 
   form?.addEventListener('submit', (e) => {
     e.preventDefault();
-    if (!recomendado?.value && select?.value && select.value !== 'Ainda não tenho a certeza') {
-      recomendado.value = select.value;
-    }
-    const phone = (form.querySelector<HTMLInputElement>('[name="telefone"]')?.value ?? '').trim();
-    const email = (form.querySelector<HTMLInputElement>('[name="email"]')?.value ?? '').trim();
-    if (!phone && !email) {
-      if (status) status.textContent = 'Coloca pelo menos um contacto para poder responder-te.';
+    if (!validateRequiredFields(form)) {
+      scrollFormIntoView(form);
       return;
     }
     void submitWeb3Form(form, status);

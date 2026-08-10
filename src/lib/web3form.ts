@@ -12,6 +12,57 @@ export function getAccessKey(): string {
   return 'COLOCAR_ACCESS_KEY_AQUI';
 }
 
+const REQUIRED_ERROR_CLS = 'border-burgundy bg-[#FBEDF0]';
+
+/**
+ * Rola até ao topo do formulário, descontando a altura do header fixo (h-20 = 80px),
+ * para que o campo em falta não fique cortado/escondido.
+ */
+export function scrollFormIntoView(form: HTMLFormElement): void {
+  const header = document.getElementById('site-header');
+  const headerHeight = header?.offsetHeight ?? 80;
+  const top = form.getBoundingClientRect().top + window.scrollY - headerHeight - 16;
+  window.scrollTo({ top, behavior: 'smooth' });
+}
+
+/**
+ * Valida os campos com `required` (sem a animação nativa do browser).
+ * Marca a vermelho/burgundy os que estiverem vazios e devolve true se tudo ok.
+ */
+export function validateRequiredFields(form: HTMLFormElement): boolean {
+  let valid = true;
+  const radioGroups = new Map<string, HTMLInputElement[]>();
+  form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>('[required]').forEach((el) => {
+    if (el.closest('.hidden')) return;
+    const isEmpty =
+      el.type === 'checkbox' || el.type === 'radio' ? !el.checked : !(el.value ?? '').trim();
+    if (el.type === 'radio') {
+      const name = el.name;
+      if (!radioGroups.has(name)) radioGroups.set(name, []);
+      radioGroups.get(name)!.push(el);
+    } else if (isEmpty) {
+      valid = false;
+      el.classList.add(...REQUIRED_ERROR_CLS.split(' '));
+    } else {
+      el.classList.remove(...REQUIRED_ERROR_CLS.split(' '));
+    }
+  });
+
+  radioGroups.forEach((group) => {
+    const allEmpty = group.every((r) => !r.checked);
+    group.forEach((r) => {
+      const legend = r.closest('fieldset')?.querySelector('legend');
+      if (allEmpty) {
+        valid = false;
+        legend?.classList.add(...REQUIRED_ERROR_CLS.split(' '));
+      } else {
+        legend?.classList.remove(...REQUIRED_ERROR_CLS.split(' '));
+      }
+    });
+  });
+  return valid;
+}
+
 /**
  * Envia o formulário para o Web3Forms e atualiza o elemento de estado.
  * Devolve true em caso de sucesso.
