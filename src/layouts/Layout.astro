@@ -76,8 +76,7 @@ const canonicalURL = new URL(Astro.url.pathname, siteURL);
       );
       document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
 
-      // Scroll-spy: atualiza o hash do URL conforme a secção ativa (sem criar histórico),
-      // tanto a rolar para baixo como para cima.
+      // Scroll-spy: sem escrita no URL. Reservado para realçar a secção ativa no futuro.
       const spySections = Array.from(
         document.querySelectorAll<HTMLElement>('section[id]')
       );
@@ -93,11 +92,7 @@ const canonicalURL = new URL(Astro.url.pathname, siteURL);
           else break;
         }
         if (!current) return;
-        const id = current.id;
-        if (id !== activeId) {
-          activeId = id;
-          history.replaceState(null, '', `#${id}`);
-        }
+        activeId = current.id;
       };
       const onScroll = () => {
         requestAnimationFrame(spyUpdate);
@@ -105,6 +100,23 @@ const canonicalURL = new URL(Astro.url.pathname, siteURL);
       window.addEventListener('scroll', onScroll, { passive: true });
       window.addEventListener('resize', onScroll, { passive: true });
       spyUpdate();
+
+      // Âncoras internas: rolam até à secção mas não escrevem o hash no URL.
+      document.addEventListener(
+        'click',
+        (e) => {
+          const target = e.target as HTMLElement | null;
+          const anchor = target?.closest<HTMLAnchorElement>('a[href^="#"]');
+          if (!anchor) return;
+          const id = anchor.getAttribute('href')?.slice(1);
+          if (!id) return;
+          const el = document.getElementById(id);
+          if (!el) return;
+          e.preventDefault();
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        },
+        { capture: true }
+      );
     </script>
   </body>
 </html>
