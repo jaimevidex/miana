@@ -12,7 +12,7 @@ export function getAccessKey(): string {
   return 'COLOCAR_ACCESS_KEY_AQUI';
 }
 
-const REQUIRED_ERROR_CLS = 'border-burgundy bg-[#FBEDF0]';
+const REQUIRED_ERROR_CLS = '!border-burgundy !bg-[#FBEDF0]';
 
 /**
  * Rola até ao topo do formulário, descontando a altura do header fixo (h-20 = 80px),

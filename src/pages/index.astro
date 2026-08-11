@@ -29,9 +29,8 @@ const phTones = [
 <Layout title="Mariana — Science-Led Skincare & Effortless Beauty" description="Unimos a ciência da pele à arte da maquilhagem. Rituais de skincare personalizados e maquilhagem glowy e sunkissed para noivas, eventos e educação." hasHero>
   <Hero />
 
-  <section class="max-w-container mx-auto px-6 md:px-16 py-24">
+  <section id="filosofia" class="max-w-container mx-auto px-6 md:px-16 py-32">
     <div class="max-w-2xl mx-auto text-center reveal">
-      <p class="eyebrow mb-6">SKIN &amp; MAKEUP</p>
       <p class="text-lg md:text-xl leading-relaxed text-darkbrown/85">
         Acreditamos que a verdadeira beleza começa na saúde da pele. Guiada pela ciência da
         Bioquímica e da Cosmetologia, a nossa filosofia rejeita o excesso de produtos e as
@@ -45,8 +44,8 @@ const phTones = [
     </div>
   </section>
 
-  <section class="max-w-container mx-auto px-6 md:px-16 py-16">
-    <p class="eyebrow text-center mb-12 reveal">O QUE FAZEMOS</p>
+  <section id="servicos" class="max-w-container mx-auto px-6 md:px-16 pb-24">
+    <h2 class="text-display-l font-bold text-center text-burgundy mb-12 reveal">O Que Fazemos</h2>
     <div class="grid md:grid-cols-3 gap-8">
       {servicos.map((s, i) => (
         <a href={s.href} class="group relative block rounded-sm overflow-hidden reveal border border-darkbrown/10 hover:border-burgundy/40 transition">
@@ -66,8 +65,8 @@ const phTones = [
     </div>
   </section>
 
-  <section class="max-w-container mx-auto px-6 md:px-16 py-24">
-    <p class="eyebrow text-center mb-4 reveal">What they say</p>
+  <section id="testemunhos" class="max-w-container mx-auto px-6 md:px-16 py-32">
+    <h2 class="text-display-l font-bold text-center text-burgundy mb-4 reveal">What They Say</h2>
     <p class="text-darkbrown/60 text-center max-w-md mx-auto text-sm reveal">
       Espaço reservado para as reviews das nossas clientes e noivas.
     </p>

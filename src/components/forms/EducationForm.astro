@@ -34,9 +34,9 @@ const radioCls = 'accent-burgundy';
     <legend class={labelCls}>Formato pretendido <span class="text-burgundy">*</span></legend>
     <div class="grid gap-2 mt-3">
       {[
-        { v: 'Automaquilhagem 1:1', t: 'Automaquilhagem 1:1 (Presencial)' },
+        { v: 'Automaquilhagem', t: 'Automaquilhagem' },
         { v: 'Skincare Education', t: 'Skincare Education' },
-        { v: 'Group Sessions & Bachelorette Parties', t: 'Group Sessions & Bachelorette Parties' },
+        { v: 'Friends & Bachelorette Parties', t: 'Friends & Bachelorette Parties' },
       ].map((f) => (
         <label class="inline-flex items-center gap-3 text-sm bg-white border border-darkbrown/10 rounded-sm px-4 py-3">
           <input type="radio" name="formato" value={f.v} required class={radioCls} data-formato={f.v} />
@@ -71,7 +71,7 @@ const radioCls = 'accent-burgundy';
     </div>
   </fieldset>
 
-  <!-- Campos adicionais GROUP SESSIONS & BACHELORETTE PARTIES -->
+  <!-- Campos adicionais FRIENDS & BACHELORETTE PARTIES -->
   <div id="group-fields" class="grid gap-5 hidden">
     <fieldset>
       <legend class={labelCls}>Qual a modalidade pretendida? <span class="text-burgundy">*</span></legend>
@@ -107,6 +107,11 @@ const radioCls = 'accent-burgundy';
     </div>
   </div>
 
+  <div>
+    <label class={labelCls} for="e-notes">Mensagem (opcional)</label>
+    <textarea id="e-notes" name="mensagem" rows={5} class="mt-1 w-full border border-darkbrown/20 rounded-sm px-4 py-3 bg-white focus:border-burgundy outline-none resize-y"></textarea>
+  </div>
+
   <p class="text-xs text-darkbrown/60"><span class="text-burgundy">*</span> Campos obrigatórios</p>
 
   <div class="flex flex-wrap items-center gap-4">
@@ -126,7 +131,7 @@ const radioCls = 'accent-burgundy';
 
   form?.querySelectorAll<HTMLInputElement>('[data-formato]').forEach((radio) => {
     radio.addEventListener('change', () => {
-      const isGroup = radio.getAttribute('data-formato') === 'Group Sessions & Bachelorette Parties';
+      const isGroup = radio.getAttribute('data-formato') === 'Friends & Bachelorette Parties';
       groupFields?.classList.toggle('hidden', !isGroup);
     });
   });

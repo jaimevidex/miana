@@ -42,6 +42,11 @@ const canonicalURL = new URL(Astro.url.pathname, siteURL);
       href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Pinyon+Script&family=Open+Sans:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
+  <script is:inline>
+      // Roda no head, antes do layout, para impedir a restauração de scroll a saltar o topo.
+      if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+      if (!window.location.hash) window.scrollTo(0, 0);
+    </script>
   </head>
   <body data-hero={hasHero ? 'true' : 'false'}>
     <Header />
@@ -51,6 +56,12 @@ const canonicalURL = new URL(Astro.url.pathname, siteURL);
     <Footer />
 
     <script>
+      // Evita que o browser restaure a posição de scroll entre páginas (salta para baixo).
+      if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+
+      // Ao carregar uma nova página, começa no topo (a menos que haja uma âncora no URL).
+      if (!window.location.hash) window.scrollTo(0, 0);
+
       // Reveal-on-scroll simples, sem dependências, respeita prefers-reduced-motion via CSS.
       const observer = new IntersectionObserver(
         (entries) => {
@@ -64,6 +75,36 @@ const canonicalURL = new URL(Astro.url.pathname, siteURL);
         { threshold: 0.15 }
       );
       document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
+
+      // Scroll-spy: atualiza o hash do URL conforme a secção ativa (sem criar histórico),
+      // tanto a rolar para baixo como para cima.
+      const spySections = Array.from(
+        document.querySelectorAll<HTMLElement>('section[id]')
+      );
+      let activeId: string | null = null;
+      const spyUpdate = () => {
+        if (!spySections.length) return;
+        const header = document.getElementById('site-header');
+        const headerH = header?.offsetHeight ?? 80;
+        const line = window.scrollY + headerH + 1;
+        let current: HTMLElement | null = spySections[0];
+        for (const el of spySections) {
+          if (el.getBoundingClientRect().top + window.scrollY <= line) current = el;
+          else break;
+        }
+        if (!current) return;
+        const id = current.id;
+        if (id !== activeId) {
+          activeId = id;
+          history.replaceState(null, '', `#${id}`);
+        }
+      };
+      const onScroll = () => {
+        requestAnimationFrame(spyUpdate);
+      };
+      window.addEventListener('scroll', onScroll, { passive: true });
+      window.addEventListener('resize', onScroll, { passive: true });
+      spyUpdate();
     </script>
   </body>
 </html>
