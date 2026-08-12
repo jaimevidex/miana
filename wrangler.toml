@@ -2,6 +2,8 @@
 # O site é um build estático do Astro (output: dist).
 name = "miana"
 compatibility_date = "2026-08-06"
+# Desativa o subdomínio público *.workers.dev — o site só fica disponível nos domínios custom.
+workers_dev = false
 
 [assets]
 directory = "./dist"

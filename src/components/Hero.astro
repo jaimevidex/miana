@@ -1,15 +1,58 @@
 ---
-// Imagem de fundo: substituir o placeholder por <Image> de astro:assets quando a foto real existir
-// (retrato "Sessão de Lisboa" — ver docs/IMAGES.md e docs/PLAN.md fase deferred).
+import { Image } from 'astro:assets';
+
+interface Props {
+  eyebrow?: string;
+  title?: string;
+  sub?: string;
+  /** Imagem de fundo (ImageMetadata importada de src/assets). */
+  image?: ImageMetadata;
+  /** Vídeo de fundo: [{ src, type }]. */
+  video?: Array<{ src: string; type: string }>;
+  /** Imagem de capa/fallback para o vídeo (caminho em /public). */
+  poster?: string;
+}
+
 const {
   eyebrow = 'Healthy Skin, Makeup that makes you glow',
   title = 'Skincare & Makeup',
   sub = 'Where skin science meets beauty. Maquilhagem que realça a tua beleza natural e uma rotina de skincare desenhada à medida da tua pele.',
+  image,
+  video,
+  poster,
 } = Astro.props;
 ---
 
 <section id="inicio" class="relative h-screen min-h-[640px] flex items-center overflow-hidden">
-  <div class="absolute inset-0 hero-placeholder"></div>
+  {
+    video && video.length ? (
+      <video
+        class="absolute inset-0 h-[140%] -top-[40%] w-full object-cover"
+        autoplay
+        muted
+        loop
+        playsinline
+        preload="metadata"
+        poster={poster}
+      >
+        {video.map((s) => (
+          <source src={s.src} type={s.type} />
+        ))}
+      </video>
+    ) : image ? (
+      <div class="absolute inset-0">
+        <Image
+          src={image}
+          alt={eyebrow}
+          loading="eager"
+          fetchpriority="high"
+          class="absolute inset-0 h-[140%] -top-[40%] w-full object-cover"
+        />
+      </div>
+    ) : (
+      <div class="absolute inset-0 hero-placeholder"></div>
+    )
+  }
   <div class="absolute inset-0 bg-gradient-to-t from-darkbrown/90 via-darkbrown/30 to-darkbrown/40"></div>
 
   <div class="relative z-10 max-w-container mx-auto w-full px-6 md:px-16 text-center">

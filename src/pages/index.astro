@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import Hero from '../components/Hero.astro';
+import heroImage from '../assets/74-IMG_8484.jpg';
 
 const servicos = [
   {
@@ -27,7 +28,7 @@ const phTones = [
 ---
 
 <Layout title="Mariana — Science-Led Skincare & Effortless Beauty" description="Unimos a ciência da pele à arte da maquilhagem. Rituais de skincare personalizados e maquilhagem glowy e sunkissed para noivas, eventos e educação." hasHero>
-  <Hero />
+  <Hero image={heroImage} />
 
   <section id="filosofia" class="max-w-container mx-auto px-6 md:px-16 py-32">
     <div class="max-w-2xl mx-auto text-center reveal">
