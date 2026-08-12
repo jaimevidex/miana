@@ -11,18 +11,21 @@ const workshops = [
     titulo: 'Automaquilhagem',
     modo: 'Individual, grupos, eventos de marcas ou corporativo',
     desc: 'Sessão exclusiva dedicada às características do teu rosto, aos teus gostos, ao teu estilo de vida e aos produtos que já tens em casa. Aprendes a criar desde looks do dia a dia ao glam de noite, descobrindo as técnicas, pincéis e tons certos para uma makeup que realce a tua beleza e que dure o dia inteiro.',
+    image: '/images/automaquilhagem.jpg',
   },
   {
     num: '#2',
     titulo: 'Skincare Education',
     modo: 'Individual, grupos, eventos de marcas ou corporativo',
     desc: 'Sessão focada em desmistificar a cosmetologia, ensinar a ler rótulos e entender os ativos certos para a tua pele. Uma abordagem prática e fundamentada na ciência, para que consigas criar a rotina de skincare perfeita para ti e adaptá-la a possíveis mudanças das necessidades da tua pele.',
+    image: '/images/skincare-education.jpg',
   },
   {
     num: '#3',
     titulo: 'Friends & Bachelorette Parties',
     modo: 'Presencial · Foco em Makeup ou Skincare',
     desc: 'Workshops presenciais em grupo desenhados para festas de despedida de solteira ou momentos de convívio entre amigas. Uma experiência leve, divertida e prática, cheia de dicas e aprendizagem. Tu decides que tema queres que aborde no workshop: makeup ou skincare. Depois, só tens de te deixar levar e aproveitar este momento épico com as tuas amigas.',
+    image: '/images/friends-parties.jpg',
   },
 ];
 ---
@@ -32,6 +35,8 @@ const workshops = [
     eyebrow="Workshops & Masterclasses"
     title="Beauty Education"
     sub="Aprende a dominar a tua rotina de skincare e a tua maquilhagem. Conhecimento, autonomia e técnica com base científica e prática descomplicada."
+image="/images/education-hero-1.jpg"
+    imgStyle="transform: scale(1.25) translateY(18%);"
   />
 
   <section id="intro" class="max-w-container mx-auto px-6 md:px-16 py-32">
@@ -48,8 +53,15 @@ const workshops = [
   <section id="workshops" class="max-w-container mx-auto px-6 md:px-16 pt-4 pb-24 space-y-24">
     {workshops.map((w, i) => (
       <div class={`grid md:grid-cols-3 items-end ${i % 2 === 1 ? '' : ''}`}>
-        <div class={`relative md:col-span-1 ${i % 2 === 1 ? 'md:order-2' : ''}`}>
-          <div class={`aspect-[3/4] w-full ${phTones[i % phTones.length]}`}></div>
+        <div class={`relative md:col-span-1 self-start ${i % 2 === 1 ? 'md:order-2' : ''}`}>
+          {
+            w.image ? (
+              <img src={w.image} alt={w.titulo} loading="lazy" decoding="async"
+                style="object-position: center bottom;" class="aspect-[3/4] w-full object-cover" />
+            ) : (
+              <div class={`aspect-[3/4] w-full ${phTones[i % phTones.length]}`}></div>
+            )
+          }
         </div>
         <div class={`md:col-span-2 flex items-end ${i % 2 === 1 ? 'md:order-1 justify-end' : ''}`}>
           <div class={`pb-4 max-w-lg ${i % 2 === 1 ? 'pr-6 md:pr-12 text-right' : 'pl-6 md:pl-12'}`}>

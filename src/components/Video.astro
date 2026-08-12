@@ -16,6 +16,8 @@ interface Props {
   lazy?: boolean;
   /** Largura/aspeto em que o poster se apresenta antes do play (evita saltos de layout). */
   aspect?: string;
+  /** Classes extra aplicadas ao <video> (ex: recorte lateral). */
+  videoClass?: string;
   caption?: string;
 }
 
@@ -27,6 +29,7 @@ const {
   controls = false,
   lazy = true,
   aspect = 'aspect-video',
+  videoClass = '',
   caption,
 } = Astro.props;
 const lazyProps = lazy ? { 'preload': 'metadata', 'poster': poster } : {};
@@ -34,10 +37,11 @@ const lazyProps = lazy ? { 'preload': 'metadata', 'poster': poster } : {};
 
 <figure class="overflow-hidden rounded-sm">
   <video
-    class:list={['w-full object-cover', aspect]}
+    class:list={['w-full object-cover', aspect, videoClass]}
     controls={controls || undefined}
     muted={autoplay || loop ? true : undefined}
     autoplay={autoplay || undefined}
+    loop={loop || undefined}
     playsinline
     {...lazyProps}
   >

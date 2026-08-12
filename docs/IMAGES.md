@@ -1,5 +1,7 @@
 # IMAGENS — Inventário e Regras
 
+> **Convenção actual (2026-08):** as imagens e vídeos do site vão para `public/images/` e `public/videos/`, com nomes legíveis por localização (ex: `public/images/hero-home.jpg`, `public/videos/mariana.mp4`, `public/videos/brides.mp4`). Quando colocares uma imagem e disseres onde entra, o nome é mudado automaticamente para algo digestible desse lugar.
+
 ## Categorias
 
 | Categoria | Usar? |

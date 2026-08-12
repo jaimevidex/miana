@@ -1,0 +1,84 @@
+default:
+    @just --list
+
+# Instalar dependências
+install:
+    npm install
+
+# Arrancar o dev server local (porta 4321)
+dev:
+    npm run dev
+
+# Arrancar o preview da build (porta 4321/4322)
+preview:
+    npm run preview
+
+# Build estático do Astro para dist/
+build:
+    npm run build
+
+# Build + limpar caches (útil quando estilos/imagens não atualizam localmente)
+build-clean:
+    rm -rf .astro node_modules/.vite node_modules/.cache
+    npm run build
+
+# Scaffold: verificar a tree git
+status:
+    git status
+
+# Commit com mensagem fixa (usa $MSG ou "update")
+commit MSG="update":
+    git add -A
+    git commit -m "{{MSG}}"
+
+# Commit e push (usa $MSG ou "update")
+commit-push MSG="update":
+    git add -A
+    git commit -m "{{MSG}}"
+    git push
+
+# Push sem commitar
+push:
+    git push
+
+# Deploy para a Cloudflare: build + deploy + verificação (rebuild sempre evita o bug de assets não subirem)
+deploy:
+    npm run build
+    npx wrangler deploy
+    @just verify
+
+# Verificar se o prod serve a build mais recente de uma página
+verify URL="https://marianapita.pt":
+    curl -s -L --max-time 20 "{{URL}}" | head -c 0
+    @echo "HTTP ok: {{URL}}"
+
+# Atualizar astro e integrações
+upgrade:
+    @echo "Atenção: a repo está no Astro v4. Só usa npx @astrojs/upgrade se fores adaptar o Tailwind a v4 (o @astrojs/tailwind@6 não é compatível com astro@7)."
+    npx @astrojs/upgrade
+
+# ---- VÍDEO ----
+
+# Comprimir um vídeo para MP4 H.264 (web) em public/videos/.
+# Uso: just video-compress "src/assets/0812 (1).mp4" mariana
+video-compress SRC OUT:
+    mkdir -p public/videos
+    ffmpeg -y -i "{{SRC}}" -vf "scale=-2:1080" -c:v libx264 -crf 23 -preset slow -movflags +faststart -an "public/videos/{{OUT}}.mp4"
+
+# Comprimir com corte de duração (segundos) — útil para loops.
+# Uso: just video-loop "src/assets/0812 (1).mp4" mariana 8
+video-loop SRC OUT DUR:
+    mkdir -p public/videos
+    ffmpeg -y -i "{{SRC}}" -t {{DUR}} -vf "scale=-2:1080" -c:v libx264 -crf 23 -preset slow -movflags +faststart -an "public/videos/{{OUT}}.mp4"
+
+# Tirar uma imagem de capa (poster) de um vídeo.
+# Uso: just video-poster "src/assets/0812 (1).mp4" mariana
+video-poster SRC OUT:
+    mkdir -p public/videos
+    ffmpeg -y -i "{{SRC}}" -frames:v 1 -q:v 2 "public/videos/{{OUT}}.jpg"
+
+# Copiar uma imagem para public/images/ com nome legível por localização.
+# Uso: just img-add "caminho/foto.jpg" hero-home
+img-add SRC NAME:
+    mkdir -p public/images
+    cp "{{SRC}}" "public/images/{{NAME}}.jpg"

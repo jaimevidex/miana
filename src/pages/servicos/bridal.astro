@@ -3,7 +3,6 @@ import Layout from '../../layouts/Layout.astro';
 import BridalForm from '../../components/forms/BridalForm.astro';
 import Gallery from '../../components/Gallery.astro';
 import Hero from '../../components/Hero.astro';
-import Video from '../../components/Video.astro';
 
 const servicos = [
   {
@@ -32,6 +31,7 @@ const phTones = [
     eyebrow="Luminous, sunkissed & effortlessly you"
     title="Bridal & Beauty"
     sub="Maquilhagem on demand desenhada à tua medida, pensada para durar o dia todo e fazer-te sentir a tua melhor versão."
+    video={[{ src: '/videos/bridal-hero.mp4', type: 'video/mp4' }]}
   />
 
   <section id="artistry" class="max-w-container mx-auto px-6 md:px-16 py-32">
@@ -48,13 +48,12 @@ const phTones = [
   <section id="experiencia" class="max-w-container mx-auto px-6 md:px-16 pt-4 pb-40 space-y-24">
       <div class="grid md:grid-cols-3 items-end">
         <div class="relative md:col-span-1">
-          <Video
-            sources={[
-              { src: '/videos/brides.mp4', type: 'video/mp4' },
-              { src: '/videos/brides.webm', type: 'video/webm' },
-            ]}
-            aspect="aspect-[3/4]"
-            autoplay
+          <img
+            src="/images/bridal-experience.jpg"
+            alt="The Bridal Experience — maquilhagem de noiva luminosa"
+            loading="lazy"
+            decoding="async"
+            class="aspect-[3/4] w-full object-cover"
           />
         </div>
         <div class="md:col-span-2 flex items-end">
@@ -77,21 +76,20 @@ const phTones = [
           </div>
         </div>
         <div class="relative md:col-span-1">
-          <Video
-            sources={[
-              { src: '/videos/guests.mp4', type: 'video/mp4' },
-              { src: '/videos/guests.webm', type: 'video/webm' },
-            ]}
-            aspect="aspect-[3/4]"
-            autoplay
+          <img
+            src="/images/guests-events.jpg"
+            alt="Guests & Events — maquilhagem glowy e sunkissed"
+            loading="lazy"
+            decoding="async"
+            class="aspect-[3/4] w-full object-cover"
           />
         </div>
       </div>
     </section>
 
   <section id="cta" class="relative w-full overflow-hidden py-56 text-center">
-    <!-- Imagem de fundo full-width (placeholder — substituir por imagem real) -->
-    <div class="absolute inset-0 cta-bg"></div>
+    <img src="/images/bridal-cta.jpg" alt="" aria-hidden="true" loading="lazy" decoding="async"
+      class="absolute inset-0 h-full w-full object-cover" />
     <div class="absolute inset-0 bg-darkbrown/50"></div>
     <div class="relative z-10 max-w-3xl mx-auto px-6">
       <h2 class="text-2xl md:text-display-l font-display font-bold text-offwhite whitespace-nowrap mb-8 reveal">Pronta para o teu glow especial?</h2>
@@ -120,9 +118,6 @@ const phTones = [
 </Layout>
 
 <style>
-  .cta-bg {
-    background: linear-gradient(135deg, #7a2430 0%, #59010b 50%, #2d1918 100%);
-  }
   .service-ph {
     transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   }

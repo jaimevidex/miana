@@ -5,12 +5,16 @@ interface Props {
   eyebrow?: string;
   title?: string;
   sub?: string;
-  /** Imagem de fundo (ImageMetadata importada de src/assets). */
-  image?: ImageMetadata;
+  /** Imagem de fundo: caminho público (ex: "/images/hero.jpg") ou ImageMetadata importado. */
+  image?: string | ImageMetadata;
   /** Vídeo de fundo: [{ src, type }]. */
   video?: Array<{ src: string; type: string }>;
   /** Imagem de capa/fallback para o vídeo (caminho em /public). */
   poster?: string;
+  /** Classes extra para a imagem de fundo (ajuste fino de posição). */
+  imgClass?: string;
+  /** Estilos inline extra para a imagem de fundo (ex: objectPosition). */
+  imgStyle?: string;
 }
 
 const {
@@ -20,14 +24,18 @@ const {
   image,
   video,
   poster,
+  imgClass = '',
+  imgStyle = '',
 } = Astro.props;
+
+const imgClasses = `absolute inset-0 h-[140%] -top-[40%] w-full object-cover ${imgClass}`;
 ---
 
 <section id="inicio" class="relative h-screen min-h-[640px] flex items-center overflow-hidden">
   {
     video && video.length ? (
       <video
-        class="absolute inset-0 h-[140%] -top-[40%] w-full object-cover"
+        class="absolute inset-0 h-[100%] -top-[0%] w-full object-cover"
         autoplay
         muted
         loop
@@ -40,15 +48,26 @@ const {
         ))}
       </video>
     ) : image ? (
-      <div class="absolute inset-0">
-        <Image
+      typeof image === 'string' ? (
+        <img
           src={image}
           alt={eyebrow}
           loading="eager"
           fetchpriority="high"
-          class="absolute inset-0 h-[140%] -top-[40%] w-full object-cover"
+          class={imgClasses}
+          style={imgStyle}
         />
-      </div>
+      ) : (
+        <div class="absolute inset-0">
+          <Image
+            src={image}
+            alt={eyebrow}
+            loading="eager"
+            fetchpriority="high"
+            class="absolute inset-0 h-[140%] -top-[40%] w-full object-cover"
+          />
+        </div>
+      )
     ) : (
       <div class="absolute inset-0 hero-placeholder"></div>
     )

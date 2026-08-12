@@ -1,5 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import Video from '../components/Video.astro';
 
 const pilares = [
   {
@@ -47,8 +48,15 @@ const pilares = [
         </div>
       </div>
 
-      <!-- Placeholder de retrato — substituir pela "Sessão de Lisboa" (ver docs/IMAGES.md) -->
-      <div class="aspect-[6/7] rounded-sm portrait-placeholder"></div>
+      <div class="aspect-[6/7]">
+        <Video
+          sources={[{ src: '/videos/mariana.mp4', type: 'video/mp4' }]}
+          aspect="aspect-[6/7]"
+          videoClass="origin-center scale-x-[1.04]"
+          autoplay
+          loop
+        />
+      </div>
     </div>
   </section>
 
@@ -78,9 +86,3 @@ const pilares = [
     </div>
   </section>
 </Layout>
-
-<style>
-  .portrait-placeholder {
-    background: linear-gradient(160deg, #f6e7e0 0%, #e8c9bc 50%, #a97b86 100%);
-  }
-</style>
