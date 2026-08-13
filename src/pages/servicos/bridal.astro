@@ -20,9 +20,28 @@ const servicos = [
   },
 ];
 
-const phTones = [
-  'linear-gradient(135deg, #7a2430 0%, #59010b 60%, #2d1918 100%)',
-  'linear-gradient(135deg, #bddaF4 0%, #8fb8d8 60%, #5d88ab 100%)',
+const galeriaBridal = [
+  { category: 'Noivas', alt: 'Maquilhagem de noiva com acabamento luminoso e natural', tall: true },
+  { category: 'Noivas', alt: 'Detalhe do glow de pele num dia de casamento' },
+  { category: 'Noivas', alt: 'Celebração final de um grande dia com glow natural', tall: true },
+  { category: 'Noivas', alt: 'Retrato de noiva com look glowy e sunkissed' },
+  { category: 'Noivas', alt: 'Pormenor dos lábios e tom de make durável' },
+  { category: 'Noivas', alt: 'Preparação da noiva em dia de casamento', tall: true },
+  { category: 'Noivas', alt: 'Toque final antes da cerimónia' },
+  { category: 'Noivas', alt: 'Bridal glow para fotografar impecavelmente', tall: true },
+  { category: 'Noivas', alt: 'Retrato final de noiva com glow delicado' },
+];
+
+const galeriaGuests = [
+  { category: 'Beauty', alt: 'Look editorial glowy e sunkissed', tall: true },
+  { category: 'Beauty', alt: 'Retrato elegante de maquilhagem premium' },
+  { category: 'Beauty', alt: 'Pormenor de maquilhagem editorial com brilho', tall: true },
+  { category: 'Beauty', alt: 'Glow natural em look de evento' },
+  { category: 'Beauty', alt: 'Makeup para convidadas e festas em grupo' },
+  { category: 'Beauty', alt: 'Durabilidade de make para eventos longos', tall: true },
+  { category: 'Beauty', alt: 'Look tailored-made para sessão fotográfica' },
+  { category: 'Beauty', alt: 'Acabamento luminoso para ocasião especial', tall: true },
+  { category: 'Beauty', alt: 'Glam on demand para a tua festa' },
 ];
 ---
 
@@ -45,65 +64,67 @@ const phTones = [
     </div>
   </section>
 
-  <section id="experiencia" class="max-w-container mx-auto px-6 md:px-16 pt-4 pb-40 space-y-24">
-      <div class="grid md:grid-cols-3 items-end">
-        <div class="relative md:col-span-1">
-          <img
-            src="/images/bridal-experience.jpg"
-            alt="The Bridal Experience — maquilhagem de noiva luminosa"
-            loading="lazy"
-            decoding="async"
-            class="aspect-[3/4] w-full object-cover"
-          />
-        </div>
-        <div class="md:col-span-2 flex items-end">
-          <div class="pl-4 md:pl-6 pb-4 max-w-lg">
-            <h3 class="font-display font-bold text-2xl md:text-3xl leading-tight">{servicos[0].title}</h3>
-            <p class="mt-3 text-xs uppercase tracking-widest text-burgundy">{servicos[0].extra}</p>
-            <p class="text-darkbrown/75 text-base leading-relaxed mt-4">{servicos[0].desc}</p>
-            {servicos[0].addon && <p class="text-burgundy text-sm mt-4">{servicos[0].addon}</p>}
-          </div>
+  <section id="experiencia-bridal" class="max-w-container mx-auto px-6 md:px-16 pt-8 pb-3 md:pb-4 space-y-8">
+    <div class="grid md:grid-cols-3 items-end gap-3 md:gap-4">
+      <div class="relative md:col-span-1">
+        <img
+          src="/images/bridal-experience.jpg"
+          alt="The Bridal Experience — maquilhagem de noiva luminosa"
+          loading="lazy"
+          decoding="async"
+          class="aspect-[2/3] w-full object-cover"
+        />
+      </div>
+      <div class="md:col-span-2 flex items-end">
+        <div class="pb-12 md:px-12 md:text-justify">
+          <h3 class="font-display font-bold text-2xl md:text-3xl leading-tight">{servicos[0].title}</h3>
+          <p class="mt-3 text-xs uppercase tracking-widest text-burgundy">{servicos[0].extra}</p>
+          <p class="text-darkbrown/75 text-base leading-relaxed mt-4">{servicos[0].desc}</p>
+          {servicos[0].addon && <p class="text-burgundy text-sm mt-4">{servicos[0].addon}</p>}
         </div>
       </div>
+    </div>
+  </section>
 
-      <!-- Fila 2: imagem à direita (último terço), texto nos outros dois terços encostado à imagem -->
-      <div class="grid md:grid-cols-3 items-end">
-        <div class="md:col-span-2 flex items-end justify-end">
-          <div class="pr-4 md:pr-6 pb-4 max-w-lg text-right">
-            <h3 class="font-display font-bold text-2xl md:text-3xl leading-tight">{servicos[1].title}</h3>
-            <p class="mt-3 text-xs uppercase tracking-widest text-burgundy">{servicos[1].extra}</p>
-            <p class="text-darkbrown/75 text-base leading-relaxed mt-4">{servicos[1].desc}</p>
-          </div>
-        </div>
-        <div class="relative md:col-span-1">
-          <img
-            src="/images/guests-events.jpg"
-            alt="Guests & Events — maquilhagem glowy e sunkissed"
-            loading="lazy"
-            decoding="async"
-            class="aspect-[3/4] w-full object-cover"
-          />
-        </div>
-      </div>
-    </section>
+  <section id="galeria-bridal" class="max-w-container mx-auto px-6 md:px-16 pb-32">
+    <Gallery items={galeriaBridal} showFilters={false} brick />
+  </section>
 
-  <section id="cta" class="relative w-full overflow-hidden py-56 text-center">
+  <section id="cta" class="relative w-full overflow-hidden py-40 text-center">
     <img src="/images/bridal-cta.jpg" alt="" aria-hidden="true" loading="lazy" decoding="async"
       class="absolute inset-0 h-full w-full object-cover" />
     <div class="absolute inset-0 bg-darkbrown/50"></div>
     <div class="relative z-10 max-w-3xl mx-auto px-6">
-      <h2 class="text-2xl md:text-display-l font-display font-bold text-offwhite whitespace-nowrap mb-8 reveal">Pronta para o teu glow especial?</h2>
+      <h2 class="text-2xl md:text-display-l font-display font-bold text-offwhite md:whitespace-nowrap mb-8 reveal">Pronta para o teu glow especial?</h2>
       <div class="flex flex-wrap justify-center gap-4 reveal">
         <a href="#orcamento" class="border border-offwhite bg-transparent text-offwhite px-6 py-3.5 text-sm font-bold uppercase rounded-full hover:bg-offwhite hover:text-burgundy transition">Let's book</a>
       </div>
     </div>
   </section>
 
-  <section id="galeria" class="py-32">
-    <div class="max-w-container mx-auto px-6 md:px-16">
-      <p class="eyebrow text-burgundy mb-12 text-center">Take a look</p>
-      <Gallery showFilters={false} brick />
+  <section id="experiencia-guests" class="max-w-container mx-auto px-6 md:px-16 pt-32 pb-3 md:pb-4 space-y-8">
+    <div class="grid md:grid-cols-3 items-end gap-3 md:gap-4">
+      <div class="md:col-span-2 flex items-end justify-end">
+        <div class="pb-12 md:px-12 md:text-justify ml-auto">
+          <h3 class="font-display font-bold text-2xl md:text-3xl leading-tight">{servicos[1].title}</h3>
+          <p class="mt-3 text-xs uppercase tracking-widest text-burgundy">{servicos[1].extra}</p>
+          <p class="text-darkbrown/75 text-base leading-relaxed mt-4">{servicos[1].desc}</p>
+        </div>
+      </div>
+      <div class="relative md:col-span-1 overflow-hidden">
+        <img
+          src="/images/guests-events.jpg"
+          alt="Guests & Events — maquilhagem glowy e sunkissed"
+          loading="lazy"
+          decoding="async"
+          class="aspect-[2/3] w-full h-full object-cover scale-125"
+        />
+      </div>
     </div>
+  </section>
+
+  <section id="galeria-guests" class="max-w-container mx-auto px-6 md:px-16 pb-28">
+    <Gallery items={galeriaGuests} showFilters={false} brick />
   </section>
 
   <section id="orcamento" class="max-w-container mx-auto px-6 md:px-16 py-32">

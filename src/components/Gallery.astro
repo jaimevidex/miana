@@ -62,6 +62,7 @@ const brickColumns = Array.from({ length: COLS }, (_, c) =>
 const toneByCategory: Record<string, string> = {
   Noivas: 'linear-gradient(160deg, #FFF1EC 0%, #F3D9C8 60%, #C89B7A 100%)',
   Beauty: 'linear-gradient(160deg, #FBEDF0 0%, #E5C1C8 55%, #A97B86 100%)',
+  'Bridal Party': 'linear-gradient(160deg, #F7E8F2 0%, #E3C2D1 55%, #B07F96 100%)',
   Workshops: 'linear-gradient(160deg, #F4EFFB 0%, #D6C9EC 55%, #9B86C4 100%)',
   Skincare: 'linear-gradient(160deg, #EAF4FA 0%, #C6E0F0 55%, #8FB8D8 100%)',
 };
@@ -85,28 +86,51 @@ const toneByCategory: Record<string, string> = {
   )}
 
   {brick ? (
-    <div class="grid grid-cols-3 gap-3 md:gap-4 items-start" id="gallery-grid">
-      {brickColumns.map((col) => (
-        <div class="flex flex-col gap-[3%]">
-          {col.map((t) => (
-            <button
-              class="gallery-item block w-full break-inside-avoid relative overflow-hidden rounded-sm group"
-              data-category={t.item.category}
-              aria-label={`Ver ${t.item.alt} em tamanho maior`}
-            >
-              <div
-                class={`gallery-placeholder w-full ${t.ratio}`}
-                style={`background:${toneByCategory[t.item.category] ?? '#EFE7E0'}`}
-              ></div>
-              <span class="absolute inset-0 bg-burgundy/0 group-hover:bg-burgundy/5 transition-colors"></span>
-              <span class="absolute bottom-3 left-3 text-[0.65rem] uppercase tracking-widest text-darkbrown/70 opacity-0 group-hover:opacity-100 transition-opacity">
-                {t.item.category}
-              </span>
-            </button>
-          ))}
-        </div>
-      ))}
-    </div>
+    <>
+      <div class="columns-1 sm:columns-2 lg:hidden gap-3 sm:gap-4 space-y-3 sm:space-y-4" id="gallery-grid">
+        {items.map((item) => (
+          <button
+            class="gallery-item block w-full break-inside-avoid relative overflow-hidden rounded-sm group"
+            data-category={item.category}
+            aria-label={`Ver ${item.alt} em tamanho maior`}
+          >
+            <div
+              class:list={[
+                'gallery-placeholder w-full',
+                item.tall ? 'aspect-[4/5]' : 'aspect-square',
+              ]}
+              style={`background:${toneByCategory[item.category] ?? '#EFE7E0'}`}
+            ></div>
+            <span class="absolute inset-0 bg-burgundy/0 group-hover:bg-burgundy/5 transition-colors"></span>
+            <span class="absolute bottom-3 left-3 text-[0.65rem] uppercase tracking-widest text-darkbrown/70 opacity-0 group-hover:opacity-100 transition-opacity">
+              {item.category}
+            </span>
+          </button>
+        ))}
+      </div>
+      <div class="hidden lg:grid grid-cols-3 gap-4 items-start" id="gallery-grid-desktop">
+        {brickColumns.map((col) => (
+          <div class="flex flex-col gap-4">
+            {col.map((t) => (
+              <button
+                class="gallery-item block w-full break-inside-avoid relative overflow-hidden rounded-sm group"
+                data-category={t.item.category}
+                aria-label={`Ver ${t.item.alt} em tamanho maior`}
+              >
+                <div
+                  class={`gallery-placeholder w-full ${t.ratio}`}
+                  style={`background:${toneByCategory[t.item.category] ?? '#EFE7E0'}`}
+                ></div>
+                <span class="absolute inset-0 bg-burgundy/0 group-hover:bg-burgundy/5 transition-colors"></span>
+                <span class="absolute bottom-3 left-3 text-[0.65rem] uppercase tracking-widest text-darkbrown/70 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {t.item.category}
+                </span>
+              </button>
+            ))}
+          </div>
+        ))}
+      </div>
+    </>
   ) : (
     <div class="columns-1 sm:columns-2 lg:columns-3 gap-5 space-y-5" id="gallery-grid">
       {items.map((item, i) => (
