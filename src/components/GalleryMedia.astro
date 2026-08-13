@@ -1,0 +1,47 @@
+---
+interface Props {
+  category: string;
+  alt: string;
+  image?: string;
+  video?: string;
+  ratioClass: string;
+  imgStyle?: string;
+}
+
+const toneByCategory: Record<string, string> = {
+  Noivas: 'linear-gradient(160deg, #FFF1EC 0%, #F3D9C8 60%, #C89B7A 100%)',
+  Beauty: 'linear-gradient(160deg, #FBEDF0 0%, #E5C1C8 55%, #A97B86 100%)',
+  Workshops: 'linear-gradient(160deg, #F4EFFB 0%, #D6C9EC 55%, #9B86C4 100%)',
+  Skincare: 'linear-gradient(160deg, #EAF4FA 0%, #C6E0F0 55%, #8FB8D8 100%)',
+};
+
+const { category, alt, image, video, ratioClass, imgStyle } = Astro.props;
+---
+
+{
+  video ? (
+    <video
+      class={`gallery-placeholder w-full ${ratioClass} object-cover`}
+      src={video}
+      autoplay
+      muted
+      loop
+      playsinline
+      preload="metadata"
+    ></video>
+  ) : image ? (
+    <img
+      class={`gallery-placeholder w-full ${ratioClass} object-cover`}
+      style={imgStyle}
+      src={image}
+      alt={alt}
+      loading="lazy"
+      decoding="async"
+    />
+  ) : (
+    <div
+      class={`gallery-placeholder w-full ${ratioClass}`}
+      style={`background:${toneByCategory[category] ?? '#EFE7E0'}`}
+    ></div>
+  )
+}

@@ -49,7 +49,7 @@ deploy:
 
 # Verificar se o prod serve a build mais recente de uma página
 verify URL="https://marianapita.pt":
-    curl -s -L --max-time 20 "{{URL}}" | head -c 0
+    curl -s -L --max-time 20 -o /dev/null "{{URL}}"
     @echo "HTTP ok: {{URL}}"
 
 # Atualizar astro e integrações

@@ -1,17 +1,20 @@
 ---
 // Galeria reutilizável. Imagens reais a entregar (ver docs/IMAGES.md) —
 // atualmente placeholders de cor por categoria, prontos a substituir por <Image> de astro:assets.
+import GalleryMedia from './GalleryMedia.astro';
 
 interface Item {
   category: string;
   alt: string;
   tall?: boolean;
+  image?: string;
+  video?: string;
+  imgStyle?: string;
 }
 
 interface Props {
   items?: Item[];
   showFilters?: boolean;
-  /** Padrão "tijolo": alturas variadas, com topo e fundo alinhados. */
   brick?: boolean;
 }
 
@@ -30,26 +33,17 @@ const defaultItems: Item[] = [
 
 const { items = defaultItems, showFilters = true, brick = false } = Astro.props;
 const categories = ['Todos', ...new Set(items.map((i) => i.category))];
-// Modo "brick": masonry retrato em 3 colunas de igual altura (fundo reto).
-// Cada coluna recebe a mesma quantidade de cada ratio (1 quadrado, 1 2:3, 1 4:5), mas por ordem
-// diferente — parecer aleatório, mas a soma de alturas + espaços é idêntica → as 3 fecham reto.
 const RATIOS = ['aspect-square', 'aspect-[2/3]', 'aspect-[4/5]'];
 const ratioWeight: Record<string, number> = {
   'aspect-square': 1,
   'aspect-[2/3]': 1.5,
   'aspect-[4/5]': 1.25,
 };
-// Espaço vertical entre peças, em fração da largura da coluna (gap-[3%]).
 const GAP = 0.03;
-const shuffled = (arr: typeof items) =>
-  arr
-    .map((v, i) => ({ v, k: (i * 7 + 3) % 13 }))
-    .sort((a, b) => a.k - b.k)
-    .map((x) => x.v);
 
 const COLS = 3;
 const perCol = Math.floor(items.length / COLS);
-const brickItems = shuffled(items.slice(0, COLS * perCol));
+const brickItems = items.slice(0, COLS * perCol);
 // Distribui as imagens em round-robin pelas colunas e roda os ratios por coluna (ordens diferentes).
 const brickColumns = Array.from({ length: COLS }, (_, c) =>
   Array.from({ length: perCol }, (_, r) => {
@@ -62,7 +56,6 @@ const brickColumns = Array.from({ length: COLS }, (_, c) =>
 const toneByCategory: Record<string, string> = {
   Noivas: 'linear-gradient(160deg, #FFF1EC 0%, #F3D9C8 60%, #C89B7A 100%)',
   Beauty: 'linear-gradient(160deg, #FBEDF0 0%, #E5C1C8 55%, #A97B86 100%)',
-  'Bridal Party': 'linear-gradient(160deg, #F7E8F2 0%, #E3C2D1 55%, #B07F96 100%)',
   Workshops: 'linear-gradient(160deg, #F4EFFB 0%, #D6C9EC 55%, #9B86C4 100%)',
   Skincare: 'linear-gradient(160deg, #EAF4FA 0%, #C6E0F0 55%, #8FB8D8 100%)',
 };
@@ -94,13 +87,7 @@ const toneByCategory: Record<string, string> = {
             data-category={item.category}
             aria-label={`Ver ${item.alt} em tamanho maior`}
           >
-            <div
-              class:list={[
-                'gallery-placeholder w-full',
-                item.tall ? 'aspect-[4/5]' : 'aspect-square',
-              ]}
-              style={`background:${toneByCategory[item.category] ?? '#EFE7E0'}`}
-            ></div>
+<GalleryMedia category={item.category} alt={item.alt} image={item.image} video={item.video} ratioClass={item.tall ? 'aspect-[4/5]' : 'aspect-square'} imgStyle={item.imgStyle} />
             <span class="absolute inset-0 bg-burgundy/0 group-hover:bg-burgundy/5 transition-colors"></span>
             <span class="absolute bottom-3 left-3 text-[0.65rem] uppercase tracking-widest text-darkbrown/70 opacity-0 group-hover:opacity-100 transition-opacity">
               {item.category}
@@ -117,10 +104,7 @@ const toneByCategory: Record<string, string> = {
                 data-category={t.item.category}
                 aria-label={`Ver ${t.item.alt} em tamanho maior`}
               >
-                <div
-                  class={`gallery-placeholder w-full ${t.ratio}`}
-                  style={`background:${toneByCategory[t.item.category] ?? '#EFE7E0'}`}
-                ></div>
+                <GalleryMedia category={t.item.category} alt={t.item.alt} image={t.item.image} video={t.item.video} ratioClass={t.ratio} imgStyle={t.item.imgStyle} />
                 <span class="absolute inset-0 bg-burgundy/0 group-hover:bg-burgundy/5 transition-colors"></span>
                 <span class="absolute bottom-3 left-3 text-[0.65rem] uppercase tracking-widest text-darkbrown/70 opacity-0 group-hover:opacity-100 transition-opacity">
                   {t.item.category}
@@ -139,13 +123,7 @@ const toneByCategory: Record<string, string> = {
           data-category={item.category}
           aria-label={`Ver ${item.alt} em tamanho maior`}
         >
-          <div
-            class:list={[
-              'gallery-placeholder w-full',
-              item.tall ? 'aspect-[4/5]' : 'aspect-square',
-            ]}
-            style={`background:${toneByCategory[item.category] ?? '#EFE7E0'}`}
-          ></div>
+          <GalleryMedia category={item.category} alt={item.alt} image={item.image} video={item.video} ratioClass={item.tall ? 'aspect-[4/5]' : 'aspect-square'} />
           <span class="absolute inset-0 bg-burgundy/0 group-hover:bg-burgundy/5 transition-colors"></span>
           <span class="absolute bottom-3 left-3 text-[0.65rem] uppercase tracking-widest text-darkbrown/70 opacity-0 group-hover:opacity-100 transition-opacity">
             {item.category}
