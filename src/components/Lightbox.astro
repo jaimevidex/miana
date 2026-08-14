@@ -78,7 +78,16 @@
         return;
       }
     }
-    if (e.target === lightbox || closeBtn?.contains(target)) {
+    // Com a lightbox aberta, fecha ao clicar fora da imagem/vídeo selecionado.
+    if (
+      lightbox &&
+      !lightbox.classList.contains('hidden') &&
+      img &&
+      video && (
+        !img.contains(target as Node) &&
+        !video.contains(target as Node)
+      )
+    ) {
       close();
     }
   });
