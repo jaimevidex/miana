@@ -1,0 +1,89 @@
+---
+// Lightbox global. Qualquer elemento com data-lightbox (imagem) ou
+// data-lightbox-video abre aqui, centrado, com o fundo desfocado.
+---
+
+<div
+  id="lightbox"
+  class="hidden fixed inset-0 z-[60] items-center justify-center bg-offwhite/40 backdrop-blur-2xl p-6"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Imagem ampliada"
+>
+  <button
+    id="lightbox-close"
+    class="absolute top-6 right-6 text-darkbrown"
+    aria-label="Fechar imagem"
+  >
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M6 6l12 12M18 6L6 18" stroke-linecap="round" />
+    </svg>
+  </button>
+  <div class="max-h-full max-w-4xl mx-auto flex items-center justify-center w-full">
+    <img id="lightbox-img" class="max-h-[85vh] max-w-full object-contain shadow-2xl hidden" alt="" />
+    <video id="lightbox-video" class="max-h-[85vh] max-w-full object-contain shadow-2xl hidden" autoplay muted loop playsinline></video>
+  </div>
+</div>
+
+<script>
+  const lightbox = document.getElementById('lightbox');
+  const img = document.getElementById('lightbox-img');
+  const video = document.getElementById('lightbox-video');
+  const closeBtn = document.getElementById('lightbox-close');
+
+  function open(src, isVideo = false) {
+    if (!lightbox) return;
+    if (isVideo) {
+      img?.classList.add('hidden');
+      video?.classList.remove('hidden');
+      video.setAttribute('src', src);
+      video.load();
+      video.play?.().catch(() => {});
+    } else {
+      video?.classList.add('hidden');
+      img?.classList.remove('hidden');
+      img.setAttribute('src', src);
+      img.setAttribute('alt', 'Imagem ampliada');
+    }
+    lightbox.classList.remove('hidden');
+    lightbox.classList.add('flex');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function close() {
+    if (!lightbox) return;
+    lightbox.classList.add('hidden');
+    lightbox.classList.remove('flex');
+    if (video && !video.paused) video.pause();
+    document.body.style.overflow = '';
+  }
+
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement | null;
+    const imgTrigger = target?.closest<HTMLElement>('[data-lightbox]');
+    if (imgTrigger) {
+      const src = imgTrigger.getAttribute('data-lightbox');
+      if (src) {
+        e.preventDefault();
+        open(src, false);
+        return;
+      }
+    }
+    const videoTrigger = target?.closest<HTMLElement>('[data-lightbox-video]');
+    if (videoTrigger) {
+      const src = videoTrigger.getAttribute('data-lightbox-video');
+      if (src) {
+        e.preventDefault();
+        open(src, true);
+        return;
+      }
+    }
+    if (e.target === lightbox || closeBtn?.contains(target)) {
+      close();
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !lightbox?.classList.contains('hidden')) close();
+  });
+</script>

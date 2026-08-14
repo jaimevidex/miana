@@ -10,30 +10,32 @@ const navItems = [
 ---
 
 <footer class="bg-burgundy text-offwhite">
-  <div class="max-w-container mx-auto px-6 md:px-16 py-16 grid gap-12 sm:grid-cols-2 md:grid-cols-4">
-    <div class="sm:col-span-2 md:col-span-2">
+  <div class="max-w-container mx-auto px-6 md:px-16 py-16 grid gap-12">
+    <div class="md:col-span-2">
       <p class="font-script text-4xl mb-3">Mariana Pita</p>
       <p class="text-sm text-offwhite/70 max-w-xs">
         Science-Led Skincare &amp; Effortless Beauty
       </p>
     </div>
 
-    <nav class="flex flex-col gap-3">
-      <span class="eyebrow !text-white mb-1">Navegação</span>
-      {navItems.map((item) => (
-        <a href={item.href} class="text-sm text-offwhite/80 hover:text-powder">{item.label}</a>
-      ))}
-    </nav>
+    <div class="grid grid-cols-2 gap-8 md:grid-cols-4">
+      <nav class="flex flex-col gap-3">
+        <span class="eyebrow !text-white mb-1">Navegação</span>
+        {navItems.map((item) => (
+          <a href={item.href} class="text-sm text-offwhite/80 hover:text-powder">{item.label}</a>
+        ))}
+      </nav>
 
-    <div class="flex flex-col gap-3">
-      <span class="eyebrow !text-white mb-1">Contacto</span>
-      <a href="mailto:mpitamakeup@gmail.com" class="text-sm text-offwhite/80 hover:text-powder">
-        mpitamakeup@gmail.com
-      </a>
-      <a href="https://instagram.com/marianapita_makeup" target="_blank" rel="noopener" class="text-sm text-offwhite/80 hover:text-powder">
-        @marianapita_makeup
-      </a>
-      <p class="text-sm text-offwhite/60">Lisboa &amp; Santarém</p>
+      <div class="flex flex-col gap-3">
+        <span class="eyebrow !text-white mb-1">Contacto</span>
+        <a href="mailto:mpitamakeup@gmail.com" class="text-sm text-offwhite/80 hover:text-powder">
+          mpitamakeup@gmail.com
+        </a>
+        <a href="https://instagram.com/marianapita_makeup" target="_blank" rel="noopener" class="text-sm text-offwhite/80 hover:text-powder">
+          @marianapita_makeup
+        </a>
+        <p class="text-sm text-offwhite/60">Lisboa &amp; Santarém</p>
+      </div>
     </div>
   </div>
 

@@ -85,6 +85,8 @@ const toneByCategory: Record<string, string> = {
           <button
             class="gallery-item block w-full break-inside-avoid relative overflow-hidden rounded-sm group"
             data-category={item.category}
+            data-lightbox={item.image}
+            data-lightbox-video={item.video}
             aria-label={`Ver ${item.alt} em tamanho maior`}
           >
 <GalleryMedia category={item.category} alt={item.alt} image={item.image} video={item.video} ratioClass={item.tall ? 'aspect-[4/5]' : 'aspect-square'} imgStyle={item.imgStyle} />
@@ -102,6 +104,8 @@ const toneByCategory: Record<string, string> = {
               <button
                 class="gallery-item block w-full break-inside-avoid relative overflow-hidden rounded-sm group"
                 data-category={t.item.category}
+                data-lightbox={t.item.image}
+                data-lightbox-video={t.item.video}
                 aria-label={`Ver ${t.item.alt} em tamanho maior`}
               >
                 <GalleryMedia category={t.item.category} alt={t.item.alt} image={t.item.image} video={t.item.video} ratioClass={t.ratio} imgStyle={t.item.imgStyle} />
@@ -121,6 +125,8 @@ const toneByCategory: Record<string, string> = {
         <button
           class="gallery-item block w-full break-inside-avoid relative overflow-hidden rounded-sm group"
           data-category={item.category}
+          data-lightbox={item.image}
+          data-lightbox-video={item.video}
           aria-label={`Ver ${item.alt} em tamanho maior`}
         >
           <GalleryMedia category={item.category} alt={item.alt} image={item.image} video={item.video} ratioClass={item.tall ? 'aspect-[4/5]' : 'aspect-square'} />

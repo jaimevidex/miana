@@ -53,13 +53,13 @@ image="/images/education-hero-1.jpg"
   <section id="workshops" class="max-w-container mx-auto px-6 md:px-16 pt-4 pb-24 space-y-24">
     {workshops.map((w, i) => (
       <div class={`grid md:grid-cols-3 items-end ${i % 2 === 1 ? '' : ''}`}>
-        <div class={`relative md:col-span-1 self-start ${i % 2 === 1 ? 'md:order-2' : ''}`}>
+        <div class={`relative md:col-span-1 self-center mb-10 md:mb-0 ${i % 2 === 1 ? 'md:order-2' : ''}`}>
           {
             w.image ? (
               <img src={w.image} alt={w.titulo} loading="lazy" decoding="async"
-                style="object-position: center bottom;" class="aspect-[3/4] w-full object-cover" />
+                style="object-position: center bottom;" class="aspect-[3/4] w-[85%] md:w-full mx-auto object-cover" />
             ) : (
-              <div class={`aspect-[3/4] w-full ${phTones[i % phTones.length]}`}></div>
+              <div class={`aspect-[3/4] w-[85%] md:w-full mx-auto ${phTones[i % phTones.length]}`}></div>
             )
           }
         </div>

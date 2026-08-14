@@ -16,6 +16,7 @@ export default {
         body: ['"Open Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       fontSize: {
+        'display-2xl': ['5.5rem', { lineHeight: '1', letterSpacing: '-0.01em' }],
         'display-xl': ['4.5rem', { lineHeight: '1.05', letterSpacing: '-0.01em' }],
         'display-l': ['3rem', { lineHeight: '1.1', letterSpacing: '-0.01em' }],
         'display-m': ['2rem', { lineHeight: '1.2' }],

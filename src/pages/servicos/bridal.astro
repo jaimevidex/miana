@@ -2,7 +2,9 @@
 import Layout from '../../layouts/Layout.astro';
 import BridalForm from '../../components/forms/BridalForm.astro';
 import Gallery from '../../components/Gallery.astro';
+import GalleryMedia from '../../components/GalleryMedia.astro';
 import Hero from '../../components/Hero.astro';
+import Lightbox from '../../components/Lightbox.astro';
 
 const servicos = [
   {
@@ -43,6 +45,16 @@ const galeriaGuests = [
   { category: 'Beauty', alt: 'Retrato elegante de maquilhagem premium', image: '/images/guests-portfolio-3.jpg' },
   { category: 'Beauty', alt: 'Durabilidade de make para eventos longos', image: '/images/guests-portfolio-8.jpg', imgStyle: 'transform: scale(1.45); object-position: center;' },
 ];
+
+// Mobile: a imagem do serviço junta-se às 9 da galeria numa grelha 2 colunas × 5 linhas.
+const galeriaBridalCombo = [
+  { category: 'Noivas', alt: 'The Bridal Experience', image: '/images/bridal-experience.jpg' },
+  ...galeriaBridal,
+];
+const galeriaGuestsCombo = [
+  { category: 'Beauty', alt: 'Guests & Events', image: '/images/guests-events.jpg' },
+  ...galeriaGuests,
+];
 ---
 
 <Layout title="Bridal & Beauty — Mariana" description="Maquilhagem de noiva e eventos com um acabamento luminoso e sunkissed. Bridal Experience, Bridal Party & Guests, Event & Special Occasions. Makeup ou Makeup + Hair." hasHero>
@@ -66,7 +78,7 @@ const galeriaGuests = [
 
   <section id="experiencia-bridal" class="max-w-container mx-auto px-6 md:px-16 pt-8 pb-3 md:pb-4 space-y-8">
     <div class="grid md:grid-cols-3 items-end gap-3 md:gap-4">
-      <div class="relative md:col-span-1">
+      <div class="relative md:col-span-1 hidden lg:block">
         <img
           src="/images/bridal-experience.jpg"
           alt="The Bridal Experience — maquilhagem de noiva luminosa"
@@ -87,10 +99,23 @@ const galeriaGuests = [
   </section>
 
   <section id="galeria-bridal" class="max-w-container mx-auto px-6 md:px-16 pb-32">
-    <Gallery items={galeriaBridal} showFilters={false} brick />
+    <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:hidden" id="gallery-grid-bridal-mobile">
+      {galeriaBridalCombo.map((item) => (
+        <div class="gallery-item block w-full relative overflow-hidden rounded-sm group"
+          data-lightbox={item.image}
+          data-lightbox-video={item.video}
+          data-category={item.category}>
+          <GalleryMedia category={item.category} alt={item.alt} image={item.image} video={item.video} ratioClass="aspect-[3/4]" imgStyle={item.imgStyle} />
+          <span class="absolute inset-0 bg-burgundy/0 group-hover:bg-burgundy/5 transition-colors"></span>
+        </div>
+      ))}
+    </div>
+    <div class="hidden lg:block">
+      <Gallery items={galeriaBridal} showFilters={false} brick />
+    </div>
   </section>
 
-  <section id="cta" class="relative w-full overflow-hidden py-40 text-center">
+  <section id="cta" class="relative w-full overflow-hidden py-16 lg:py-40 text-center">
     <img src="/images/bridal-cta.jpg" alt="" aria-hidden="true" loading="lazy" decoding="async"
       class="absolute inset-0 h-full w-full object-cover" />
     <div class="absolute inset-0 bg-darkbrown/50"></div>
@@ -111,7 +136,7 @@ const galeriaGuests = [
           <p class="text-darkbrown/75 text-base leading-relaxed mt-4">{servicos[1].desc}</p>
         </div>
       </div>
-      <div class="relative md:col-span-1 overflow-hidden">
+      <div class="relative md:col-span-1 overflow-hidden hidden lg:block">
         <img
           src="/images/guests-events.jpg"
           alt="Guests & Events — maquilhagem glowy e sunkissed"
@@ -124,7 +149,20 @@ const galeriaGuests = [
   </section>
 
   <section id="galeria-guests" class="max-w-container mx-auto px-6 md:px-16 pb-28">
-    <Gallery items={galeriaGuests} showFilters={false} brick />
+    <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:hidden" id="gallery-grid-guests-mobile">
+      {galeriaGuestsCombo.map((item) => (
+        <div class="gallery-item block w-full relative overflow-hidden rounded-sm group"
+          data-lightbox={item.image}
+          data-lightbox-video={item.video}
+          data-category={item.category}>
+          <GalleryMedia category={item.category} alt={item.alt} image={item.image} video={item.video} ratioClass="aspect-[3/4]" imgStyle={item.imgStyle} />
+          <span class="absolute inset-0 bg-burgundy/0 group-hover:bg-burgundy/5 transition-colors"></span>
+        </div>
+      ))}
+    </div>
+    <div class="hidden lg:block">
+      <Gallery items={galeriaGuests} showFilters={false} brick />
+    </div>
   </section>
 
   <section id="orcamento" class="max-w-container mx-auto px-6 md:px-16 py-32">
@@ -136,6 +174,8 @@ const galeriaGuests = [
       <BridalForm />
     </div>
   </section>
+
+  <Lightbox />
 </Layout>
 
 <style>

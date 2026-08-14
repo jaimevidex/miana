@@ -32,12 +32,15 @@ Mariana Pita
     <div class="flex items-center gap-4 lg:hidden">
       <button
         id="menu-toggle"
-        class="header-text"
+        class="header-text relative z-50"
         aria-label="Abrir menu"
         aria-expanded="false"
       >
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <svg id="icon-burger" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
           <path d="M4 7h16M4 12h16M4 17h16" stroke-linecap="round" />
+        </svg>
+        <svg id="icon-close" class="hidden icon-close" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M6 6l12 12M18 6L6 18" stroke-linecap="round" />
         </svg>
       </button>
     </div>
@@ -46,8 +49,11 @@ Mariana Pita
   <!-- Menu mobile full-screen -->
   <div
     id="mobile-menu"
-    class="hidden lg:hidden fixed inset-0 bg-offwhite z-40 flex-col items-center justify-center gap-7"
+    class="hidden lg:hidden fixed inset-0 bg-offwhite z-40 flex flex-col items-center justify-center gap-9"
   >
+    <a href="/" class="font-script text-6xl text-burgundy mb-6 hover:text-burgundy/70">
+      Mariana Pita
+    </a>
     {navItems.map((item) => (
       <a href={item.href} class="text-2xl font-display text-darkbrown hover:text-burgundy">
         {item.label}
@@ -68,6 +74,9 @@ Mariana Pita
   .header-scroll.solid {
     background-color: #59010B;
   }
+  .icon-close {
+    color: #2d1918;
+  }
   :global(body) {
     padding-top: 0;
   }
@@ -77,6 +86,8 @@ Mariana Pita
   const header = document.getElementById('site-header');
   const toggle = document.getElementById('menu-toggle');
   const mobileMenu = document.getElementById('mobile-menu');
+  const iconBurger = document.getElementById('icon-burger');
+  const iconClose = document.getElementById('icon-close');
 
   // Nas páginas que não começam com hero full-bleed escuro, o header fica sempre sólido.
   const bodyHasHero = document.body.dataset.hero === 'true';
@@ -95,19 +106,18 @@ Mariana Pita
   });
 
   let open = false;
-  toggle?.addEventListener('click', () => {
-    open = !open;
+  function setMenu(state) {
+    open = state;
     mobileMenu?.classList.toggle('hidden', !open);
     mobileMenu?.classList.toggle('flex', open);
-    toggle.setAttribute('aria-expanded', String(open));
-  });
+    toggle?.setAttribute('aria-expanded', String(open));
+    toggle?.setAttribute('aria-label', open ? 'Fechar menu' : 'Abrir menu');
+    iconBurger?.classList.toggle('hidden', open);
+    iconClose?.classList.toggle('hidden', !open);
+  }
+  toggle?.addEventListener('click', () => setMenu(!open));
 
   mobileMenu?.querySelectorAll('a').forEach((link) => {
-    link.addEventListener('click', () => {
-      open = false;
-      mobileMenu?.classList.add('hidden');
-      mobileMenu?.classList.remove('flex');
-      toggle?.setAttribute('aria-expanded', 'false');
-    });
+    link.addEventListener('click', () => setMenu(false));
   });
 </script>
