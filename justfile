@@ -6,7 +6,7 @@ install:
     npm install
 
 # Arrancar o dev server do ASTRO com HMR (só a UI; sem /api/* do funil). Porta 4321
-dev:astro:
+dev-astro:
     npm run dev
 
 # Dev do FUNIL completo (Worker + assets + API). Build + wrangler dev (porta 8787).
