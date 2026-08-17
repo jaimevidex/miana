@@ -1,12 +1,13 @@
 // Página privada `/diagnostico` — server-rendered a partir do token (dados vêm do KV, não do browser).
 import type { Lead } from './lib';
-import { htmlEscape, maskEmail } from './lib';
+import { htmlEscape } from './lib';
 
 const PLANS = [
   { v: 'One Time Call (Plano 3M)', t: 'One Time Call - Plano 3M' },
   { v: 'Duo Call (Plano 6M)', t: 'Duo Call - Plano 6M' },
   { v: 'Triple Call (Plano 9M)', t: 'Triple Call - Plano 9M' },
   { v: 'Full Year Call (Plano 12M)', t: 'Full Year Call - Plano 12M' },
+  { v: 'Ainda não sei', t: 'Ainda não sei' },
 ];
 
 const ROUTINE_Q = [
@@ -51,7 +52,11 @@ const ROUTINE_Q = [
 ];
 
 function fieldCls(multiple = false): string {
-  return `mt-1 w-full border border-darkbrown/20 rounded-sm px-4 py-3 bg-white focus:border-burgundy outline-none`;
+  return `mt-1 w-full border border-darkbrown/20 rounded-md px-4 py-3 bg-white focus:border-burgundy outline-none`;
+}
+
+function taCls(): string {
+  return `mt-1 w-full border border-darkbrown/20 rounded-md px-4 py-3 bg-white focus:border-burgundy outline-none resize-y min-h-[110px] text-sm leading-relaxed`;
 }
 
 function planRadios(selected: string): string {
@@ -86,10 +91,11 @@ function routineFieldsets(lead: Lead): string {
     } else {
       const star = q.optional ? '' : ' <span class="text-burgundy">*</span>';
       html.push(`
-        <div>
-          <label class="block text-sm font-medium text-darkbrown" for="${q.name}">${htmlEscape(q.label)}${star}</label>
-          <textarea id="${q.name}" name="${q.name}" rows="3" ${required} class="${fieldCls()}"
+        <div class="ta-wrap">
+          <label class="block text-sm font-semibold text-darkbrown" for="${q.name}">${htmlEscape(q.label)}${star}</label>
+          <textarea id="${q.name}" name="${q.name}" rows="5" ${required} class="${taCls()}"
             placeholder="${htmlEscape(q.hint || q.placeholder || '')}"></textarea>
+          ${q.hint ? `<p class="ta-hint">${htmlEscape(q.hint)}</p>` : ''}
         </div>`);
     }
   }
@@ -99,7 +105,6 @@ function routineFieldsets(lead: Lead): string {
 export function renderDiagnosticPage(lead: Lead): Response {
   const nome = htmlEscape(lead.nome);
   const email = htmlEscape(lead.email);
-  const emailMasked = htmlEscape(maskEmail(lead.email));
   const telefone = htmlEscape(lead.telefone);
   const planOptions = planRadios(lead.plano);
   const routineHtml = routineFieldsets(lead);
@@ -118,11 +123,14 @@ export function renderDiagnosticPage(lead: Lead): Response {
     h1{font-size:26px;margin:0 0 8px;color:#8a2831}
     p.sub{color:#7a6a64;font-size:14px;margin:0 0 24px}
     .lbl{display:block;font-size:13px;font-weight:600;color:#3b2a2a}
-    .in{margin-top:4px;width:100%;border:1px solid rgba(59,42,42,.2);border-radius:4px;padding:12px 16px;font-size:14px;box-sizing:border-box}
+    .in{margin-top:4px;width:100%;border:1px solid rgba(59,42,42,.2);border-radius:8px;padding:12px 16px;font-size:14px;box-sizing:border-box}
     .in:focus{border-color:#8a2831;outline:none}
-    .opt{display:inline-flex;align-items:flex-start;gap:12px;font-size:14px;background:#fff;border:1px solid rgba(59,42,42,.1);border-radius:4px;padding:12px 16px;margin-bottom:8px;cursor:pointer}
+    .ta-wrap{margin-top:2px}
+    .ta-hint{color:#8a7a74;font-size:12px;margin:6px 0 0}
+    .opt{display:inline-flex;align-items:flex-start;gap:12px;font-size:14px;background:#fff;border:1px solid rgba(59,42,42,.1);border-radius:8px;padding:12px 16px;margin-bottom:8px;cursor:pointer;width:100%;box-sizing:border-box}
+    .opt:hover{border-color:#8a2831}
     .opt input{margin-top:3px;accent-color:#8a2831}
-    .grid{display:grid;gap:16px}
+    .grid{display:grid;gap:18px}
     .req{color:#8a2831}
     .btn{display:inline-block;background:#8a2831;color:#fbf5ef;padding:14px 32px;font-size:14px;font-weight:600;border:0;border-radius:999px;cursor:pointer}
     .btn:hover{opacity:.9}
@@ -131,12 +139,15 @@ export function renderDiagnosticPage(lead: Lead): Response {
     .status.err{color:#b3261e}
     .note{font-size:12px;color:#8a7a74;margin-top:16px}
     fieldset{border:0;padding:0;margin:0}
+    .done{display:none;text-align:center;padding:40px 24px}
+    .done h2{font-size:22px;color:#0a7a4a;margin:0 0 8px}
+    .done p{color:#7a6a64;font-size:14px;margin:0}
   </style>
 </head>
 <body>
   <main class="wrap card">
     <h1>Diagnóstico de pele</h1>
-    <p class="sub">Olá ${nome}! Preenche este diagnóstico para eu perceber o plano (${emailMasked}) mais indicado para ti. Os teus dados já estão pré-preenchidos.</p>
+    <p class="sub">Olá ${nome}! Preenche este diagnóstico para eu perceber o plano mais indicado para ti.</p>
 
     <form id="form-diagnostico" action="/api/diagnostico" method="POST" class="grid" novalidate>
       <input type="hidden" name="token" value="${lead.token}" />
@@ -165,18 +176,22 @@ export function renderDiagnosticPage(lead: Lead): Response {
         <label class="lbl"><input type="checkbox" name="consent" required class="accent-burgundy" /> Li e aceito que os meus dados sejam usados para o meu acompanhamento de pele, e que o pedido seja contactado pela Mariana. <span class="req">*</span></label>
       </div>
 
-      <div>
+<div>
         <button type="submit" class="btn">Submeter diagnóstico</button>
         <p id="diag-status" class="status" role="status" aria-live="polite"></p>
       </div>
     </form>
 
-    <p class="note">Este link é privado e expira em 48h. Os teus dados são usados apenas para o teu acompanhamento (RGPD).</p>
+    <div id="diag-done" class="done" role="status">
+      <h2>✓ Diagnóstico enviado</h2>
+      <p>Obrigada! Recebi o teu diagnóstico. Entrarei em contacto dentro de 48h.</p>
+    </div>
   </main>
 
   <script>
     const form = document.getElementById('form-diagnostico');
     const status = document.getElementById('diag-status');
+    const done = document.getElementById('diag-done');
     function markRequired() {
       let valid = true;
       form.querySelectorAll('[required]').forEach((el) => {
@@ -199,16 +214,16 @@ export function renderDiagnosticPage(lead: Lead): Response {
     }
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      if (status.dataset.done) return;
+      if (done.dataset.done) return;
       if (!markRequired()) { status.textContent = 'Faltam alguns campos obrigatórios.'; return; }
       status.textContent = 'A enviar...';
       const res = await fetch(form.action, { method: 'POST', body: new FormData(form), headers: { Accept: 'application/json' } });
       const data = await res.json();
       if (data.success) {
-        status.textContent = data.message || 'Enviado!';
-        status.className = 'status ok';
-        status.dataset.done = '1';
-        form.reset();
+        done.dataset.done = '1';
+        form.style.display = 'none';
+        done.style.display = 'block';
+        done.scrollIntoView({ behavior: 'smooth', block: 'center' });
       } else {
         status.textContent = data.error || 'Algo correu mal. Tenta de novo.';
         status.className = 'status err';

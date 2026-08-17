@@ -11,7 +11,14 @@ dev-astro:
 
 # Dev do FUNIL completo (Worker + assets + API). Build + wrangler dev (porta 8787).
 # Necessário para testar /api/lead, /diagnostico e /api/diagnostico end-to-end.
+# Garante a porta e processos livres antes de arrancar (evita "Address already in use").
 dev:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Mata processos wrangler/workerd residuais que segurem a porta 8787
+    for pid in $(lsof -ti :8787 || true); do kill -9 "$pid" 2>/dev/null || true; done
+    pkill -9 -f "wrangler dev --port 8787" 2>/dev/null || true
+    sleep 1
     npm run build
     npx wrangler dev --port 8787
 
