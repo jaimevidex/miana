@@ -5,9 +5,15 @@ default:
 install:
     npm install
 
-# Arrancar o dev server local (porta 4321)
-dev:
+# Arrancar o dev server do ASTRO com HMR (só a UI; sem /api/* do funil). Porta 4321
+dev:astro:
     npm run dev
+
+# Dev do FUNIL completo (Worker + assets + API). Build + wrangler dev (porta 8787).
+# Necessário para testar /api/lead, /diagnostico e /api/diagnostico end-to-end.
+dev:
+    npm run build
+    npx wrangler dev --port 8787
 
 # Arrancar o preview da build (porta 4321/4322)
 preview:
