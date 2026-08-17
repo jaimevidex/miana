@@ -85,8 +85,11 @@ const radioCls = 'accent-burgundy';
           throw new Error(data.error || 'Erro ao enviar');
         }
       })
-      .catch(() => {
-        status.textContent = 'Algo correu mal. Tenta novamente ou escreve para mpitamakeup@gmail.com.';
+      .catch((err) => {
+        const msg = err?.message === 'Erro ao enviar'
+          ? 'Algo correu mal. Tenta novamente ou escreve para hello@marianapita.pt.'
+          : err?.message || 'Algo correu mal. Tenta novamente.';
+        status.textContent = msg;
         status.className = 'mt-3 text-sm text-red-700';
       });
   });

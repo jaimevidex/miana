@@ -7,6 +7,7 @@ export interface Env {
   ASSETS: Fetcher;
   EMAIL_ENABLED?: string;
   OWNER_EMAIL?: string;
+  RATE_LIMIT_DISABLED?: string;
 }
 
 export interface Lead {
@@ -100,6 +101,9 @@ function rateKey(clientIP: string, email: string): string {
 
 // Rate-limit simples por IP. Devolve true se o pedido deve ser aceite.
 export async function allowRequest(env: Env, clientIP: string, email: string): Promise<boolean> {
+  // Desativável em dev (RATE_LIMIT_DISABLED=true em .dev.vars) — o IP local é partilhado nos testes.
+  if (env.RATE_LIMIT_DISABLED === 'true') return true;
+
   const key = rateKey(clientIP, email);
   const now = Date.now();
   const raw = await env.LEADS.get(key);

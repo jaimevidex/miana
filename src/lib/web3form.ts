@@ -93,8 +93,11 @@ export async function submitWeb3Form(
     }
     throw new Error(result.message || 'Erro ao enviar');
   } catch (err) {
+    const msg = err instanceof Error ? err.message : '';
     statusEl.textContent =
-      'Algo correu mal. Tenta novamente ou escreve para mpitamakeup@gmail.com.';
+      msg && msg !== 'Erro ao enviar'
+        ? msg
+        : 'Algo correu mal. Tenta novamente ou escreve para hello@marianapita.pt.';
     statusEl.className = 'mt-3 text-sm text-red-700';
     return false;
   }
