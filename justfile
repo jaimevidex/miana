@@ -41,6 +41,10 @@ commit-push MSG="update":
 push:
     git push
 
+# Typecheck do Worker (funnel Skin Call) usando o tsconfig dedicado
+worker-check:
+    npx tsc --noEmit -p worker/tsconfig.json
+
 # Deploy para a Cloudflare: build + deploy + verificação (rebuild sempre evita o bug de assets não subirem)
 deploy:
     npm run build

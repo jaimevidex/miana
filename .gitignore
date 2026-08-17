@@ -2,6 +2,9 @@
 dist/
 .astro/
 
+# cloudflare wrangler local state
+.wrangler/
+
 # dependencies
 node_modules/
 

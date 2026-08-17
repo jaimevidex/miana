@@ -1,15 +1,42 @@
-# Configuração do Cloudflare Pages via Wrangler (nova versão, Pages on Workers).
-# O site é um build estático do Astro (output: dist).
+# Configuração do Cloudflare via Wrangler.
+# O site é um build estático do Astro (dist/), servido pelo binding ASSETS.
+# Um Worker (worker/index.ts) adiciona o funnel Skin Call (fase 2):
+#   - POST /api/lead        grava lead em KV LEADS e devolve link do diagnóstico
+#   - GET  /diagnostico     página privada pré-preenchida a partir do token
+#   - (tudo o resto)        serve os assets estáticos do Astro
 name = "miana"
 compatibility_date = "2026-08-06"
-# Desativa o subdomínio público *.workers.dev — o site só fica disponível nos domínios custom.
+compatibility_flags = ["nodejs_compat"]
+
+# Desativa o subdomínio público *.workers.dev — o site só fica nos domínios custom.
 workers_dev = false
 
-[assets]
-directory = "./dist"
+# Entry point do Worker que adiciona a API do funnel.
+main = "worker/index.ts"
 
-# Domínio custom — liga o worker a marianapita.pt (ativa após a zona ficar Active no Cloudflare)
+# Domínio custom — liga o worker a marianapita.pt.
 routes = [
   { pattern = "marianapita.pt", custom_domain = true },
   { pattern = "www.marianapita.pt", custom_domain = true }
 ]
+
+[assets]
+binding = "ASSETS"
+directory = "./dist"
+
+# Namespace KV onde ficam os leads (token, nome, email, telefone, plano), TTL 48h.
+# Preencher `id`/`preview_id` após criar o KV no dashboard (wrangler kv namespace create LEADS).
+[[kv_namespaces]]
+binding = "LEADS"
+id = "REPLACE_WITH_KV_ID"
+preview_id = "REPLACE_WITH_KV_PREVIEW_ID"
+
+# Variáveis de ambiente.
+# - EMAIL_ENABLED: enquanto a API do Resend não estiver operacional usamos stub (log em vez de enviar).
+#   Em deploy real: npx wrangler secret put EMAIL_ENABLED
+# - RESEND_API_KEY: chave de API do Resend (envio de email transacional, https://resend.com).
+#   Em deploy real: npx wrangler secret put RESEND_API_KEY
+# - OWNER_EMAIL: email da dona — recebe o pedido real do diagnóstico e os avisos leves.
+[vars]
+EMAIL_ENABLED = "false"
+OWNER_EMAIL = "hello@marianapita.pt"

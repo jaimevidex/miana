@@ -39,41 +39,37 @@
 
 ---
 
-## Fase 2 — Backend / funnel Skin Call (aguarda domínio `marianapita.pt` Active)
+## Fase 2 — Backend / funnel Skin Call
 
 > A proposta: quando alguém submete o skin-call, guardar o email e enviar um email ao lead com link para um formulário de diagnóstico privado, pré-preenchido; só esse diagnóstico gera o "pedido real" no backend.
+>
+> O domínio `marianapita.pt` está **Active** e o DNS já aponta para a Cloudflare — o bloqueio da Fase 2 está **desbloqueado** (ver `.env`, `wrangler.toml` e `worker/`).
 
-### Bloqueio
-- [ ] Domínio `marianapita.pt` ficar **Active** + DNS (SPF/DKIM/DMARC) configurado — sem isto o Cloudflare Email não envia
+### Código pronto (implementado, falta configurar credenciais no deploy)
+- [x] `wrangler.toml`: sair do estático puro → Worker com `assets` + `kv_namespaces` (`LEADS`) + binding `send_email`
+- [x] KV `LEADS`: gravar lead (nome/email/telefone/plano) com `token` único, TTL **48h** (`worker/lib.ts`)
+- [x] `POST /api/lead`: grava lead + devolve link `/diagnostico?token=…` + emails (invite ao lead, aviso ao dono)
+- [x] `GET /diagnostico?token=…`: página privada pré-preenchida (dados vêm do KV, não do browser) — `worker/diagnostico.ts`
+- [x] Email: **Resend** (API REST, grátis — 3.000/mês, 100/dia). Envia `no-reply@marianapita.pt` no invite do lead; o diagnóstico termina em `hello@marianapita.pt`. `EMAIL_ENABLED=false` em modo stub — `worker/email.ts`
+- [x] Stage 2 diagnóstico: reintroduzidas as questões de rotina de pele como o formulário de diagnóstico; submete o "pedido real" **diretamente por email à dona** (eliminada dependência Web3Forms no backend) — `POST /api/diagnostico`
+- [x] Consentimento "Vou receber um email com link privado" antes do submit do stage 1
+- [x] Honeypot `botcheck` + rate-limit por IP (5/h) no Worker
+- [x] Limpeza automática via TTL 48h
+- [x] `worker/tsconfig.json` + `npm run worker:check` / `just worker-check` (typecheck do Worker)
 
-### Arquitetura
-- [ ] `wrangler.toml`: sair do estático puro → Worker com `assets` + `kv_namespaces` (`LEADS`)
-- [ ] KV `LEADS`: gravar lead (nome/email/telefone/plano) com `token` único, TTL **48h**
+### Para configurar antes do deploy (credenciais / conta)
+- [ ] Criar conta **Resend** e adicionar o domínio `marianapita.pt` (SPF/DKIM) — o Resend entrega os registos DNS para pores no `marianapita.pt`
+- [ ] Secret `RESEND_API_KEY`: `npx wrangler secret put RESEND_API_KEY`
+- [ ] Secret/var `EMAIL_ENABLED=true` (para ligar o envio real)
+- [ ] Criar o KV `LEADS` e preencher `id`/`preview_id` no `wrangler.toml`
+- [ ] Confirmar `OWNER_EMAIL` (default `hello@marianapita.pt`)
+- [ ] Testar `wrangler dev` (feito: `/api/lead`, `/diagnostico`, `/api/diagnostico`, honeypot, rate-limit e consumo de token validados)
 
-### Endpoints (Worker)
-- [ ] `POST /api/lead`: grava lead + devolve link `/diagnostico?token=…`
-- [ ] `GET /diagnostico?token=…`: página privada pré-preenchida (dados vindos do token, não do browser)
+> Nota sobre custo: Cloudflare Email Sending (enviar para destinatários arbitrários) requer o plano Workers Paid. Por isso trocámos para Resend (free tier) — envia do próprio domínio via SPF/DKIM, sem plano pago.
 
-### Email (Cloudflare Email)
-- [ ] Binding `send_email` no Worker (remetente `no-reply@marianapita.pt`)
-- [ ] Conteúdo: "Olá, vi que estás interessada na Skin Call, estamos quase lá… Quando tiveres 5 minutos preenche apenas este formulário de diagnóstico de pele para eu perceber o plano mais indicado para ti." + botão para o link
-- [ ] Enquanto domínio não Active: `EMAIL_ENABLED=false` em modo stub/flag
-
-### Stage 2 (diagnóstico)
-- [ ] Reintroduzir as questões de rotina de pele (removidas do skin-call) como o formulário de diagnóstico
-- [ ] Só o diagnóstico submete como "pedido real" (Web3Forms/backend), com nome/email/plano
-- [ ] Stage 1 envia aviso leve ao dono; stage 2 o pedido completo (decisão: "receber nos dois")
-
-### Segurança / RGPD
-- [ ] Manter honeypot `botcheck` + rate-limit/anti-spam no Worker
-- [ ] Consentimento "Vou receber um email com link privado" antes do submit do stage 1
-- [ ] Limpeza automática via TTL 48h
-
-### Melhorias de backend recomendadas
-- [ ] Centralizar os 3 formulários no nosso Worker (eliminar dependência Web3Forms)
-- [ ] Confirmação automática ao cliente em Bridal/Education (paridade com o funnel Skin Call)
-- [ ] Rate-limit real por IP/email
-- [ ] Visual custom dos radios (bolinha/ring burgundy) — baixo esforço
+### Melhorias de backend recomendadas (fora do ciclo atual)
+- [ ] Centralizar os 3 formulários no nosso Worker (eliminar dependência Web3Forms) — o funnel Skin Call já não usa Web3Forms; faltam Bridal/Education
+- [ ] Confirmação automática ao cliente em Bridal/Education (paridade com o funnel Skin Call) — via Resend
 
 ---
 

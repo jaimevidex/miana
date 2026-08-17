@@ -1,0 +1,144 @@
+// Entry point do Worker — serve os assets estáticos do Astro e adiciona o funnel Skin Call.
+//
+// Rotas:
+//   POST /api/lead            Stage 1: grava lead no KV, envia email com link, devolve { url }.
+//   GET  /diagnostico?token=  Página privada pré-preenchida (dados do KV, não do browser).
+//   POST /api/diagnostico     Stage 2: submete o diagnóstico como pedido real (email à dona).
+
+import { allowRequest, generateToken, isBot, json, LEAD_TTL, readForm, validateLead, type Env, type Lead, type LeadInput } from './lib';
+import { sendDiagnosticInvite, sendOwnerRequest } from './email';
+import { renderDiagnosticError, renderDiagnosticPage } from './diagnostico';
+
+// OK: tripé CORS e honeypot. Todos os posts vêm do nosso próprio domínio, mas aceitamos origins.
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Accept',
+};
+
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url);
+    const path = url.pathname;
+    const method = request.method;
+
+    if (method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
+
+    if (path === '/api/lead' && method === 'POST') return handleLead(request, env);
+    if (path === '/api/diagnostico' && method === 'POST') return handleDiagnostico(request, env);
+    if (path === '/diagnostico' && method === 'GET') return handleDiagnosticPage(request, env);
+
+    // Tudo o resto: assets estáticos do Astro.
+    return env.ASSETS.fetch(request as Request);
+  },
+} satisfies ExportedHandler<Env>;
+
+// Stage 1 — guardar o lead e devolver o link do diagnóstico.
+async function handleLead(request: Request, env: Env): Promise<Response> {
+  const clientIP = request.headers.get('CF-Connecting-IP') || 'unknown';
+
+  try {
+    const form = await readForm(request);
+
+    if (isBot(form)) {
+      // Bot preencheu o honey pot — devolvemos sucesso falso, mas não gravamos nada.
+      return json({ success: true, url: '/servicos/skin-call' });
+    }
+
+    const lead = {
+      nome: (form.get('nome') || '') as string,
+      telefone: (form.get('telefone') || '') as string,
+      email: ((form.get('email') || '') as string).trim().toLowerCase(),
+      plano: (form.get('plano') || '') as string,
+    };
+
+    const err = validateLead(lead);
+    if (err) return json({ success: false, error: err }, 400);
+
+    const allowed = await allowRequest(env, clientIP, lead.email);
+    if (!allowed) {
+      return json({ success: false, error: 'Demasiadas tentativas. Tenta mais tarde.' }, 429);
+    }
+
+    const token = generateToken();
+    const record: Lead = {
+      token,
+      ...lead,
+      createdAt: Date.now(),
+    };
+    await env.LEADS.put(`lead:${token}`, JSON.stringify(record), { expirationTtl: LEAD_TTL });
+
+    // Em paralelo: enviar email ao lead com o link do diagnóstico. Nunca bloqueia a resposta.
+    await Promise.allSettled([
+      sendDiagnosticInvite(env, { nome: lead.nome, email: lead.email, token }),
+    ]);
+
+    const url = `/diagnostico?token=${encodeURIComponent(token)}`;
+    return json({ success: true, url });
+  } catch (e) {
+    console.error('[api/lead] error:', e);
+    return json({ success: false, error: 'Erro no servidor. Tenta de novo.' }, 500);
+  }
+}
+
+// Stage 2 — submete o diagnóstico como pedido real.
+async function handleDiagnostico(request: Request, env: Env): Promise<Response> {
+  try {
+    const form = await readForm(request);
+    if (isBot(form)) return json({ success: true, message: 'Enviado!' });
+
+    const token = (form.get('token') || '') as string;
+    if (!token) return json({ success: false, error: 'Falta o token de acesso.' }, 400);
+
+    const raw = await env.LEADS.get(`lead:${token}`);
+    if (!raw) return json({ success: false, error: 'Este link expirou (48h) ou não é válido. Pede um novo.' }, 410);
+
+    const stored: Lead = JSON.parse(raw);
+    const payload = {
+      nome: (form.get('nome') || stored.nome) as string,
+      telefone: (form.get('telefone') || stored.telefone) as string,
+      email: ((form.get('email') || stored.email) as string).trim().toLowerCase(),
+      plano: (form.get('plano') || stored.plano) as string,
+      rotina: (form.get('rotina') || '') as string,
+      rotina_frequencia: (form.get('rotina_frequencia') || '') as string,
+      preocupacoes: form.getAll('preocupacoes').join(', '),
+      alergias: (form.get('alergias') || '') as string,
+      consent: (form.get('consent') === 'on') ? 'Sim' : 'Não',
+    };
+
+    const err = validateLead(payload);
+    if (err) return json({ success: false, error: err }, 400);
+
+    // Consome o token imediatamente (uso único).
+    await env.LEADS.delete(`lead:${token}`);
+
+    // Entrega o pedido real à dona.
+    await sendOwnerRequest(env, payload);
+
+    return json({
+      success: true,
+      message: 'Obrigada! Recebi o teu diagnóstico. Entrarei em contacto dentro de 48h.',
+    });
+  } catch (e) {
+    console.error('[api/diagnostico] error:', e);
+    return json({ success: false, error: 'Erro no servidor. Tenta de novo.' }, 500);
+  }
+}
+
+// GET /diagnostico?token=… — página privada pré-preenchida.
+async function handleDiagnosticPage(request: Request, env: Env): Promise<Response> {
+  const url = new URL(request.url);
+  const token = url.searchParams.get('token') || '';
+
+  if (!token) return renderDiagnosticError('missing');
+
+  const raw = await env.LEADS.get(`lead:${token}`);
+  if (!raw) return renderDiagnosticError('invalid');
+
+  try {
+    const lead: Lead = JSON.parse(raw);
+    return renderDiagnosticPage(lead);
+  } catch {
+    return renderDiagnosticError('invalid');
+  }
+}

@@ -1,17 +1,11 @@
 ---
-import { getAccessKey, submitWeb3Form } from '../../lib/web3form';
-
-const accessKey = getAccessKey();
-
 const inputCls =
   'mt-1 w-full border border-darkbrown/20 rounded-sm px-4 py-3 bg-white focus:border-burgundy outline-none';
 const labelCls = 'block text-sm font-medium text-darkbrown';
 const radioCls = 'accent-burgundy';
 ---
 
-<form id="form-skin-call" action="https://api.web3forms.com/submit" method="POST" novalidate class="grid gap-6">
-  <input type="hidden" name="access_key" value={accessKey} />
-  <input type="hidden" name="subject" value="Quiz — The Skin Call" />
+<form id="form-skin-call" action="/api/lead" method="POST" novalidate class="grid gap-6">
   <input type="checkbox" name="botcheck" class="hidden" style="display:none" />
 
   <div class="grid sm:grid-cols-2 gap-5">
@@ -50,6 +44,11 @@ const radioCls = 'accent-burgundy';
 
   <p class="text-xs text-darkbrown/60"><span class="text-burgundy">*</span> Campos obrigatórios</p>
 
+  <label class="inline-flex items-start gap-3 text-sm text-darkbrown/80">
+    <input type="checkbox" name="consent" required class="accent-burgundy mt-0.5" />
+    <span>Vou receber um email com um link privado para o diagnóstico de pele, o que me permite criar o plano mais indicado para mim. <span class="text-burgundy">*</span></span>
+  </label>
+
   <div class="flex flex-wrap items-center gap-4">
     <button type="submit" class="bg-burgundy text-offwhite px-8 py-3.5 text-sm font-semibold rounded-full hover:opacity-90 transition">
       Submeter Formulário
@@ -59,10 +58,12 @@ const radioCls = 'accent-burgundy';
 </form>
 
 <script>
-  import { submitWeb3Form, validateRequiredFields, scrollFormIntoView } from '../../lib/web3form';
+  import { validateRequiredFields, scrollFormIntoView } from '../../lib/web3form';
 
   const form = document.getElementById('form-skin-call') as HTMLFormElement | null;
   const status = document.getElementById('form-skin-call-status');
+
+  const SUCCESS = 'Enviado! Verifica o teu email — vou enviar-te o link privado para o diagnóstico de pele.';
 
   form?.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -70,6 +71,34 @@ const radioCls = 'accent-burgundy';
       scrollFormIntoView(form);
       return;
     }
-    void submitWeb3Form(form, status);
+
+    const consent = form.querySelector<HTMLInputElement>('[name="consent"]');
+    if (consent && !consent.checked) {
+      scrollFormIntoView(form);
+      return;
+    }
+
+    status.textContent = 'A enviar...';
+    status.className = 'mt-3 text-sm text-darkbrown/60';
+
+    fetch(form.action, {
+      method: 'POST',
+      body: new FormData(form),
+      headers: { Accept: 'application/json' },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          status.textContent = SUCCESS;
+          status.className = 'mt-3 text-sm font-medium text-burgundy';
+          form.reset();
+        } else {
+          throw new Error(data.error || 'Erro ao enviar');
+        }
+      })
+      .catch(() => {
+        status.textContent = 'Algo correu mal. Tenta novamente ou escreve para mpitamakeup@gmail.com.';
+        status.className = 'mt-3 text-sm text-red-700';
+      });
   });
 </script>
