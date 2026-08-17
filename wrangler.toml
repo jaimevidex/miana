@@ -38,5 +38,5 @@ preview_id = "5dda"
 #   Em deploy real: npx wrangler secret put RESEND_API_KEY
 # - OWNER_EMAIL: email da dona — recebe o pedido real do diagnóstico e os avisos leves.
 [vars]
-EMAIL_ENABLED = "false"
+EMAIL_ENABLED = "true"
 OWNER_EMAIL = "hello@marianapita.pt"
