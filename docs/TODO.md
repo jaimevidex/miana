@@ -63,12 +63,12 @@
 - [ ] Secret/var `EMAIL_ENABLED=true` (para ligar o envio real)
 - [ ] Criar o KV `LEADS` e preencher `id`/`preview_id` no `wrangler.toml`
 - [ ] Confirmar `OWNER_EMAIL` (default `hello@marianapita.pt`)
-- [ ] Testar `wrangler dev` (feito: `/api/lead`, `/diagnostico`, `/api/diagnostico`, honeypot, rate-limit e consumo de token validados)
+- [ ] Testar `wrangler dev` (feito: `/api/lead`, `/diagnostico`, `/api/diagnostico`, `/api/contact`, honeypot, rate-limit e consumo de token validados)
 
 > Nota sobre custo: Cloudflare Email Sending (enviar para destinatários arbitrários) requer o plano Workers Paid. Por isso trocámos para Resend (free tier) — envia do próprio domínio via SPF/DKIM, sem plano pago.
 
 ### Melhorias de backend recomendadas (fora do ciclo atual)
-- [ ] Centralizar os 3 formulários no nosso Worker (eliminar dependência Web3Forms) — o funnel Skin Call já não usa Web3Forms; faltam Bridal/Education
+- [x] Centralizar os 3 formulários no nosso Worker (eliminada dependência Web3Forms) — Bridal e Education via `POST /api/contact` (email à dona); Skin Call via funnel `token`
 - [ ] Confirmação automática ao cliente em Bridal/Education (paridade com o funnel Skin Call) — via Resend
 
 ---

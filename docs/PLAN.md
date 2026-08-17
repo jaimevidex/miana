@@ -2,7 +2,7 @@
 
 > Plano completo de implementação. Fonte: docs (BRIEF, SITEMAP, CONTENT, DESIGN, IMAGES), todos 🟢 completos.
 
-**Stack:** Astro 4 + Tailwind 3 (v3.4) + Sitemap. Deploy futuro: Cloudflare Pages. Formulários: Web3Forms.
+**Stack:** Astro 4 + Tailwind 3 (v3.4) + Sitemap. Deploy: Cloudflare Worker (Static Assets). Formulários: Worker + Resend.
 
 ## Fase 0 — Persistência do plano & registo
 - [x] 0.1 Guardar este plano em `docs/PLAN.md`
@@ -29,8 +29,8 @@
 | `/servicos/education` | Beauty Education | Form 3 |
 | `/contacto` | Contacto | Form geral |
 
-## Fase D — Formulários (Web3Forms)
-- Infraestrutura reutilizável, `PUBLIC_WEB3FORMS_KEY` do env, honeypot, ARIA, mensagem de sucesso comum.
+## Fase D — Formulários (via Worker)
+- Infraestrutura reutilizável, `POST /api/contact` do Worker, honeypot, ARIA, mensagem de sucesso comum. Email à dona via Resend (`worker/email.ts`).
 - Form 2 (Quiz): Q1 recomenda plano (A→One Time, B→Duo, C→Triple, D→Full Year), Q2–Q5.
 - Form 1 e Form 3: campos condicionais (Bride/Guests; Group Sessions).
 
@@ -46,4 +46,4 @@
 - Deploy Cloudflare Pages, domínio, Search Console (ver TODO — deferred).
 
 ## Deferred (para tratar depois — ver docs/TODO.md)
-Imagens reais, retrato "Sessão de Lisboa", Web3Forms key, vídeos/reels, domínio/email, logótipo, testemunhos, redes sociais/WhatsApp, política RGPD, GA/Meta IDs, deploy final, fases futuras (Newsletter/Calendly).
+Imagens reais, retrato "Sessão de Lisboa", domínio/email, vídeos/reels, logótipo, testemunhos, redes sociais/WhatsApp, política RGPD, GA/Meta IDs, deploy final, fases futuras (Newsletter/Calendly).

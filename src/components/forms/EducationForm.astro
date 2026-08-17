@@ -1,16 +1,11 @@
 ---
-import { getAccessKey, submitWeb3Form } from '../../lib/web3form';
-
-const accessKey = getAccessKey();
-
 const inputCls =
   'mt-1 w-full border border-darkbrown/20 rounded-sm px-4 py-3 bg-white focus:border-burgundy outline-none';
 const labelCls = 'block text-sm font-medium text-darkbrown';
 const radioCls = 'accent-burgundy';
 ---
 
-<form id="form-education" action="https://api.web3forms.com/submit" method="POST" novalidate class="grid gap-5">
-  <input type="hidden" name="access_key" value={accessKey} />
+<form id="form-education" action="/api/contact" method="POST" novalidate class="grid gap-5">
   <input type="hidden" name="subject" value="Pedido — Beauty Education (Workshop)" />
   <input type="checkbox" name="botcheck" class="hidden" style="display:none" />
 
@@ -123,7 +118,7 @@ const radioCls = 'accent-burgundy';
 </form>
 
 <script>
-  import { submitWeb3Form, validateRequiredFields, scrollFormIntoView } from '../../lib/web3form';
+  import { submitForm, validateRequiredFields, scrollFormIntoView } from '../../lib/web3form';
 
   const form = document.getElementById('form-education') as HTMLFormElement | null;
   const status = document.getElementById('form-education-status');
@@ -142,6 +137,6 @@ const radioCls = 'accent-burgundy';
       scrollFormIntoView(form);
       return;
     }
-    void submitWeb3Form(form, status);
+    void submitForm(form, status);
   });
 </script>

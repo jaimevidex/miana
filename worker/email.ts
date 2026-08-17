@@ -120,3 +120,23 @@ export async function sendOwnerRequest(env: Env, data: Record<string, string>): 
 
   await sendResend(env, { to: ownerEmail(env), subject, html, text });
 }
+
+// Email genérico de formulário (Bridal, Education, etc.) entregue à dona.
+// `fields` é uma lista de pares [label, valor] já ordenada para o email.
+export async function sendFormEmail(
+  env: Env,
+  info: { subject: string; fields: [string, string][] }
+): Promise<void> {
+  const html = `
+    <div style="font-family: Arial, Helvetica, sans-serif; line-height:1.6; color:#3b2a2a;">
+      <p><strong>${info.subject}:</strong></p>
+      <table style="border-collapse:collapse; font-size:14px;">
+        ${info.fields.filter(([, v]) => v).map(([k, v]) => `<tr><td style="padding:6px 12px 6px 0; color:#8a7a74; font-weight:600; vertical-align:top; white-space:nowrap;">${k}</td><td style="padding:6px 0;">${v}</td></tr>`).join('')}
+      </table>
+    </div>
+  `;
+
+  const text = `${info.subject}:\n\n${info.fields.filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`).join('\n')}`;
+
+  await sendResend(env, { to: ownerEmail(env), subject: info.subject, html, text });
+}

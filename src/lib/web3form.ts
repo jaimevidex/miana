@@ -1,16 +1,9 @@
-// Utilitário de formulários Web3Forms (https://web3forms.com) — partilhado por todos os formulários.
-// A key real é definida pelo utilizador em .env como PUBLIC_WEB3FORMS_KEY (ver .env.example).
+// Utilitário de formulários do site — partilhado por todos os formulários.
+// Envia para o nosso Worker (POST /api/contact ou /api/lead), que entrega o pedido
+// por email à dona (hello@marianapita.pt) via Resend — sem dependência de Web3Forms.
 
 export const SUCCESS_MESSAGE =
   'Obrigada! O teu pedido foi registado. Responderei assim que possível, num prazo de até 48h com todas as informações.';
-
-export function getAccessKey(): string {
-  const key = import.meta.env.PUBLIC_WEB3FORMS_KEY;
-  if (key && key !== 'COLOCAR_ACCESS_KEY_AQUI') {
-    return key;
-  }
-  return 'COLOCAR_ACCESS_KEY_AQUI';
-}
 
 const REQUIRED_ERROR_CLS = '!border-burgundy !bg-[#FBEDF0]';
 
@@ -64,10 +57,10 @@ export function validateRequiredFields(form: HTMLFormElement): boolean {
 }
 
 /**
- * Envia o formulário para o Web3Forms e atualiza o elemento de estado.
+ * Envia o formulário para o nosso Worker e atualiza o elemento de estado.
  * Devolve true em caso de sucesso.
  */
-export async function submitWeb3Form(
+export async function submitForm(
   form: HTMLFormElement,
   statusEl: HTMLElement | null
 ): Promise<boolean> {

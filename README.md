@@ -5,8 +5,8 @@ Site estático (sem backend) construído com **Astro** + **Tailwind CSS**, otimi
 ## Stack
 - [Astro](https://astro.build) — geração estática, otimização automática de imagens (`astro:assets`)
 - [Tailwind CSS](https://tailwindcss.com) — estilos
-- [Web3Forms](https://web3forms.com) — envio do formulário de contacto sem backend
-- Deploy: Cloudflare Pages / Netlify
+- [Worker (Cloudflare)](https://developers.cloudflare.com/workers/) — envia os formulários para o email da dona via Resend (`POST /api/contact`)
+- Deploy: Cloudflare Worker (Static Assets)
 
 ## Documentação do projeto
 
@@ -62,5 +62,5 @@ public/
 1. Preencher `docs/BRIEF.md` com a cliente.
 2. Substituir todo o texto placeholder (marcado com `<!-- TODO -->` ou `[...]`) com `docs/CONTENT.md`.
 3. Substituir imagens placeholder em `public/images` pelas reais (ver `docs/IMAGES.md`).
-4. Configurar a chave do Web3Forms em `ContactForm.astro`.
+4. Configurar os formulários → `POST /api/contact` no Worker (ver `docs/DEPLOYMENT.md`).
 5. Deploy — seguir `docs/DEPLOYMENT.md`.

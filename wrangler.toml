@@ -28,8 +28,8 @@ directory = "./dist"
 # Preencher `id`/`preview_id` após criar o KV no dashboard (wrangler kv namespace create LEADS).
 [[kv_namespaces]]
 binding = "LEADS"
-id = "REPLACE_WITH_KV_ID"
-preview_id = "REPLACE_WITH_KV_PREVIEW_ID"
+id = "5dda5a40cac64dd586445d4ec701cabb"
+preview_id = "5dda"
 
 # Variáveis de ambiente.
 # - EMAIL_ENABLED: enquanto a API do Resend não estiver operacional usamos stub (log em vez de enviar).

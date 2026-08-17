@@ -4,9 +4,10 @@
 //   POST /api/lead            Stage 1: grava lead no KV, envia email com link, devolve { url }.
 //   GET  /diagnostico?token=  Página privada pré-preenchida (dados do KV, não do browser).
 //   POST /api/diagnostico     Stage 2: submete o diagnóstico como pedido real (email à dona).
+//   POST /api/contact         Formulários genéricos (Bridal, Education) — envia email à dona.
 
-import { allowRequest, generateToken, isBot, json, LEAD_TTL, readForm, validateLead, type Env, type Lead, type LeadInput } from './lib';
-import { sendDiagnosticInvite, sendOwnerRequest } from './email';
+import { allowRequest, generateToken, isBot, isValidEmail, json, LEAD_TTL, readForm, validateLead, type Env, type Lead, type LeadInput } from './lib';
+import { sendDiagnosticInvite, sendFormEmail, sendOwnerRequest } from './email';
 import { renderDiagnosticError, renderDiagnosticPage } from './diagnostico';
 
 // OK: tripé CORS e honeypot. Todos os posts vêm do nosso próprio domínio, mas aceitamos origins.
@@ -25,6 +26,7 @@ export default {
     if (method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
 
     if (path === '/api/lead' && method === 'POST') return handleLead(request, env);
+    if (path === '/api/contact' && method === 'POST') return handleContact(request, env);
     if (path === '/api/diagnostico' && method === 'POST') return handleDiagnostico(request, env);
     if (path === '/diagnostico' && method === 'GET') return handleDiagnosticPage(request, env);
 
@@ -77,6 +79,60 @@ async function handleLead(request: Request, env: Env): Promise<Response> {
     return json({ success: true, url });
   } catch (e) {
     console.error('[api/lead] error:', e);
+    return json({ success: false, error: 'Erro no servidor. Tenta de novo.' }, 500);
+  }
+}
+
+// Formulários genéricos (Bridal/Education) — envia um email à dona com os campos preenchidos.
+async function handleContact(request: Request, env: Env): Promise<Response> {
+  const clientIP = request.headers.get('CF-Connecting-IP') || 'unknown';
+
+  try {
+    const form = await readForm(request);
+    if (isBot(form)) return json({ success: true });
+
+    const nome = ((form.get('nome') || '') as string).trim();
+    const email = ((form.get('email') || '') as string).trim().toLowerCase();
+
+    // Validação mínima: nome + email têm de existir (resto fica ao critério do formulário).
+    if (nome.length < 2) return json({ success: false, error: 'Falta o nome.' }, 400);
+    if (!isValidEmail(email)) return json({ success: false, error: 'Falta um email válido.' }, 400);
+
+    const allowed = await allowRequest(env, clientIP, email);
+    if (!allowed) return json({ success: false, error: 'Demasiadas tentativas. Tenta mais tarde.' }, 429);
+
+    // Ignora campos de sistema/honeypot e monta os campos legíveis a partir do form.
+    const skip = new Set(['botcheck', 'access_key', 'subject']);
+    const subject = ((form.get('subject') || '') as string).trim() || 'Novo pedido';
+    const FIELD_LABELS: Record<string, string> = {
+      nome: 'Nome', telefone: 'Contacto telefónico', email: 'E-mail',
+      opcao_servico: 'Opção de serviço', data_casamento: 'Data do casamento',
+      hora_pronta: 'Hora de estar pronta', local_preparacao: 'Local da preparação',
+      local_prova: 'Local da prova', servicos_procurados: 'Serviços procurados',
+      numero_guests: 'Número de guests', addon_skin_call: 'Add-on Skin Call',
+      data_evento: 'Data do evento', hora_pronta_evento: 'Hora do evento',
+      local_evento: 'Local do evento', servicos_procurados_guests: 'Serviços procurados',
+      numero_pessoas: 'Número de pessoas', mensagem: 'Mensagem',
+      formato: 'Formato', local_workshop: 'Local do workshop', data_hora: 'Data e hora',
+      tipo: 'Tipo', modalidade: 'Modalidade', numero_participantes: 'Número de participantes',
+      regime: 'Regime',
+    };
+
+    const fields: [string, string][] = [];
+    form.forEach((value, key) => {
+      if (skip.has(key)) return;
+      const label = FIELD_LABELS[key] || key.replace(/_/g, ' ');
+      fields.push([label, String(value)]);
+    });
+
+    // Rapidamente: monta o assunto com o nome se não estiver incluído.
+    const finalSubject = subject.includes(nome) ? subject : `${subject} — ${nome}`;
+
+    await sendFormEmail(env, { subject: finalSubject, fields });
+
+    return json({ success: true, message: 'Obrigada! O teu pedido foi registado. Entrarei em contacto dentro de 48h.' });
+  } catch (e) {
+    console.error('[api/contact] error:', e);
     return json({ success: false, error: 'Erro no servidor. Tenta de novo.' }, 500);
   }
 }
