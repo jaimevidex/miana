@@ -95,7 +95,6 @@ function routineFieldsets(lead: Lead): string {
           <label class="block text-sm font-semibold text-darkbrown" for="${q.name}">${htmlEscape(q.label)}${star}</label>
           <textarea id="${q.name}" name="${q.name}" rows="5" ${required} class="${taCls()}"
             placeholder="${htmlEscape(q.hint || q.placeholder || '')}"></textarea>
-          ${q.hint ? `<p class="ta-hint">${htmlEscape(q.hint)}</p>` : ''}
         </div>`);
     }
   }
@@ -119,26 +118,29 @@ export function renderDiagnosticPage(lead: Lead): Response {
   <style>
     body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:#f6f0ea;color:#3b2a2a;margin:0;padding:24px 16px;line-height:1.6}
     .wrap{max-width:640px;margin:0 auto}
-    .card{background:#fff;border:1px solid rgba(59,42,42,.1);border-radius:12px;padding:28px 24px}
+    .card{background:#fff;border:1px solid rgba(59,42,42,.08);border-radius:16px;padding:32px 28px;box-shadow:0 12px 40px rgba(59,42,42,.06)}
     h1{font-size:26px;margin:0 0 8px;color:#8a2831}
     p.sub{color:#7a6a64;font-size:14px;margin:0 0 24px}
-    .lbl{display:block;font-size:13px;font-weight:600;color:#3b2a2a}
-    .in{margin-top:4px;width:100%;border:1px solid rgba(59,42,42,.2);border-radius:8px;padding:12px 16px;font-size:14px;box-sizing:border-box}
-    .in:focus{border-color:#8a2831;outline:none}
+    .lbl{display:block;font-size:14px;font-weight:600;color:#3b2a2a;margin-bottom:2px}
+    .in,textarea{border:1.5px solid #e5ded7;border-radius:12px;padding:14px 16px;font-size:15px;box-sizing:border-box;width:100%;background:#fff;transition:border-color .15s,box-shadow .15s;color:#3b2a2a}
+    .in:focus,textarea:focus{border-color:#8a2831;box-shadow:0 0 0 4px rgba(138,40,49,.10);outline:none}
+    .in::placeholder,textarea::placeholder{color:#b4a8a1;font-family:inherit;font-weight:400;font-style:normal;opacity:1}
     .ta-wrap{margin-top:2px}
-    .ta-hint{color:#8a7a74;font-size:12px;margin:6px 0 0}
-    .opt{display:inline-flex;align-items:flex-start;gap:12px;font-size:14px;background:#fff;border:1px solid rgba(59,42,42,.1);border-radius:8px;padding:12px 16px;margin-bottom:8px;cursor:pointer;width:100%;box-sizing:border-box}
-    .opt:hover{border-color:#8a2831}
+    .ta-hint{color:#8a7a74;font-size:12.5px;margin:7px 0 0}
+    textarea{resize:vertical;min-height:130px;line-height:1.7}
+    .opt{display:inline-flex;align-items:flex-start;gap:12px;font-size:14px;background:#fff;border:1.5px solid #e5ded7;border-radius:12px;padding:13px 16px;margin-bottom:8px;cursor:pointer;width:100%;box-sizing:border-box;transition:border-color .15s,background .15s}
+    .opt:hover{border-color:#8a2831;background:#fbf6f2}
     .opt input{margin-top:3px;accent-color:#8a2831}
-    .grid{display:grid;gap:18px}
+    .grid{display:grid;gap:20px}
     .req{color:#8a2831}
-    .btn{display:inline-block;background:#8a2831;color:#fbf5ef;padding:14px 32px;font-size:14px;font-weight:600;border:0;border-radius:999px;cursor:pointer}
-    .btn:hover{opacity:.9}
+    .btn{display:inline-block;background:#8a2831;color:#fbf5ef;padding:15px 36px;font-size:15px;font-weight:600;border:0;border-radius:999px;cursor:pointer;transition:background .15s}
+    .btn:hover{background:#6f2027}
     .status{margin-top:12px;font-size:13px}
     .status.ok{color:#0a7a4a;font-weight:600}
     .status.err{color:#b3261e}
     .note{font-size:12px;color:#8a7a74;margin-top:16px}
     fieldset{border:0;padding:0;margin:0}
+    fieldset .lbl{margin-bottom:8px}
     .done{display:none;text-align:center;padding:40px 24px}
     .done h2{font-size:22px;color:#0a7a4a;margin:0 0 8px}
     .done p{color:#7a6a64;font-size:14px;margin:0}

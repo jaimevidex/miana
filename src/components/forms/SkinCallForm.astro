@@ -44,11 +44,6 @@ const radioCls = 'accent-burgundy';
 
   <p class="text-xs text-darkbrown/60"><span class="text-burgundy">*</span> Campos obrigatórios</p>
 
-  <label class="inline-flex items-start gap-3 text-sm text-darkbrown/80">
-    <input type="checkbox" name="consent" required class="accent-burgundy mt-0.5" />
-    <span>Vou receber um email com um link privado para o diagnóstico de pele, o que me permite criar o plano mais indicado para mim. <span class="text-burgundy">*</span></span>
-  </label>
-
   <div class="flex flex-wrap items-center gap-4">
     <button type="submit" class="bg-burgundy text-offwhite px-8 py-3.5 text-sm font-semibold rounded-full hover:opacity-90 transition">
       Submeter Formulário
@@ -68,12 +63,6 @@ const radioCls = 'accent-burgundy';
   form?.addEventListener('submit', (e) => {
     e.preventDefault();
     if (!validateRequiredFields(form)) {
-      scrollFormIntoView(form);
-      return;
-    }
-
-    const consent = form.querySelector<HTMLInputElement>('[name="consent"]');
-    if (consent && !consent.checked) {
       scrollFormIntoView(form);
       return;
     }
