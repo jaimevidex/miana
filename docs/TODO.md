@@ -87,6 +87,6 @@
 | 6 | Fornecer testemunhos/reviews reais de clientes/noivas (espaço reservado na Home) | Média | ⏳ |
 | 7 | Confirmar links reais de redes sociais (Instagram `@marianapita_makeup`) e se há WhatsApp/telefone para o Contacto | Média | ⏳ |
 | 8 | Criar página Política de Privacidade & Cookies (RGPD) e respetivo link no footer | Média | ⏳ |
-| 9 | Fornecer IDs do Google Analytics e Meta Pixel (blocos placeholder no código) | Baixa | ⏳ |
-| 10 | Deploy final: domínio na Cloudflare Pages, Search Console, submissão do sitemap | Baixa | ⏳ |
+| 9 | Fornecer IDs do Google Analytics e Meta Pixel (blocos placeholder prontos no `Layout.astro` via `PUBLIC_GA_ID` / `PUBLIC_META_PIXEL_ID`) | Baixa | ⏳ |
+| 10 | Deploy final: domínio na Cloudflare Pages, Search Console (tag pronta via `PUBLIC_GSC_VERIFICATION`), submissão do sitemap | Baixa | ⏳ |
 | 11 | **Imagens / R2**: as galerias mantêm-se em `public/` estático (`astro:assets`); R2/upload remoto só se houver necessidade futura de gestão sem deploy | Baixa | ⏳ |

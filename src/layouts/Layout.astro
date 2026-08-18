@@ -14,6 +14,24 @@ interface Props {
 const { title, description, ogImage = '/images/og-default.jpg', hasHero = false } = Astro.props;
 const siteURL = new URL(Astro.site ?? 'https://marianapita.pt');
 const canonicalURL = new URL(Astro.url.pathname, siteURL);
+
+// Analytics / verificação — ativos apenas quando o respetivo PUBLIC_* tem valor.
+const gaId = import.meta.env.PUBLIC_GA_ID?.trim() || '';
+const pixelId = import.meta.env.PUBLIC_META_PIXEL_ID?.trim() || '';
+const gscToken = import.meta.env.PUBLIC_GSC_VERIFICATION?.trim() || '';
+
+const gaBoot = `window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', '${gaId}');`;
+
+const pixelBoot = `!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+document,'script','https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '${pixelId}');
+fbq('track', 'PageView');`;
 ---
 
 <!doctype html>
@@ -34,6 +52,20 @@ const canonicalURL = new URL(Astro.url.pathname, siteURL);
     <meta property="og:image" content={new URL(ogImage, siteURL)} />
     <meta property="og:url" content={canonicalURL} />
     <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Google Analytics 4 (GA4) — só ativo se PUBLIC_GA_ID estiver definido em .env -->
+    {gaId && (
+      <>
+        <script src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} async></script>
+        <script set:html={gaBoot}></script>
+      </>
+    )}
+
+    <!-- Meta Pixel — só ativo se PUBLIC_META_PIXEL_ID estiver definido em .env -->
+    {pixelId && <script set:html={pixelBoot}></script>}
+
+    <!-- Google Search Console — cópia a tag de verificação fornecida pelo Google e cola-a aqui -->
+    {gscToken && <meta name="google-site-verification" content={gscToken} />}
 
     <!-- Fontes: Playfair Display + Open Sans (social), Pinyon Script (assinatura) — ver docs/DESIGN.md -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
