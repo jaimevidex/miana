@@ -22,6 +22,33 @@ const servicos = [
     image: '/images/home-education.jpg',
   },
 ];
+
+const testemunhos = [
+  {
+    texto: 'A makeup ficou simplesmente sensacional! A Mariana tem um talento enorme e adorei, acima de tudo, o cuidado, o carinho e a atenção que tem para com cada pessoa. Senti-me mesmo especial. Recomendo de coração!',
+    autor: 'Joana',
+  },
+  {
+    texto: 'Conheci a Mariana ainda durante o seu curso, fui modelo dela! E adivinhem? Adorei!!!! No último casamento que tive foi ela quem me maquilhou a mim, a minha irmã e a minha mãe e ficámos todas lindas! Obrigada!!',
+    autor: 'Rita',
+  },
+  {
+    texto: 'Fui maquilhada pela Mariana para o meu casamento e foi incrível! Fizemos a prova e, no dia do casamento, dei feedback do que queria alterar, e essas alterações foram executadas na perfeição.',
+    autor: 'Dhara',
+  },
+  {
+    texto: 'Trabalhar com a Mariana foi 10000/10. Para além da makeup incrível, a melhor parte foi a simpatia, pontualidade e cuidado enquanto estava a maquilhar. Não é "maquilho e pronto". Nota-se o cuidado com o conforto das clientes, que podem sentir-se bem em dar a sua opinião!',
+    autor: 'Adriana',
+  },
+  {
+    texto: 'Estou muito satisfeita com os produtos que a Mariana me aconselhou para a minha pele. Estou a adorar... A minha pele nunca esteve tão bem. Muito grata, adorei.',
+    autor: 'Liliana',
+  },
+  {
+    texto: 'Se procuram um aconselhamento de skincare personalizado e baseado em conhecimento científico, para perceberem o que a vossa pele realmente precisa, recomendo mesmo a Mariana! Ajudou-me a perceber as necessidades da minha pele e, desde que comecei a seguir a rotina, notei uma diferença enorme: os poros diminuíram drasticamente, a oleosidade na zona T está mais controlada e a minha pele está muito mais luminosa.',
+    autor: 'Daniela',
+  },
+];
 ---
 
 <Layout title="Mariana — Science-Led Skincare & Effortless Beauty" description="Unimos a ciência da pele à arte da maquilhagem. Rituais de skincare personalizados e maquilhagem glowy e sunkissed para noivas, eventos e educação." hasHero>
@@ -65,9 +92,20 @@ const servicos = [
 
   <section id="testemunhos" class="max-w-container mx-auto px-6 md:px-16 py-16 md:py-32">
     <h2 class="text-display-l font-bold text-center text-burgundy mb-4 reveal">What They Say</h2>
-    <p class="text-darkbrown/60 text-center max-w-md mx-auto text-sm reveal">
-      Espaço reservado para as reviews das nossas clientes e noivas.
+    <p class="text-darkbrown/60 text-center max-w-md mx-auto text-sm mb-12 reveal">
+      As palavras de quem já passou pelo nosso cuidado.
     </p>
+    <div class="grid md:grid-cols-3 gap-6 md:gap-8">
+      {testemunhos.map((t) => (
+        <figure class="flex flex-col justify-between rounded-sm border border-darkbrown/10 bg-white p-8 reveal">
+          <div>
+            <div class="text-burgundy mb-4" aria-hidden="true">★★★★★</div>
+            <blockquote class="text-darkbrown/80 text-sm leading-relaxed">"{t.texto}"</blockquote>
+          </div>
+          <figcaption class="mt-6 text-burgundy font-semibold text-sm uppercase tracking-widest">— {t.autor}</figcaption>
+        </figure>
+      ))}
+    </div>
   </section>
 </Layout>
 
