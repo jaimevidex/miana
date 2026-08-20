@@ -95,14 +95,13 @@ const testemunhos = [
     <p class="text-darkbrown/60 text-center max-w-md mx-auto text-sm mb-12 reveal">
       As palavras de quem já passou pelo nosso cuidado.
     </p>
-    <div class="testimonials relative max-w-6xl mx-auto">
+    <div class="testimonials relative max-w-5xl mx-auto px-10 md:px-16">
       <button type="button" aria-label="Testemunho anterior" class="t-arrow left" data-t-prev>&lsaquo;</button>
       <div class="overflow-hidden" data-t-holder>
         <div class="flex" data-t-track>
           {testemunhos.map((t) => (
             <div class="t-card shrink-0">
-              <figure class="rounded-sm border border-darkbrown/10 bg-white px-6 py-5">
-                <div class="text-burgundy text-sm leading-none mb-3" aria-hidden="true">★★★★★</div>
+              <figure class="flex h-full flex-col rounded-sm border border-darkbrown/10 bg-white px-6 py-5">
                 <blockquote class="text-darkbrown/80 text-sm leading-relaxed">"{t.texto}"</blockquote>
                 <figcaption class="mt-4 text-burgundy font-semibold text-xs uppercase tracking-widest">— {t.autor}</figcaption>
               </figure>
@@ -186,14 +185,11 @@ const testemunhos = [
   }
   .testimonials [data-t-track] {
     gap: 1rem;
+    align-items: stretch;
   }
   @media (min-width: 768px) {
     .testimonials .t-card {
       width: calc((100% - 2rem) / 3);
-    }
-    .testimonials {
-      padding-left: 0;
-      padding-right: 0;
     }
   }
   .testimonials .t-arrow {
@@ -225,14 +221,6 @@ const testemunhos = [
   }
   .testimonials .t-arrow.right {
     right: 0;
-  }
-  @media (max-width: 767px) {
-    .testimonials .t-arrow.left {
-      left: 0.25rem;
-    }
-    .testimonials .t-arrow.right {
-      right: 0.25rem;
-    }
   }
 </style>
 
