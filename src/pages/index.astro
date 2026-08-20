@@ -95,19 +95,132 @@ const testemunhos = [
     <p class="text-darkbrown/60 text-center max-w-md mx-auto text-sm mb-12 reveal">
       As palavras de quem já passou pelo nosso cuidado.
     </p>
-    <div class="grid md:grid-cols-3 gap-6 md:gap-8">
-      {testemunhos.map((t) => (
-        <figure class="flex flex-col justify-between rounded-sm border border-darkbrown/10 bg-white p-8 reveal">
-          <div>
-            <div class="text-burgundy mb-4" aria-hidden="true">★★★★★</div>
-            <blockquote class="text-darkbrown/80 text-sm leading-relaxed">"{t.texto}"</blockquote>
-          </div>
-          <figcaption class="mt-6 text-burgundy font-semibold text-sm uppercase tracking-widest">— {t.autor}</figcaption>
-        </figure>
-      ))}
+    <div class="testimonials relative max-w-4xl mx-auto">
+      <div class="overflow-hidden" data-t-holder>
+        <div class="flex" data-t-track>
+          {testemunhos.map((t) => (
+            <div class="t-card shrink-0">
+              <figure class="flex h-full flex-col justify-between rounded-sm border border-darkbrown/10 bg-white p-8">
+                <div>
+                  <div class="text-burgundy mb-4" aria-hidden="true">★★★★★</div>
+                  <blockquote class="text-darkbrown/80 text-sm leading-relaxed">"{t.texto}"</blockquote>
+                </div>
+                <figcaption class="mt-6 text-burgundy font-semibold text-sm uppercase tracking-widest">— {t.autor}</figcaption>
+              </figure>
+            </div>
+          ))}
+        </div>
+      </div>
+      <button type="button" aria-label="Testemunho anterior" class="t-arrow left" data-t-prev>‹</button>
+      <button type="button" aria-label="Próximo testemunho" class="t-arrow right" data-t-next>›</button>
     </div>
   </section>
 </Layout>
+
+<script>
+  const holder = document.querySelector('[data-t-holder]') as HTMLElement;
+  const track = document.querySelector('[data-t-track]') as HTMLElement;
+  const nextBtn = document.querySelector('[data-t-next]') as HTMLButtonElement;
+  const prevBtn = document.querySelector('[data-t-prev]') as HTMLButtonElement;
+  const cards = Array.from(track.children) as HTMLElement[];
+
+  // Duplica os cards (antes e depois) para o loop infinito ser suave.
+  const clone = (els: HTMLElement[]) => els.map((c) => c.cloneNode(true) as HTMLElement);
+  clone(cards.slice(-1)).forEach((n) => track.prepend(n));
+  const originals = Array.from(track.children).slice(0, -cards.length);
+  clone(originals.slice(0, cards.length)).forEach((n) => track.appendChild(n));
+  // Reinicia com o primeiro card real visível.
+  let idx = cards.length;
+  track.style.transform = `translateX(${-idx * 100 / cards.length}%)`;
+
+  const perView = () => (window.matchMedia('(min-width: 768px)').matches ? 3 : 1);
+  const normalCount = cards.length;
+  const total = track.children.length;
+  const lastIdx = total - perView() - 1;
+
+  function render(animate: boolean) {
+    track.style.transition = animate ? 'transform 0.55s cubic-bezier(0.4, 0, 0.2, 1)' : 'none';
+    track.style.transform = `translateX(${(-idx * 100) / normalCount}%)`;
+  }
+
+  function next() {
+    idx += 1;
+    if (idx > lastIdx) {
+      idx = normalCount;
+      track.style.transition = 'none';
+      track.style.transform = `translateX(${(-idx * 100) / normalCount}%)`;
+      requestAnimationFrame(() => render(true));
+    } else {
+      render(true);
+    }
+  }
+
+  function prev() {
+    idx -= 1;
+    if (idx < normalCount) {
+      idx = lastIdx;
+      track.style.transition = 'none';
+      track.style.transform = `translateX(${(-idx * 100) / normalCount}%)`;
+      requestAnimationFrame(() => render(true));
+    } else {
+      render(true);
+    }
+  }
+
+  nextBtn.addEventListener('click', next);
+  prevBtn.addEventListener('click', prev);
+</script>
+
+<style>
+  .testimonials .t-card {
+    width: 100%;
+  }
+  @media (min-width: 768px) {
+    .testimonials .t-card {
+      width: calc(100% / 3);
+    }
+    .testimonials {
+      padding-left: 0;
+      padding-right: 0;
+    }
+  }
+  .testimonials .t-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    line-height: 1;
+    color: var(--color-offwhite, #fff);
+    background: var(--color-burgundy, #59010B);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+    z-index: 5;
+  }
+  .testimonials .t-arrow:hover {
+    opacity: 0.85;
+  }
+  .testimonials .t-arrow.left {
+    left: -1.25rem;
+  }
+  .testimonials .t-arrow.right {
+    right: -1.25rem;
+  }
+  @media (max-width: 767px) {
+    .testimonials .t-arrow.left {
+      left: 0.25rem;
+    }
+    .testimonials .t-arrow.right {
+      right: 0.25rem;
+    }
+  }
+</style>
 
 <style>
   .service-ph {
