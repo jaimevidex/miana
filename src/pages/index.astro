@@ -95,91 +95,101 @@ const testemunhos = [
     <p class="text-darkbrown/60 text-center max-w-md mx-auto text-sm mb-12 reveal">
       As palavras de quem já passou pelo nosso cuidado.
     </p>
-    <div class="testimonials relative max-w-4xl mx-auto">
+    <div class="testimonials relative max-w-6xl mx-auto">
+      <button type="button" aria-label="Testemunho anterior" class="t-arrow left" data-t-prev>&lsaquo;</button>
       <div class="overflow-hidden" data-t-holder>
         <div class="flex" data-t-track>
           {testemunhos.map((t) => (
             <div class="t-card shrink-0">
-              <figure class="flex h-full flex-col justify-between rounded-sm border border-darkbrown/10 bg-white px-7 py-6">
-                <div>
-                  <div class="text-burgundy mb-3 text-sm" aria-hidden="true">★★★★★</div>
-                  <blockquote class="text-darkbrown/80 text-sm leading-relaxed">"{t.texto}"</blockquote>
-                </div>
-                <figcaption class="mt-5 text-burgundy font-semibold text-xs uppercase tracking-widest">— {t.autor}</figcaption>
+              <figure class="rounded-sm border border-darkbrown/10 bg-white px-6 py-5">
+                <div class="text-burgundy text-sm leading-none mb-3" aria-hidden="true">★★★★★</div>
+                <blockquote class="text-darkbrown/80 text-sm leading-relaxed">"{t.texto}"</blockquote>
+                <figcaption class="mt-4 text-burgundy font-semibold text-xs uppercase tracking-widest">— {t.autor}</figcaption>
               </figure>
             </div>
           ))}
         </div>
       </div>
-      <div class="flex items-center justify-center gap-6 mt-10">
-        <button type="button" aria-label="Testemunho anterior" class="t-arrow" data-t-prev>&lsaquo;</button>
-        <button type="button" aria-label="Próximo testemunho" class="t-arrow" data-t-next>&rsaquo;</button>
-      </div>
+      <button type="button" aria-label="Próximo testemunho" class="t-arrow right" data-t-next>&rsaquo;</button>
     </div>
   </section>
 </Layout>
 
 <script>
-  const holder = document.querySelector('[data-t-holder]') as HTMLElement;
   const track = document.querySelector('[data-t-track]') as HTMLElement;
   const nextBtn = document.querySelector('[data-t-next]') as HTMLButtonElement;
   const prevBtn = document.querySelector('[data-t-prev]') as HTMLButtonElement;
-  const cards = Array.from(track.children) as HTMLElement[];
 
-  // Duplica os cards (antes e depois) para o loop infinito ser suave.
+  // Cards reais antes de duplicar.
+  const originals = Array.from(track.children) as HTMLElement[];
+  const n = originals.length;
+
+  // Duplica para loop infinito suave: [último] + originais + [primeiros].
   const clone = (els: HTMLElement[]) => els.map((c) => c.cloneNode(true) as HTMLElement);
-  clone(cards.slice(-1)).forEach((n) => track.prepend(n));
-  const originals = Array.from(track.children).slice(0, -cards.length);
-  clone(originals.slice(0, cards.length)).forEach((n) => track.appendChild(n));
-  // Reinicia com o primeiro card real visível.
-  let idx = cards.length;
-  track.style.transform = `translateX(${-idx * 100 / cards.length}%)`;
+  clone(originals.slice(-1)).forEach((el) => track.prepend(el));
+  clone(originals.slice(0, n)).forEach((el) => track.appendChild(el));
 
+  // Todos os cards do track. Depois do prepend, os originais ficam em all[1..n].
+  const all = Array.from(track.children) as HTMLElement[];
+  const realStart = all.indexOf(originals[0]); // índice do 1º original
   const perView = () => (window.matchMedia('(min-width: 768px)').matches ? 3 : 1);
-  const normalCount = cards.length;
-  const total = track.children.length;
-  const lastIdx = total - perView() - 1;
+  const maxStart = all.length - perView(); // último índice possível sem mostrar vazio
+
+  // idx = índice (no track) do primeiro card VISÍVEL.
+  let idx = realStart;
+
+  // posição acumulada em px (card + respetivo gap).
+  function pos(i: number): number {
+    let base = 0;
+    for (let k = 0; k < i; k++) {
+      const w = all[k].offsetWidth;
+      const next = all[k + 1];
+      const gap = next ? next.offsetLeft - all[k].offsetLeft - w : 0;
+      base += w + gap;
+    }
+    return base;
+  }
 
   function render(animate: boolean) {
     track.style.transition = animate ? 'transform 0.55s cubic-bezier(0.4, 0, 0.2, 1)' : 'none';
-    track.style.transform = `translateX(${(-idx * 100) / normalCount}%)`;
+    track.style.transform = `translateX(${-pos(idx)}px)`;
+  }
+
+  function jump(to: number, animate: boolean) {
+    idx = to;
+    if (!animate) {
+      track.style.transition = 'none';
+      track.style.transform = `translateX(${-pos(idx)}px)`;
+    }
+    requestAnimationFrame(() => render(true));
   }
 
   function next() {
-    idx += 1;
-    if (idx > lastIdx) {
-      idx = normalCount;
-      track.style.transition = 'none';
-      track.style.transform = `translateX(${(-idx * 100) / normalCount}%)`;
-      requestAnimationFrame(() => render(true));
-    } else {
-      render(true);
-    }
+    if (idx + 1 > maxStart) jump(realStart, false);
+    else { idx += 1; render(true); }
   }
 
   function prev() {
-    idx -= 1;
-    if (idx < normalCount) {
-      idx = lastIdx;
-      track.style.transition = 'none';
-      track.style.transform = `translateX(${(-idx * 100) / normalCount}%)`;
-      requestAnimationFrame(() => render(true));
-    } else {
-      render(true);
-    }
+    if (idx - 1 < realStart) jump(maxStart, false);
+    else { idx -= 1; render(true); }
   }
 
   nextBtn.addEventListener('click', next);
   prevBtn.addEventListener('click', prev);
+  window.addEventListener('resize', () => render(false));
+  render(false);
 </script>
 
 <style>
   .testimonials .t-card {
     width: 100%;
   }
+  .testimonials [data-t-track] {
+    gap: 1rem;
+  }
   @media (min-width: 768px) {
     .testimonials .t-card {
-      width: calc(100% / 3);
+      width: calc((100% - 2rem) / 3);
     }
     .testimonials {
       padding-left: 0;
@@ -187,6 +197,9 @@ const testemunhos = [
     }
   }
   .testimonials .t-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
     width: 3rem;
     height: 3rem;
     border-radius: 9999px;
@@ -202,9 +215,24 @@ const testemunhos = [
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
     cursor: pointer;
     transition: opacity 0.2s ease;
+    z-index: 5;
   }
   .testimonials .t-arrow:hover {
     opacity: 0.85;
+  }
+  .testimonials .t-arrow.left {
+    left: 0;
+  }
+  .testimonials .t-arrow.right {
+    right: 0;
+  }
+  @media (max-width: 767px) {
+    .testimonials .t-arrow.left {
+      left: 0.25rem;
+    }
+    .testimonials .t-arrow.right {
+      right: 0.25rem;
+    }
   }
 </style>
 
