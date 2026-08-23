@@ -38,6 +38,9 @@
   acceptBtn.addEventListener('click', () => decide('granted'));
   rejectBtn.addEventListener('click', () => decide('denied'));
 
+  // × fecha sem decidir (torna a aparecer na próxima visita, até haver escolha).
+  document.getElementById('cb-close')?.addEventListener('click', hide);
+
   // Reabrir a partir do footer ("Gerir preferências").
   document.querySelectorAll('[data-cookie-prefs]').forEach((el) =>
     el.addEventListener('click', show)
