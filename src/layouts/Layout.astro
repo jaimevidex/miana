@@ -1,6 +1,7 @@
 ---
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import CookieBanner from '../components/CookieBanner.astro';
 import '../styles/global.css';
 
 interface Props {
@@ -21,18 +22,29 @@ const pixelId = import.meta.env.PUBLIC_META_PIXEL_ID?.trim() || '';
 const gscToken = import.meta.env.PUBLIC_GSC_VERIFICATION?.trim() || '';
 const cfToken = import.meta.env.PUBLIC_CF_ANALYTICS_TOKEN?.trim() || '';
 
-const gaBoot = `window.dataLayer = window.dataLayer || [];
-function gtag(){dataLayer.push(arguments);}
-gtag('js', new Date());
-gtag('config', '${gaId}');`;
-
-const pixelBoot = `!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
-n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
-t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
-document,'script','https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', '${pixelId}');
-fbq('track', 'PageView');`;
+// GA4 + Meta Pixel só arrancam depois de consentimento no banner (localStorage 'mp-consent').
+const analyticsGate = `(function(){
+  var GA='${gaId}', PX='${pixelId}';
+  var fired=false;
+  function granted(){try{return localStorage.getItem('mp-consent')==='granted'}catch(e){return false}}
+  function boot(){
+    if(fired)return;fired=true;
+    var d=document;
+    var s=d.createElement('script');s.async=true;
+    s.src='https://www.googletagmanager.com/gtag/js?id='+GA;
+    d.head.appendChild(s);
+    window.dataLayer=window.dataLayer||[];
+    window.gtag=function(){window.dataLayer.push(arguments)};
+    window.gtag('js',new Date());
+    window.gtag('config',GA);
+    if(PX){
+      !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+      fbq('init',PX);fbq('track','PageView');
+    }
+  }
+  if(granted()){boot()}
+  else{window.addEventListener('mp-consent-granted',boot,{once:true})}
+})();`;
 ---
 
 <!doctype html>
@@ -54,16 +66,8 @@ fbq('track', 'PageView');`;
     <meta property="og:url" content={canonicalURL} />
     <meta name="twitter:card" content="summary_large_image" />
 
-    <!-- Google Analytics 4 (GA4) — só ativo se PUBLIC_GA_ID estiver definido em .env -->
-    {gaId && (
-      <>
-        <script src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} async></script>
-        <script set:html={gaBoot}></script>
-      </>
-    )}
-
-    <!-- Meta Pixel — só ativo se PUBLIC_META_PIXEL_ID estiver definido em .env -->
-    {pixelId && <script set:html={pixelBoot}></script>}
+    <!-- Google Analytics 4 + Meta Pixel — carregados só após consentimento de cookies (ver CookieBanner) -->
+    {gaId && <script is:inline set:html={analyticsGate}></script>}
 
     <!-- Google Search Console — cópia a tag de verificação fornecida pelo Google e cola-a aqui -->
     {gscToken && <meta name="google-site-verification" content={gscToken} />}
@@ -96,6 +100,7 @@ fbq('track', 'PageView');`;
       <slot />
     </main>
     <Footer />
+    <CookieBanner />
 
     <script>
       // Evita que o browser restaure a posição de scroll entre páginas (salta para baixo).

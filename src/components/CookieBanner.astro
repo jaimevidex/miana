@@ -1,0 +1,151 @@
+---
+// Banner RGPD — aparece até haver decisão; só carrega analytics após "Aceito".
+---
+
+<div id="cookie-banner" class="cb" role="dialog" aria-modal="false" aria-label="Preferências de cookies">
+  <div class="cb-card">
+    <p class="cb-cookie" aria-hidden="true">🍪</p>
+    <p class="cb-title">Temos cookies!</p>
+    <p class="cb-text">
+      Calma — são só os digitais. Usamos-os para perceber o que funciona bem por aqui
+      e tornar este site ainda mais glow. Nada de histórias com os teus dados.
+    </p>
+    <div class="cb-actions">
+      <button type="button" id="cb-reject" class="cb-btn cb-secondary">Só o essencial</button>
+      <button type="button" id="cb-accept" class="cb-btn cb-primary">Aceito, vamos a isso</button>
+    </div>
+    <button type="button" id="cb-close" class="cb-close" aria-label="Fechar sem decidir">×</button>
+  </div>
+</div>
+
+<script>
+  const KEY = 'mp-consent';
+  const banner = document.getElementById('cookie-banner') as HTMLElement;
+  const acceptBtn = document.getElementById('cb-accept') as HTMLButtonElement;
+  const rejectBtn = document.getElementById('cb-reject') as HTMLButtonElement;
+
+  const show = () => banner.classList.add('cb-show');
+  const hide = () => banner.classList.remove('cb-show');
+
+  function decide(value: 'granted' | 'denied') {
+    try {
+      localStorage.setItem(KEY, value);
+    } catch {}
+    if (value === 'granted') window.dispatchEvent(new Event('mp-consent-granted'));
+    hide();
+  }
+
+  acceptBtn.addEventListener('click', () => decide('granted'));
+  rejectBtn.addEventListener('click', () => decide('denied'));
+
+  // Reabrir a partir do footer ("Gerir preferências").
+  document.querySelectorAll('[data-cookie-prefs]').forEach((el) =>
+    el.addEventListener('click', show)
+  );
+
+  // Sem decisão guardada → aparece com uma pequena pausa para não assustar.
+  let saved: string | null = null;
+  try {
+    saved = localStorage.getItem(KEY);
+  } catch {}
+  if (!saved) setTimeout(show, 900);
+</script>
+
+<style>
+  .cb {
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    display: flex;
+    justify-content: center;
+    padding: 1rem;
+    z-index: 80;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(120%);
+    transition:
+      opacity 0.35s ease,
+      transform 0.45s cubic-bezier(0.34, 1.4, 0.64, 1);
+  }
+  .cb.cb-show {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+  .cb-card {
+    position: relative;
+    max-width: 26rem;
+    background: #fffdf7;
+    border: 1px solid rgba(89, 1, 11, 0.12);
+    border-radius: 1rem;
+    box-shadow: 0 18px 45px rgba(45, 25, 24, 0.25);
+    padding: 1.5rem 1.5rem 1.25rem;
+    text-align: center;
+  }
+  .cb-cookie {
+    font-size: 2rem;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+    display: inline-block;
+    transform-origin: 50% 60%;
+    animation: cb-wiggle 2.6s ease-in-out infinite;
+  }
+  @keyframes cb-wiggle {
+    0%, 100% { transform: rotate(-8deg); }
+    50% { transform: rotate(10deg) scale(1.08); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cb-cookie { animation: none; }
+    .cb { transition: opacity 0.3s ease; }
+  }
+  .cb-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.25rem;
+    color: #59010b;
+    margin-bottom: 0.4rem;
+  }
+  .cb-text {
+    font-size: 0.8rem;
+    line-height: 1.55;
+    color: rgba(45, 25, 24, 0.75);
+    margin-bottom: 1rem;
+  }
+  .cb-actions {
+    display: flex;
+    gap: 0.6rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .cb-btn {
+    cursor: pointer;
+    border-radius: 9999px;
+    padding: 0.55rem 1.15rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    transition: opacity 0.2s ease, transform 0.15s ease;
+  }
+  .cb-btn:hover { opacity: 0.88; }
+  .cb-btn:active { transform: scale(0.97); }
+  .cb-primary {
+    background: #59010b;
+    color: #fffdf7;
+    border: 1px solid #59010b;
+  }
+  .cb-secondary {
+    background: transparent;
+    color: #59010b;
+    border: 1px solid rgba(89, 1, 11, 0.35);
+  }
+  .cb-close {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.75rem;
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    color: rgba(45, 25, 24, 0.4);
+    cursor: pointer;
+  }
+  .cb-close:hover { color: #59010b; }
+</style>
