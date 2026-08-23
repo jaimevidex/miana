@@ -19,6 +19,7 @@ const canonicalURL = new URL(Astro.url.pathname, siteURL);
 const gaId = import.meta.env.PUBLIC_GA_ID?.trim() || '';
 const pixelId = import.meta.env.PUBLIC_META_PIXEL_ID?.trim() || '';
 const gscToken = import.meta.env.PUBLIC_GSC_VERIFICATION?.trim() || '';
+const cfToken = import.meta.env.PUBLIC_CF_ANALYTICS_TOKEN?.trim() || '';
 
 const gaBoot = `window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
@@ -66,6 +67,15 @@ fbq('track', 'PageView');`;
 
     <!-- Google Search Console — cópia a tag de verificação fornecida pelo Google e cola-a aqui -->
     {gscToken && <meta name="google-site-verification" content={gscToken} />}
+
+    <!-- Cloudflare Web Analytics — só ativo se PUBLIC_CF_ANALYTICS_TOKEN estiver definido em .env (sem cookies) -->
+    {cfToken && (
+      <script
+        defer
+        src="https://static.cloudflareinsights.com/beacon.min.js"
+        data-cf-beacon={`{"token": "${cfToken}"}`}
+      ></script>
+    )}
 
     <!-- Fontes: Playfair Display + Open Sans (social), Pinyon Script (assinatura) — ver docs/DESIGN.md -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
