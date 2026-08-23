@@ -33,6 +33,17 @@ const { category, alt, image, video, ratioClass, imgStyle } = Astro.props;
       preload="metadata"
       data-warm
     ></video>
+  ) : image ? (
+    <Image
+      class={`gallery-placeholder w-full ${ratioClass} object-cover`}
+      style={imgStyle}
+      src={image}
+      alt={alt}
+      width={800}
+      quality={80}
+      loading="lazy"
+      decoding="async"
+    />
   ) : (
     <div
       class={`gallery-placeholder w-full ${ratioClass}`}
