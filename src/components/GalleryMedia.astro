@@ -31,18 +31,8 @@ const { category, alt, image, video, ratioClass, imgStyle } = Astro.props;
       loop
       playsinline
       preload="metadata"
+      data-warm
     ></video>
-  ) : image ? (
-    <Image
-      class={`gallery-placeholder w-full ${ratioClass} object-cover`}
-      style={imgStyle}
-      src={image}
-      alt={alt}
-      width={800}
-      quality={80}
-      loading="lazy"
-      decoding="async"
-    />
   ) : (
     <div
       class={`gallery-placeholder w-full ${ratioClass}`}
@@ -50,3 +40,19 @@ const { category, alt, image, video, ratioClass, imgStyle } = Astro.props;
     ></div>
   )
 }
+
+<script>
+  // Warm-up: após o load da página, força o download em background dos vídeos
+  // da galeria (preload="auto"), para estarem em buffer quando o utilizador
+  // chegar à secção. O atraso evita competir com imagens/LCP iniciais.
+  const warmVideos = () => {
+    document.querySelectorAll<HTMLVideoElement>('video[data-warm]').forEach((v) => {
+      if (v.preload === 'auto') return;
+      v.preload = 'auto';
+      v.load();
+    });
+  };
+  const kick = () => window.setTimeout(warmVideos, 1200);
+  if (document.readyState === 'complete') kick();
+  else window.addEventListener('load', kick);
+</script>
