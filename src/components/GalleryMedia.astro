@@ -1,11 +1,8 @@
 ---
-import { Image } from 'astro:assets';
-import type { ImageMetadata } from 'astro';
-
 interface Props {
   category: string;
   alt: string;
-  image?: ImageMetadata;
+  image?: string;
   video?: string;
   ratioClass: string;
   imgStyle?: string;
@@ -24,7 +21,7 @@ const { category, alt, image, video, ratioClass, imgStyle } = Astro.props;
 {
   video ? (
     <video
-      class={`gallery-placeholder w-full ${ratioClass} object-cover`}
+      class={`gallery-placeholder media-blur w-full ${ratioClass} object-cover`}
       src={video}
       autoplay
       muted
@@ -34,13 +31,11 @@ const { category, alt, image, video, ratioClass, imgStyle } = Astro.props;
       data-warm
     ></video>
   ) : image ? (
-    <Image
-      class={`gallery-placeholder w-full ${ratioClass} object-cover`}
+    <img
+      class={`gallery-placeholder media-blur w-full ${ratioClass} object-cover`}
       style={imgStyle}
       src={image}
       alt={alt}
-      width={800}
-      quality={80}
       loading="lazy"
       decoding="async"
     />
@@ -66,4 +61,32 @@ const { category, alt, image, video, ratioClass, imgStyle } = Astro.props;
   const kick = () => window.setTimeout(warmVideos, 1200);
   if (document.readyState === 'complete') kick();
   else window.addEventListener('load', kick);
+
+  // Blur-up: meios começam desfocados e ficam nítidos assim que há dados.
+  const reveal = (el: Element) => el.classList.add('is-loaded');
+  document.querySelectorAll('img.media-blur, video.media-blur').forEach((el) => {
+    if (el.tagName === 'IMG') {
+      const im = el as HTMLImageElement;
+      if (im.complete && im.naturalWidth > 0) reveal(im);
+      else im.addEventListener('load', () => reveal(im), { once: true });
+    } else {
+      const v = el as HTMLVideoElement;
+      if (v.readyState >= 2) reveal(v);
+      else v.addEventListener('loadeddata', () => reveal(v), { once: true });
+    }
+  });
 </script>
+
+<style>
+  .media-blur {
+    filter: blur(18px);
+    transform: scale(1.05);
+    transition:
+      filter 0.6s ease-out,
+      transform 0.6s ease-out;
+  }
+  .media-blur.is-loaded {
+    filter: blur(0);
+    transform: none;
+  }
+</style>

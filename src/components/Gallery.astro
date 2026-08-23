@@ -2,13 +2,12 @@
 // Galeria reutilizável. Imagens reais a entregar (ver docs/IMAGES.md) —
 // atualmente placeholders de cor por categoria, prontos a substituir por <Image> de astro:assets.
 import GalleryMedia from './GalleryMedia.astro';
-import type { ImageMetadata } from 'astro';
 
 interface Item {
   category: string;
   alt: string;
   tall?: boolean;
-  image?: ImageMetadata;
+  image?: string;
   video?: string;
   imgStyle?: string;
 }
@@ -86,15 +85,11 @@ const toneByCategory: Record<string, string> = {
           <button
             class="gallery-item block w-full break-inside-avoid relative overflow-hidden rounded-sm group"
             data-category={item.category}
-            data-lightbox={item.image?.src}
+            data-lightbox={item.image}
             data-lightbox-video={item.video}
             aria-label={`Ver ${item.alt} em tamanho maior`}
           >
-<GalleryMedia category={item.category} alt={item.alt} image={item.image} video={item.video} ratioClass={item.tall ? 'aspect-[4/5]' : 'aspect-square'} imgStyle={item.imgStyle} />
-            <span class="absolute inset-0 bg-burgundy/0 group-hover:bg-burgundy/5 transition-colors"></span>
-            <span class="absolute bottom-3 left-3 text-[0.65rem] uppercase tracking-widest text-darkbrown/70 opacity-0 group-hover:opacity-100 transition-opacity">
-              {item.category}
-            </span>
+            <GalleryMedia category={item.category} alt={item.alt} image={item.image} video={item.video} ratioClass={item.tall ? 'aspect-[4/5]' : 'aspect-square'} imgStyle={item.imgStyle} />
           </button>
         ))}
       </div>
@@ -110,10 +105,6 @@ const toneByCategory: Record<string, string> = {
                 aria-label={`Ver ${t.item.alt} em tamanho maior`}
               >
                 <GalleryMedia category={t.item.category} alt={t.item.alt} image={t.item.image} video={t.item.video} ratioClass={t.ratio} imgStyle={t.item.imgStyle} />
-                <span class="absolute inset-0 bg-burgundy/0 group-hover:bg-burgundy/5 transition-colors"></span>
-                <span class="absolute bottom-3 left-3 text-[0.65rem] uppercase tracking-widest text-darkbrown/70 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {t.item.category}
-                </span>
               </button>
             ))}
           </div>
@@ -126,27 +117,22 @@ const toneByCategory: Record<string, string> = {
         <button
           class="gallery-item block w-full break-inside-avoid relative overflow-hidden rounded-sm group"
           data-category={item.category}
-          data-lightbox={item.image?.src}
+          data-lightbox={item.image}
           data-lightbox-video={item.video}
           aria-label={`Ver ${item.alt} em tamanho maior`}
         >
           <GalleryMedia category={item.category} alt={item.alt} image={item.image} video={item.video} ratioClass={item.tall ? 'aspect-[4/5]' : 'aspect-square'} />
-          <span class="absolute inset-0 bg-burgundy/0 group-hover:bg-burgundy/5 transition-colors"></span>
-          <span class="absolute bottom-3 left-3 text-[0.65rem] uppercase tracking-widest text-darkbrown/70 opacity-0 group-hover:opacity-100 transition-opacity">
-            {item.category}
-          </span>
         </button>
       ))}
     </div>
   )}
 </div>
 
-<style>
-  .gallery-placeholder {
-    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .gallery-item:hover .gallery-placeholder {
-    transform: scale(1.03);
+<style is:global>
+  /* Hover nas galerias: apenas contorno fino burgundy, sem animações. */
+  .gallery-item:hover {
+    outline: 1.5px solid #59010b;
+    outline-offset: -1.5px;
   }
 </style>
 

@@ -2,6 +2,13 @@
 
 > Estado real do projeto. Doc de referência: `PLAN.md` (plano original). Este ficheiro regista o ciclo atual: Fase 1 (Frontend — formulários/páginas) → Fase 2 (Backend / funnel Skin Call), dependente do domínio ficar Active.
 
+## Ciclo atual — próximo trabalho
+
+- [ ] **Blur-up real por imagem**: gerar placeholder LQIP (versão minúscula desfocada) de cada imagem/vídeo e mostrá-la como fundo até o ficheiro real estar pronto (o blur-up atual só esbate o próprio elemento durante o load)
+- [ ] **Mudar copy dos emails**: rever textos dos emails enviados pela Mariana (convite diagnóstico, pedido Bridal/Education, diagnóstico submetido) em `worker/email.ts`
+- [ ] **Melhorar página de diagnóstico** (`/diagnostico?token=…`): UX/copy/layout da página privada pré-preenchida (`worker/diagnostico.ts`)
+- [ ] **Testar todos os flows de envio de emails**: bateria completa em prod após as alterações (Bridal, Education, Skin Call stage 1+2, honeypot, validações, rate limit)
+
 ## Estado recente do frontend (formulários)
 
 ### Bridal (`/servicos/bridal`)
