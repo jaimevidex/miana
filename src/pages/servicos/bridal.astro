@@ -5,6 +5,11 @@ import Gallery from '../../components/Gallery.astro';
 import GalleryMedia from '../../components/GalleryMedia.astro';
 import Hero from '../../components/Hero.astro';
 import Lightbox from '../../components/Lightbox.astro';
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+
+const assets = import.meta.glob('../../assets/images/*.jpg', { eager: true }) as Record<string, { default: ImageMetadata }>;
+const img = (name: string): ImageMetadata => assets[`../../assets/images/${name}.jpg`].default;
 
 const servicos = [
   {
@@ -23,36 +28,36 @@ const servicos = [
 ];
 
 const galeriaBridal = [
-  { category: 'Noivas', alt: 'Celebração final de um grande dia com glow natural', image: '/images/bridal-portfolio-8.jpg' },
+  { category: 'Noivas', alt: 'Celebração final de um grande dia com glow natural', image: img('bridal-portfolio-8') },
   { category: 'Noivas', alt: 'Detalhe do glow de pele em dia de casamento', video: '/videos/bridal-portfolio.mp4' },
-  { category: 'Noivas', alt: 'Preparação de noiva em dia de casamento', image: '/images/bridal-portfolio-3.jpg' },
-  { category: 'Noivas', alt: 'Bridal glow para fotografar impecavelmente', image: '/images/bridal-portfolio-4.jpg', imgStyle: 'transform: scale(1.25) translateX(-18%); object-fit: cover; object-position: center; transform-origin: center left;' },
-  { category: 'Noivas', alt: 'Maquilhagem luminosa para cerimónia', image: '/images/bridal-portfolio-6.jpg' },
-  { category: 'Noivas', alt: 'Retrato final de noiva com glow delicado', image: '/images/bridal-portfolio-5.jpg' },
-  { category: 'Noivas', alt: 'Look de noiva glowy e sunkissed', image: '/images/bridal-portfolio-2.jpg' },
-  { category: 'Noivas', alt: 'Maquilhagem de noiva com acabamento luminoso e natural', image: '/images/bridal-portfolio-1.jpg', imgStyle: 'transform: scale(1.25) translateX(-18%); object-fit: cover; object-position: center; transform-origin: center left;' },
-  { category: 'Noivas', alt: 'Toque final antes da cerimónia', image: '/images/bridal-portfolio-7.jpg' },
+  { category: 'Noivas', alt: 'Preparação de noiva em dia de casamento', image: img('bridal-portfolio-3') },
+  { category: 'Noivas', alt: 'Bridal glow para fotografar impecavelmente', image: img('bridal-portfolio-4'), imgStyle: 'transform: scale(1.25) translateX(-18%); object-fit: cover; object-position: center; transform-origin: center left;' },
+  { category: 'Noivas', alt: 'Maquilhagem luminosa para cerimónia', image: img('bridal-portfolio-6') },
+  { category: 'Noivas', alt: 'Retrato final de noiva com glow delicado', image: img('bridal-portfolio-5') },
+  { category: 'Noivas', alt: 'Look de noiva glowy e sunkissed', image: img('bridal-portfolio-2') },
+  { category: 'Noivas', alt: 'Maquilhagem de noiva com acabamento luminoso e natural', image: img('bridal-portfolio-1'), imgStyle: 'transform: scale(1.25) translateX(-18%); object-fit: cover; object-position: center; transform-origin: center left;' },
+  { category: 'Noivas', alt: 'Toque final antes da cerimónia', image: img('bridal-portfolio-7') },
 ];
 
 const galeriaGuests = [
-  { category: 'Beauty', alt: 'Look editorial glowy e sunkissed', image: '/images/guests-portfolio-1.jpg' },
+  { category: 'Beauty', alt: 'Look editorial glowy e sunkissed', image: img('guests-portfolio-1') },
   { category: 'Beauty', alt: 'Glam on demand para a tua festa', video: '/videos/guests-portfolio.mp4' },
-  { category: 'Beauty', alt: 'Look para sessão fotográfica', image: '/images/guests-portfolio-7.jpg' },
-  { category: 'Beauty', alt: 'Makeup para convidadas e festas em grupo', image: '/images/guests-portfolio-2.jpg', imgStyle: 'transform: scale(1.15) translateY(7%); object-position: center;' },
-  { category: 'Beauty', alt: 'Maquilhagem para eventos e ocasiões especiais', image: '/images/guests-portfolio-5.jpg' },
-  { category: 'Beauty', alt: 'Glow natural em look de evento', image: '/images/guests-portfolio-4.jpg', imgStyle: 'transform: scale(1.45) translateY(-7%); object-position: center;' },
-  { category: 'Beauty', alt: 'Acabamento luminoso para evento', image: '/images/guests-portfolio-6.jpg', imgStyle: 'transform: scale(1.55) translateX(-10%); object-position: center;' },
-  { category: 'Beauty', alt: 'Retrato elegante de maquilhagem premium', image: '/images/guests-portfolio-3.jpg' },
-  { category: 'Beauty', alt: 'Durabilidade de make para eventos longos', image: '/images/guests-portfolio-8.jpg', imgStyle: 'transform: scale(1.45); object-position: center;' },
+  { category: 'Beauty', alt: 'Look para sessão fotográfica', image: img('guests-portfolio-7') },
+  { category: 'Beauty', alt: 'Makeup para convidadas e festas em grupo', image: img('guests-portfolio-2'), imgStyle: 'transform: scale(1.15) translateY(7%); object-position: center;' },
+  { category: 'Beauty', alt: 'Maquilhagem para eventos e ocasiões especiais', image: img('guests-portfolio-5') },
+  { category: 'Beauty', alt: 'Glow natural em look de evento', image: img('guests-portfolio-4'), imgStyle: 'transform: scale(1.45) translateY(-7%); object-position: center;' },
+  { category: 'Beauty', alt: 'Acabamento luminoso para evento', image: img('guests-portfolio-6'), imgStyle: 'transform: scale(1.55) translateX(-10%); object-position: center;' },
+  { category: 'Beauty', alt: 'Retrato elegante de maquilhagem premium', image: img('guests-portfolio-3') },
+  { category: 'Beauty', alt: 'Durabilidade de make para eventos longos', image: img('guests-portfolio-8'), imgStyle: 'transform: scale(1.45); object-position: center;' },
 ];
 
 // Mobile: a imagem do serviço junta-se às 9 da galeria numa grelha 2 colunas × 5 linhas.
 const galeriaBridalCombo = [
-  { category: 'Noivas', alt: 'The Bridal Experience', image: '/images/bridal-experience.jpg' },
+  { category: 'Noivas', alt: 'The Bridal Experience', image: img('bridal-experience') },
   ...galeriaBridal,
 ];
 const galeriaGuestsCombo = [
-  { category: 'Beauty', alt: 'Guests & Events', image: '/images/guests-events.jpg' },
+  { category: 'Beauty', alt: 'Guests & Events', image: img('guests-events') },
   ...galeriaGuests,
 ];
 ---
@@ -79,12 +84,14 @@ const galeriaGuestsCombo = [
   <section id="experiencia-bridal" class="max-w-container mx-auto px-6 md:px-16 pt-8 pb-3 md:pb-4 space-y-8">
     <div class="grid md:grid-cols-3 items-end gap-3 md:gap-4">
       <div class="relative md:col-span-1 hidden lg:block">
-        <img
-          src="/images/bridal-experience.jpg"
+        <Image
+          src={img('bridal-experience')}
           alt="The Bridal Experience — maquilhagem de noiva luminosa"
+          width={1200}
+          quality={80}
           loading="lazy"
           decoding="async"
-          data-lightbox="/images/bridal-experience.jpg"
+          data-lightbox={img('bridal-experience').src}
           style="cursor: zoom-in;"
           class="aspect-[2/3] w-full object-cover"
         />
@@ -104,7 +111,7 @@ const galeriaGuestsCombo = [
     <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:hidden" id="gallery-grid-bridal-mobile">
       {galeriaBridalCombo.map((item) => (
         <div class="gallery-item block w-full relative overflow-hidden rounded-sm group"
-          data-lightbox={item.image}
+          data-lightbox={item.image?.src}
           data-lightbox-video={item.video}
           data-category={item.category}>
           <GalleryMedia category={item.category} alt={item.alt} image={item.image} video={item.video} ratioClass="aspect-[3/4]" imgStyle={item.imgStyle} />
@@ -118,7 +125,7 @@ const galeriaGuestsCombo = [
   </section>
 
   <section id="cta" class="relative w-full overflow-hidden py-16 lg:py-40 text-center">
-    <img src="/images/bridal-cta.jpg" alt="" aria-hidden="true" loading="lazy" decoding="async"
+    <Image src={img('bridal-cta')} alt="" aria-hidden="true" width={1920} quality={80} loading="lazy" decoding="async"
       class="absolute inset-0 h-full w-full object-cover" />
     <div class="absolute inset-0 bg-darkbrown/50"></div>
     <div class="relative z-10 max-w-3xl mx-auto px-6">
@@ -139,12 +146,14 @@ const galeriaGuestsCombo = [
         </div>
       </div>
       <div class="relative md:col-span-1 overflow-hidden hidden lg:block">
-        <img
-          src="/images/guests-events.jpg"
+        <Image
+          src={img('guests-events')}
           alt="Guests & Events — maquilhagem glowy e sunkissed"
+          width={1200}
+          quality={80}
           loading="lazy"
           decoding="async"
-          data-lightbox="/images/guests-events.jpg"
+          data-lightbox={img('guests-events').src}
           style="cursor: zoom-in;"
           class="aspect-[2/3] w-full h-full object-cover scale-125"
         />
@@ -156,7 +165,7 @@ const galeriaGuestsCombo = [
     <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:hidden" id="gallery-grid-guests-mobile">
       {galeriaGuestsCombo.map((item) => (
         <div class="gallery-item block w-full relative overflow-hidden rounded-sm group"
-          data-lightbox={item.image}
+          data-lightbox={item.image?.src}
           data-lightbox-video={item.video}
           data-category={item.category}>
           <GalleryMedia category={item.category} alt={item.alt} image={item.image} video={item.video} ratioClass="aspect-[3/4]" imgStyle={item.imgStyle} />

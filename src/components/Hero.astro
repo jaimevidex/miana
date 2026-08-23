@@ -64,7 +64,9 @@ const imgClasses = `absolute inset-0 h-[140%] -top-[40%] w-full object-cover ${i
             alt={eyebrow}
             loading="eager"
             fetchpriority="high"
-            class="absolute inset-0 h-[140%] -top-[40%] w-full object-cover"
+            quality={80}
+            class={`absolute inset-0 h-[140%] -top-[40%] w-full object-cover ${imgClass}`}
+            style={imgStyle}
           />
         </div>
       )

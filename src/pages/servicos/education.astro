@@ -2,6 +2,11 @@
 import Layout from '../../layouts/Layout.astro';
 import EducationForm from '../../components/forms/EducationForm.astro';
 import Hero from '../../components/Hero.astro';
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+
+const assets = import.meta.glob('../../assets/images/*.jpg', { eager: true }) as Record<string, { default: ImageMetadata }>;
+const img = (name: string): ImageMetadata => assets[`../../assets/images/${name}.jpg`].default;
 
 const phTones = ['ph-tone-0', 'ph-tone-1', 'ph-tone-2'];
 
@@ -11,21 +16,21 @@ const workshops = [
     titulo: 'Automaquilhagem',
     modo: 'Individual, grupos, eventos de marcas ou corporativo',
     desc: 'Sessão exclusiva dedicada às características do teu rosto, aos teus gostos, ao teu estilo de vida e aos produtos que já tens em casa. Aprendes a criar desde looks do dia a dia ao glam de noite, descobrindo as técnicas, pincéis e tons certos para uma makeup que realce a tua beleza e que dure o dia inteiro.',
-    image: '/images/automaquilhagem.jpg',
+    image: img('automaquilhagem'),
   },
   {
     num: '#2',
     titulo: 'Skincare Education',
     modo: 'Individual, grupos, eventos de marcas ou corporativo',
     desc: 'Sessão focada em desmistificar a cosmetologia, ensinar a ler rótulos e entender os ativos certos para a tua pele. Uma abordagem prática e fundamentada na ciência, para que consigas criar a rotina de skincare perfeita para ti e adaptá-la a possíveis mudanças das necessidades da tua pele.',
-    image: '/images/skincare-education.jpg',
+    image: img('skincare-education'),
   },
   {
     num: '#3',
     titulo: 'Friends & Bachelorette Parties',
     modo: 'Presencial · Foco em Makeup ou Skincare',
     desc: 'Workshops presenciais em grupo desenhados para festas de despedida de solteira ou momentos de convívio entre amigas. Uma experiência leve, divertida e prática, cheia de dicas e aprendizagem. Tu decides que tema queres que aborde no workshop: makeup ou skincare. Depois, só tens de te deixar levar e aproveitar este momento épico com as tuas amigas.',
-    image: '/images/friends-parties.jpg',
+    image: img('friends-parties'),
   },
 ];
 ---
@@ -35,7 +40,7 @@ const workshops = [
     eyebrow="Workshops & Masterclasses"
     title="Beauty Education"
     sub="Aprende a dominar a tua rotina de skincare e a tua maquilhagem. Conhecimento, autonomia e técnica com base científica e prática descomplicada."
-image="/images/education-hero-1.jpg"
+image={img('education-hero-1')}
     imgStyle="transform: scale(1.25) translateY(18%);"
   />
 
@@ -56,7 +61,7 @@ image="/images/education-hero-1.jpg"
         <div class={`relative md:col-span-1 self-center mb-10 md:mb-0 ${i % 2 === 1 ? 'md:order-2' : ''}`}>
           {
             w.image ? (
-              <img src={w.image} alt={w.titulo} loading="lazy" decoding="async"
+              <Image src={w.image} alt={w.titulo} width={800} quality={80} loading="lazy" decoding="async"
                 style="object-position: center bottom;" class="aspect-[3/4] w-[85%] md:w-full mx-auto object-cover" />
             ) : (
               <div class={`aspect-[3/4] w-[85%] md:w-full mx-auto ${phTones[i % phTones.length]}`}></div>

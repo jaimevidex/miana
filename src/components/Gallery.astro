@@ -2,12 +2,13 @@
 // Galeria reutilizável. Imagens reais a entregar (ver docs/IMAGES.md) —
 // atualmente placeholders de cor por categoria, prontos a substituir por <Image> de astro:assets.
 import GalleryMedia from './GalleryMedia.astro';
+import type { ImageMetadata } from 'astro';
 
 interface Item {
   category: string;
   alt: string;
   tall?: boolean;
-  image?: string;
+  image?: ImageMetadata;
   video?: string;
   imgStyle?: string;
 }
@@ -85,7 +86,7 @@ const toneByCategory: Record<string, string> = {
           <button
             class="gallery-item block w-full break-inside-avoid relative overflow-hidden rounded-sm group"
             data-category={item.category}
-            data-lightbox={item.image}
+            data-lightbox={item.image?.src}
             data-lightbox-video={item.video}
             aria-label={`Ver ${item.alt} em tamanho maior`}
           >
@@ -125,7 +126,7 @@ const toneByCategory: Record<string, string> = {
         <button
           class="gallery-item block w-full break-inside-avoid relative overflow-hidden rounded-sm group"
           data-category={item.category}
-          data-lightbox={item.image}
+          data-lightbox={item.image?.src}
           data-lightbox-video={item.video}
           aria-label={`Ver ${item.alt} em tamanho maior`}
         >

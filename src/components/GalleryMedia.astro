@@ -1,8 +1,11 @@
 ---
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+
 interface Props {
   category: string;
   alt: string;
-  image?: string;
+  image?: ImageMetadata;
   video?: string;
   ratioClass: string;
   imgStyle?: string;
@@ -30,11 +33,13 @@ const { category, alt, image, video, ratioClass, imgStyle } = Astro.props;
       preload="metadata"
     ></video>
   ) : image ? (
-    <img
+    <Image
       class={`gallery-placeholder w-full ${ratioClass} object-cover`}
       style={imgStyle}
       src={image}
       alt={alt}
+      width={800}
+      quality={80}
       loading="lazy"
       decoding="async"
     />
