@@ -84,7 +84,7 @@ export async function sendDiagnosticInvite(
 
 // Pedido completo (stage 2) entregue à dona — o funil termina aqui.
 export async function sendOwnerRequest(env: Env, data: Record<string, string>): Promise<void> {
-  const subject = `Skin Call - diagnóstico real: ${data.nome}`;
+  const subject = `🔔 Skin Call - Diagonóstico Pele - ${data.nome}`;
   const lines = [
     ['Nome', data.nome],
     ['Contacto', data.telefone],
@@ -99,7 +99,7 @@ export async function sendOwnerRequest(env: Env, data: Record<string, string>): 
 
   const html = `
     <div style="font-family: Arial, Helvetica, sans-serif; line-height:1.6; color:#3b2a2a;">
-      <p><strong>Novo pedido de Skin Call:</strong></p>
+      <p>Nova resposta de diagonóstico de pele da <strong>Skin Call</strong>:</p>
       <table style="border-collapse:collapse; font-size:14px;">
         ${lines
           .filter(([, v]) => v)
@@ -110,6 +110,7 @@ export async function sendOwnerRequest(env: Env, data: Record<string, string>): 
           )
           .join('')}
       </table>
+      <p>Agora que tens os dados todos podes seguir para marcar uma videochamada.</p>
     </div>
   `;
 
@@ -156,7 +157,7 @@ export async function sendQuoteRequest(
   }
 ): Promise<void> {
   const diagUrl = `${SITE_URL}/diagnostico?token=${encodeURIComponent(data.token)}`;
-  const subject = `Skin Call — Pedido de orçamento: ${data.nome}`;
+  const subject = `💰 Skin Call — Pedido de orçamento - ${data.nome}`;
 
   const lines = [
     ['Nome', data.nome],
@@ -186,6 +187,7 @@ export async function sendQuoteRequest(
           Abrir diagnóstico
         </a>
       </p>
+      <p style="font-size:13px; color:#8a7a74; word-break:break-all;">${diagUrl}</p>
       <p style="font-size:13px; color:#8a7a74;">Este link expira em 2 meses. Após análise, encaminha o link para a cliente.</p>
     </div>
   `;
