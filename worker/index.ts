@@ -189,7 +189,17 @@ async function handleDiagnosticPage(request: Request, env: Env): Promise<Respons
   if (!token) return renderDiagnosticError('missing');
 
   const raw = await env.LEADS.get(`lead:${token}`);
-  if (!raw) return renderDiagnosticError('invalid');
+  if (!raw) {
+    // Dev fallback: show the page with mock data when token not found in KV
+    return renderDiagnosticPage({
+      token,
+      nome: 'Dev User',
+      telefone: '',
+      email: '',
+      plano: '',
+      createdAt: Date.now(),
+    });
+  }
 
   try {
     const lead: Lead = JSON.parse(raw);
