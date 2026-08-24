@@ -140,3 +140,60 @@ export async function sendFormEmail(
 
   await sendResend(env, { to: ownerEmail(env), subject: info.subject, html, text });
 }
+
+// Pedido de orçamento — email à Mariana com os dados da skin-call e link de diagnóstico.
+export async function sendQuoteRequest(
+  env: Env,
+  data: {
+    nome: string;
+    telefone: string;
+    email: string;
+    plano: string;
+    rotina: string;
+    rotina_frequencia: string;
+    preocupacoes: string;
+    token: string;
+  }
+): Promise<void> {
+  const diagUrl = `${SITE_URL}/diagnostico?token=${encodeURIComponent(data.token)}`;
+  const subject = `Skin Call — Pedido de orçamento: ${data.nome}`;
+
+  const lines = [
+    ['Nome', data.nome],
+    ['Contacto', data.telefone],
+    ['Email', data.email],
+    ['Plano', data.plano],
+    ['Rotina', data.rotina || '—'],
+    ['Frequência', data.rotina_frequencia || '—'],
+    ['Preocupações', data.preocupacoes || '—'],
+  ];
+
+  const html = `
+    <div style="font-family: Arial, Helvetica, sans-serif; line-height:1.6; color:#3b2a2a;">
+      <p><strong>Novo pedido de orçamento — Skin Call:</strong></p>
+      <table style="border-collapse:collapse; font-size:14px;">
+        ${lines
+          .filter(([, v]) => v)
+          .map(
+            ([k, v]) => `
+          <tr><td style="padding:6px 12px 6px 0; color:#8a7a74; font-weight:600; vertical-align:top; white-space:nowrap;">${k}</td>
+          <td style="padding:6px 0;">${v}</td></tr>`
+          )
+          .join('')}
+      </table>
+      <p style="margin-top:24px;">
+        <a href="${diagUrl}" style="display:inline-block; background:#8a2831; color:#fbf5ef; text-decoration:none; padding:12px 24px; border-radius:999px; font-weight:600;">
+          Abrir diagnóstico
+        </a>
+      </p>
+      <p style="font-size:13px; color:#8a7a74;">Este link expira em 2 meses. Após análise, encaminha o link para a cliente.</p>
+    </div>
+  `;
+
+  const text = `Novo pedido de orçamento — Skin Call:\n\n${lines
+    .filter(([, v]) => v)
+    .map(([k, v]) => `${k}: ${v}`)
+    .join('\n')}\n\nLink de diagnóstico: ${diagUrl}\n\nEste link expira em 2 meses.`;
+
+  await sendResend(env, { to: ownerEmail(env), subject, html, text });
+}

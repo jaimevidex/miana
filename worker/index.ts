@@ -7,7 +7,7 @@
 //   POST /api/contact         Formulários genéricos (Bridal, Education) — envia email à dona.
 
 import { allowRequest, generateToken, isBot, isValidEmail, json, LEAD_TTL, readForm, validateLead, type Env, type Lead, type LeadInput } from './lib';
-import { sendDiagnosticInvite, sendFormEmail, sendOwnerRequest } from './email';
+import { sendQuoteRequest, sendFormEmail, sendOwnerRequest } from './email';
 import { renderDiagnosticError, renderDiagnosticPage } from './diagnostico';
 
 // OK: tripé CORS e honeypot. Todos os posts vêm do nosso próprio domínio, mas aceitamos origins.
@@ -63,20 +63,40 @@ async function handleLead(request: Request, env: Env): Promise<Response> {
     }
 
     const token = generateToken();
+
+    // Capturar campos extra da skin-call
+    const rotina = (form.get('rotina') || '') as string;
+    const rotina_frequencia = (form.get('rotina_frequencia') || '') as string;
+    const preocupacoesList = form.getAll('preocupacoes').map(String);
+    const preocupacoes_outro = (form.get('preocupacoes_outro') || '') as string;
+    const pele_tipo = form.getAll('pele_tipo').map(String);
+    const preocupacoes = [...preocupacoesList, ...(preocupacoes_outro ? [`Outra: ${preocupacoes_outro}`] : [])].join(', ');
+
     const record: Lead = {
       token,
       ...lead,
+      rotina,
+      rotina_frequencia,
+      preocupacoes,
       createdAt: Date.now(),
     };
     await env.LEADS.put(`lead:${token}`, JSON.stringify(record), { expirationTtl: LEAD_TTL });
 
-    // Em paralelo: enviar email ao lead com o link do diagnóstico. Nunca bloqueia a resposta.
+    // Enviar email à Mariana com pedido de orçamento
     await Promise.allSettled([
-      sendDiagnosticInvite(env, { nome: lead.nome, email: lead.email, token }),
+      sendQuoteRequest(env, {
+        nome: lead.nome,
+        telefone: lead.telefone,
+        email: lead.email,
+        plano: lead.plano,
+        rotina,
+        rotina_frequencia,
+        preocupacoes,
+        token,
+      }),
     ]);
 
-    const url = `/diagnostico?token=${encodeURIComponent(token)}`;
-    return json({ success: true, url });
+    return json({ success: true });
   } catch (e) {
     console.error('[api/lead] error:', e);
     return json({ success: false, error: 'Erro no servidor. Tenta de novo.' }, 500);
@@ -147,7 +167,7 @@ async function handleDiagnostico(request: Request, env: Env): Promise<Response> 
     if (!token) return json({ success: false, error: 'Falta o token de acesso.' }, 400);
 
     const raw = await env.LEADS.get(`lead:${token}`);
-    if (!raw) return json({ success: false, error: 'Este link expirou (48h) ou não é válido. Pede um novo.' }, 410);
+    if (!raw) return json({ success: false, error: 'Este link expirou (2 meses) ou não é válido. Pede um novo.' }, 410);
 
     const stored: Lead = JSON.parse(raw);
     const payload = {

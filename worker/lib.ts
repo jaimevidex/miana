@@ -16,10 +16,13 @@ export interface Lead {
   telefone: string;
   email: string;
   plano: string;
+  rotina?: string;
+  rotina_frequencia?: string;
+  preocupacoes?: string;
   createdAt: number;
 }
 
-export const LEAD_TTL = 60 * 60 * 48; // 48h em segundos
+export const LEAD_TTL = 60 * 60 * 24 * 60; // 2 meses em segundos
 export const RATE_WINDOW = 60 * 60; // 1h
 export const RATE_MAX = 5; // máx. 5 submissões por IP/email por janela
 

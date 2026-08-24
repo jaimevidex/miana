@@ -8,39 +8,111 @@ const radioCls = 'accent-burgundy';
 <form id="form-skin-call" action="/api/lead" method="POST" novalidate class="grid gap-6">
   <input type="checkbox" name="botcheck" class="hidden" style="display:none" />
 
-  <div class="grid sm:grid-cols-2 gap-5">
-    <div>
-      <label class={labelCls} for="sc-name">Nome completo <span class="text-burgundy">*</span></label>
-      <input id="sc-name" name="nome" type="text" required class={inputCls} />
+  <div class="grid sm:grid-cols-2 gap-x-32 gap-y-6">
+    <div class="flex flex-col gap-6">
+      <div class="grid sm:grid-cols-2 gap-5">
+        <div>
+          <label class={labelCls} for="sc-name">Nome completo <span class="text-burgundy">*</span></label>
+          <input id="sc-name" name="nome" type="text" required class={inputCls} />
+        </div>
+        <div>
+          <label class={labelCls} for="sc-phone">Contacto telefónico <span class="text-burgundy">*</span></label>
+          <input id="sc-phone" name="telefone" type="tel" required class={inputCls} />
+        </div>
+      </div>
+
+      <div>
+        <label class={labelCls} for="sc-email">E-mail <span class="text-burgundy">*</span></label>
+        <input id="sc-email" name="email" type="email" required class={inputCls} />
+      </div>
+
+      <fieldset>
+        <legend class={labelCls}>Qual o plano que procuras? <span class="text-burgundy">*</span></legend>
+        <div class="grid gap-2 mt-3">
+          {[
+            { v: 'One Time Call (Plano 3M)', t: 'One Time Call - Plano 3M' },
+            { v: 'Duo Call (Plano 6M)', t: 'Duo Call - Plano 6M' },
+            { v: 'Triple Call (Plano 9M)', t: 'Triple Call - Plano 9M' },
+            { v: 'Full Year Call (Plano 12M)', t: 'Full Year Call - Plano 12M' },
+            { v: 'Ainda não sei', t: 'Ainda não sei' },
+          ].map((p) => (
+            <label class="inline-flex items-start gap-3 text-sm bg-white border border-darkbrown/10 rounded-sm px-4 py-3">
+              <input type="radio" name="plano" value={p.v} required class={`${radioCls} mt-0.5`} />
+              <span>{p.t}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      <div>
+        <label class={labelCls} for="sc-rotina">Descreve a tua rotina de pele atual <span class="text-burgundy">*</span></label>
+        <textarea id="sc-rotina" name="rotina" required rows={4} class={inputCls} placeholder="Ex.: de manhã lavo com gel, hidratante e protetor solar; à noite remover maquilhagem e creme noturno." />
+      </div>
+
+      <fieldset>
+        <legend class={labelCls}>Com que regularidade segues essa rotina? <span class="text-burgundy">*</span></legend>
+        <div class="grid gap-2 mt-3">
+          {[
+            'Quase todos os dias',
+            '2-3 vezes por semana',
+            'Só quando me lembro',
+            'Ainda não tenho rotina',
+          ].map((o) => (
+            <label class="inline-flex items-start gap-3 text-sm bg-white border border-darkbrown/10 rounded-sm px-4 py-3">
+              <input type="radio" name="rotina_frequencia" value={o} required class={`${radioCls} mt-0.5`} />
+              <span>{o}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
     </div>
-    <div>
-      <label class={labelCls} for="sc-phone">Contacto telefónico <span class="text-burgundy">*</span></label>
-      <input id="sc-phone" name="telefone" type="tel" required class={inputCls} />
+
+    <div class="flex flex-col gap-6">
+      <fieldset>
+        <legend class={labelCls}>Como sentes a tua pele? <span class="text-burgundy">*</span></legend>
+        <div class="grid gap-2 mt-3">
+          {[
+            'Normal',
+            'Oleosa',
+            'Seca',
+            'Mista',
+            'Sensível / reativa',
+          ].map((o) => (
+            <label class="inline-flex items-start gap-3 text-sm bg-white border border-darkbrown/10 rounded-sm px-4 py-3">
+              <input type="checkbox" name="pele_tipo" value={o} class={`${radioCls} mt-0.5`} />
+              <span>{o}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend class={labelCls}>Quais as principais preocupações de pele? <span class="text-burgundy">*</span></legend>
+        <div class="grid gap-2 mt-3">
+          {[
+            'Borbulhas persistentes',
+            'Pigmentação / manchas',
+            'Sinais de envelhecimento',
+            'Vermelhidão / sensibilidade',
+            'Desidratação',
+            'Luminosidade',
+            'Textura',
+            'Olheiras',
+            'Pontos negros / filamentos sebáceos',
+            'Outra',
+          ].map((o) => (
+            <label class="inline-flex items-start gap-3 text-sm bg-white border border-darkbrown/10 rounded-sm px-4 py-3">
+              <input type="checkbox" name="preocupacoes" value={o} class={`${radioCls} mt-0.5`} />
+              <span>{o}</span>
+            </label>
+          ))}
+        </div>
+        <div id="preocupacoes-outro-wrap" class="hidden mt-2">
+          <input type="text" name="preocupacoes_outro" placeholder="Escreve aqui..." class={inputCls} />
+        </div>
+      </fieldset>
     </div>
   </div>
-
-  <div>
-    <label class={labelCls} for="sc-email">E-mail <span class="text-burgundy">*</span></label>
-    <input id="sc-email" name="email" type="email" required class={inputCls} />
-  </div>
-
-  <fieldset>
-    <legend class={labelCls}>Qual o plano que procuras? <span class="text-burgundy">*</span></legend>
-    <div class="grid gap-2 mt-3">
-      {[
-        { v: 'One Time Call (Plano 3M)', t: 'One Time Call - Plano 3M' },
-        { v: 'Duo Call (Plano 6M)', t: 'Duo Call - Plano 6M' },
-        { v: 'Triple Call (Plano 9M)', t: 'Triple Call - Plano 9M' },
-        { v: 'Full Year Call (Plano 12M)', t: 'Full Year Call - Plano 12M' },
-        { v: 'Ainda não sei', t: 'Ainda não sei' },
-      ].map((p) => (
-        <label class="inline-flex items-start gap-3 text-sm bg-white border border-darkbrown/10 rounded-sm px-4 py-3">
-          <input type="radio" name="plano" value={p.v} required class={`${radioCls} mt-0.5`} />
-          <span>{p.t}</span>
-        </label>
-      ))}
-    </div>
-  </fieldset>
 
   <p class="text-xs text-darkbrown/60"><span class="text-burgundy">*</span> Campos obrigatórios</p>
 
@@ -58,7 +130,19 @@ const radioCls = 'accent-burgundy';
   const form = document.getElementById('form-skin-call') as HTMLFormElement | null;
   const status = document.getElementById('form-skin-call-status');
 
-  const SUCCESS = 'Enviado! Verifica o teu email — vou enviar-te o link privado para o diagnóstico de pele.';
+  const outroWrap = document.getElementById('preocupacoes-outro-wrap');
+  const outroInput = outroWrap?.querySelector('input') as HTMLInputElement | null;
+
+  form?.querySelectorAll('input[name="preocupacoes"]').forEach((cb) => {
+    cb.addEventListener('change', () => {
+      const checked = form.querySelectorAll('input[name="preocupacoes"]:checked');
+      const hasOutro = Array.from(checked).some((c) => (c as HTMLInputElement).value === 'Outra');
+      outroWrap?.classList.toggle('hidden', !hasOutro);
+      if (!hasOutro && outroInput) outroInput.value = '';
+    });
+  });
+
+  const SUCCESS = 'Pedido enviado! Vou analisar e entrar em contacto com um orçamento.';
 
   form?.addEventListener('submit', (e) => {
     e.preventDefault();

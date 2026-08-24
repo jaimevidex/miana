@@ -242,7 +242,7 @@ export function renderDiagnosticError(reason: 'missing' | 'invalid' | 'expired')
   const messages = {
     missing: 'Falta o token de acesso neste link.',
     invalid: 'Este link de diagnóstico não é válido.',
-    expired: 'Este link de diagnóstico expirou (48h). Pede um novo no formulário da Skin Call.',
+    expired: 'Este link de diagnóstico expirou (2 meses). Pede um novo no formulário da Skin Call.',
   } as const;
   const html = `<!doctype html>
 <html lang="pt">
