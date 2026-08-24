@@ -60,7 +60,7 @@ const imgClasses = `absolute inset-0 h-[140%] -top-[40%] w-full object-cover ${i
             alt={eyebrow}
             loading="eager"
             fetchpriority="high"
-            quality={80}
+            quality={90}
             class={`absolute inset-0 h-[140%] -top-[40%] w-full object-cover ${imgClass}`}
             style={imgStyle}
           />
@@ -91,7 +91,10 @@ const imgClasses = `absolute inset-0 h-[140%] -top-[40%] w-full object-cover ${i
   // Defer hero video: load after page is interactive, not on initial parse
   const heroVideo = document.querySelector<HTMLVideoElement>('[data-hero-video]');
   if (heroVideo) {
+    let loaded = false;
     const loadHero = () => {
+      if (loaded) return;
+      loaded = true;
       heroVideo.preload = 'auto';
       heroVideo.load();
       heroVideo.play?.().catch(() => {});
