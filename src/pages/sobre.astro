@@ -2,6 +2,8 @@
 import Layout from '../layouts/Layout.astro';
 import Video from '../components/Video.astro';
 
+import marianaVideo from '../assets/videos/mariana.mp4';
+
 const pilares = [
   {
     num: '01',
@@ -50,7 +52,7 @@ const pilares = [
 
       <div class="aspect-[6/7]">
         <Video
-          sources={[{ src: '/videos/mariana.mp4', type: 'video/mp4' }]}
+          sources={[{ src: marianaVideo, type: 'video/mp4' }]}
           aspect="aspect-[6/7]"
           videoClass="origin-center scale-x-[1.04]"
           autoplay

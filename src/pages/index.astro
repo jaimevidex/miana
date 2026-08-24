@@ -1,25 +1,31 @@
 ---
+import { Image } from 'astro:assets';
 import Layout from '../layouts/Layout.astro';
 import Hero from '../components/Hero.astro';
+
+import heroHome from '../assets/images/hero-home.jpg';
+import homeBridal from '../assets/images/home-bridal.jpg';
+import homeSkinCall from '../assets/images/home-skin-call.jpg';
+import homeEducation from '../assets/images/home-education.jpg';
 
 const servicos = [
   {
     titulo: 'Bridal & Beauty',
     desc: 'Maquilhagem luminosa e sunkissed, desenhada à tua medida para os momentos mais especiais.',
     href: '/servicos/bridal',
-    image: '/images/home-bridal.jpg',
+    image: homeBridal,
   },
   {
     titulo: 'The Skin Call',
     desc: 'Consultoria 1:1 focada na biologia e química da tua pele. O teu plano de skincare personalizado, sem complicações.',
     href: '/servicos/skin-call',
-    image: '/images/home-skin-call.jpg',
+    image: homeSkinCall,
   },
   {
     titulo: 'Beauty Education',
     desc: 'Workshops e masterclasses de makeup e skincare para aprenderes a dominar a tua rotina e o teu glow.',
     href: '/servicos/education',
-    image: '/images/home-education.jpg',
+    image: homeEducation,
   },
 ];
 
@@ -52,7 +58,7 @@ const testemunhos = [
 ---
 
 <Layout title="Mariana — Science-Led Skincare & Effortless Beauty" description="Unimos a ciência da pele à arte da maquilhagem. Rituais de skincare personalizados e maquilhagem glowy e sunkissed para noivas, eventos e educação." hasHero>
-  <Hero image="/images/hero-home.jpg" />
+  <Hero image={heroHome} />
 
   <section id="filosofia" class="max-w-container mx-auto px-6 md:px-16 py-32">
     <div class="max-w-4xl mx-auto text-center reveal">
@@ -75,7 +81,7 @@ const testemunhos = [
       {servicos.map((s, i) => (
         <a href={s.href} class="group relative block rounded-sm overflow-hidden reveal border border-darkbrown/10 hover:border-burgundy/40 transition">
           <div class="relative aspect-[1/1] md:aspect-[3/4] w-full overflow-hidden">
-            <img src={s.image} alt={s.titulo} loading="lazy" decoding="async"
+            <Image src={s.image} alt={s.titulo} loading="lazy" decoding="async"
               class="absolute inset-0 h-full w-full object-cover service-ph" />
             <div class="absolute inset-0 flex items-center justify-center bg-gradient-to-t from-darkbrown/70 via-transparent to-darkbrown/15">
               <div class="flex flex-col items-center text-center px-6">

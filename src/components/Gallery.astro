@@ -1,13 +1,14 @@
 ---
 // Galeria reutilizável. Imagens reais a entregar (ver docs/IMAGES.md) —
 // atualmente placeholders de cor por categoria, prontos a substituir por <Image> de astro:assets.
+import type { ImageMetadata } from 'astro';
 import GalleryMedia from './GalleryMedia.astro';
 
 interface Item {
   category: string;
   alt: string;
   tall?: boolean;
-  image?: string;
+  image?: string | ImageMetadata;
   video?: string;
   imgStyle?: string;
 }
@@ -32,6 +33,13 @@ const defaultItems: Item[] = [
 ];
 
 const { items = defaultItems, showFilters = true, brick = false } = Astro.props;
+
+function getLightboxSrc(image?: string | ImageMetadata): string {
+  if (!image) return '';
+  if (typeof image === 'string') return image;
+  return image.src;
+}
+
 const categories = ['Todos', ...new Set(items.map((i) => i.category))];
 const RATIOS = ['aspect-square', 'aspect-[2/3]', 'aspect-[4/5]'];
 const ratioWeight: Record<string, number> = {
@@ -85,7 +93,7 @@ const toneByCategory: Record<string, string> = {
           <button
             class="gallery-item block w-full break-inside-avoid relative overflow-hidden rounded-sm group"
             data-category={item.category}
-            data-lightbox={item.image}
+            data-lightbox={getLightboxSrc(item.image)}
             data-lightbox-video={item.video}
             aria-label={`Ver ${item.alt} em tamanho maior`}
           >
@@ -100,7 +108,7 @@ const toneByCategory: Record<string, string> = {
               <button
                 class="gallery-item block w-full break-inside-avoid relative overflow-hidden rounded-sm group"
                 data-category={t.item.category}
-                data-lightbox={t.item.image}
+                data-lightbox={getLightboxSrc(t.item.image)}
                 data-lightbox-video={t.item.video}
                 aria-label={`Ver ${t.item.alt} em tamanho maior`}
               >
@@ -117,7 +125,7 @@ const toneByCategory: Record<string, string> = {
         <button
           class="gallery-item block w-full break-inside-avoid relative overflow-hidden rounded-sm group"
           data-category={item.category}
-          data-lightbox={item.image}
+          data-lightbox={getLightboxSrc(item.image)}
           data-lightbox-video={item.video}
           aria-label={`Ver ${item.alt} em tamanho maior`}
         >
@@ -127,14 +135,6 @@ const toneByCategory: Record<string, string> = {
     </div>
   )}
 </div>
-
-<style is:global>
-  /* Hover nas galerias: apenas contorno fino burgundy, sem animações. */
-  .gallery-item:hover {
-    outline: 1.5px solid #59010b;
-    outline-offset: -1.5px;
-  }
-</style>
 
 <script>
   const buttons = document.querySelectorAll('#gallery-filters button');

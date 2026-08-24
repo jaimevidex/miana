@@ -29,6 +29,12 @@
     outline-offset: 2px;
   }
 
+  .gallery-item:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(89, 1, 11, 0.35);
+    transition: box-shadow 0.3s ease;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
       animation-duration: 0.01ms !important;

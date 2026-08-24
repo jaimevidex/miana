@@ -3,6 +3,8 @@ import Layout from '../../layouts/Layout.astro';
 import SkinCallForm from '../../components/forms/SkinCallForm.astro';
 import Hero from '../../components/Hero.astro';
 
+import skinCallHero from '../../assets/videos/skin-call-hero.mp4';
+
 const planos = [
   {
     num: '01',
@@ -59,7 +61,7 @@ const processo = [
     eyebrow="Skin Analysis & Skincare Routine Design"
     title="The Skin Call"
     sub="A tua pele analisada através da ciência. Uma rotina de skincare simplificada e intencional, desenhada para o teu dia a dia e necessidades."
-    video={[{ src: '/videos/skin-call-hero.mp4', type: 'video/mp4' }]}
+    video={[{ src: skinCallHero, type: 'video/mp4' }]}
   />
 
   <section id="intro" class="max-w-container mx-auto px-6 md:px-16 py-32">

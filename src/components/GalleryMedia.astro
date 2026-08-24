@@ -1,8 +1,10 @@
 ---
+import { Image } from 'astro:assets';
+
 interface Props {
   category: string;
   alt: string;
-  image?: string;
+  image?: ImageMetadata;
   video?: string;
   ratioClass: string;
   imgStyle?: string;
@@ -16,77 +18,72 @@ const toneByCategory: Record<string, string> = {
 };
 
 const { category, alt, image, video, ratioClass, imgStyle } = Astro.props;
+const bg = toneByCategory[category] ?? '#EFE7E0';
 ---
 
-{
-  video ? (
+<div class={`lqip-box relative w-full ${ratioClass}`} style={`background:${bg}`}>
+  {video ? (
     <video
-      class={`gallery-placeholder media-blur w-full ${ratioClass} object-cover`}
+      class="gallery-placeholder media-fade h-full w-full object-cover"
       src={video}
-      autoplay
       muted
       loop
       playsinline
-      preload="metadata"
-      data-warm
+      preload="none"
+      data-lazy-video
     ></video>
   ) : image ? (
-    <img
-      class={`gallery-placeholder media-blur w-full ${ratioClass} object-cover`}
-      style={imgStyle}
+    <Image
       src={image}
       alt={alt}
+      class="gallery-placeholder media-fade h-full w-full object-cover"
+      style={imgStyle}
+      placeholder="blur"
       loading="lazy"
       decoding="async"
     />
   ) : (
-    <div
-      class={`gallery-placeholder w-full ${ratioClass}`}
-      style={`background:${toneByCategory[category] ?? '#EFE7E0'}`}
-    ></div>
-  )
-}
-
-<script>
-  // Warm-up: após o load da página, força o download em background dos vídeos
-  // da galeria (preload="auto"), para estarem em buffer quando o utilizador
-  // chegar à secção. O atraso evita competir com imagens/LCP iniciais.
-  const warmVideos = () => {
-    document.querySelectorAll<HTMLVideoElement>('video[data-warm]').forEach((v) => {
-      if (v.preload === 'auto') return;
-      v.preload = 'auto';
-      v.load();
-    });
-  };
-  const kick = () => window.setTimeout(warmVideos, 1200);
-  if (document.readyState === 'complete') kick();
-  else window.addEventListener('load', kick);
-
-  // Blur-up: meios começam desfocados e ficam nítidos assim que há dados.
-  const reveal = (el: Element) => el.classList.add('is-loaded');
-  document.querySelectorAll('img.media-blur, video.media-blur').forEach((el) => {
-    if (el.tagName === 'IMG') {
-      const im = el as HTMLImageElement;
-      if (im.complete && im.naturalWidth > 0) reveal(im);
-      else im.addEventListener('load', () => reveal(im), { once: true });
-    } else {
-      const v = el as HTMLVideoElement;
-      if (v.readyState >= 2) reveal(v);
-      else v.addEventListener('loadeddata', () => reveal(v), { once: true });
-    }
-  });
-</script>
+    <div class="h-full w-full" style={`background:${bg}`}></div>
+  )}
+</div>
 
 <style>
-  .media-blur {
-    filter: blur(18px);
-    transform: scale(1.05);
-    transition:
-      filter 0.6s ease-out,
-      transform 0.6s ease-out;
+  .media-fade {
+    opacity: 0;
+    transition: opacity 0.5s ease-out;
   }
-  .media-blur.is-loaded {
-    filter: blur(0);
-    transform: none;
+  .lqip-box.is-loaded .media-fade {
+    opacity: 1;
   }
 </style>
+
+<script>
+  const reveal = (el: Element) => el.closest('.lqip-box')?.classList.add('is-loaded');
+
+  // Images
+  document.querySelectorAll('img.media-fade').forEach((el) => {
+    const im = el as HTMLImageElement;
+    if (im.complete && im.naturalWidth > 0) reveal(im);
+    else im.addEventListener('load', () => reveal(im), { once: true });
+  });
+
+  // Videos — load + play only when entering viewport
+  const videoObserver = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          const v = entry.target as HTMLVideoElement;
+          v.preload = 'auto';
+          v.load();
+          v.play?.().catch(() => {});
+          reveal(v);
+          videoObserver.unobserve(v);
+        }
+      }
+    },
+    { rootMargin: '200px' }
+  );
+  document.querySelectorAll<HTMLVideoElement>('video[data-lazy-video]').forEach((v) => {
+    videoObserver.observe(v);
+  });
+</script>

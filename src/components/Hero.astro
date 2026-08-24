@@ -5,15 +5,10 @@ interface Props {
   eyebrow?: string;
   title?: string;
   sub?: string;
-  /** Imagem de fundo: caminho público (ex: "/images/hero.jpg") ou ImageMetadata importado. */
   image?: string | ImageMetadata;
-  /** Vídeo de fundo: [{ src, type }]. */
   video?: Array<{ src: string; type: string }>;
-  /** Imagem de capa/fallback para o vídeo (caminho em /public). */
   poster?: string;
-  /** Classes extra para a imagem de fundo (ajuste fino de posição). */
   imgClass?: string;
-  /** Estilos inline extra para a imagem de fundo (ex: objectPosition). */
   imgStyle?: string;
 }
 
@@ -40,7 +35,8 @@ const imgClasses = `absolute inset-0 h-[140%] -top-[40%] w-full object-cover ${i
         muted
         loop
         playsinline
-        preload="metadata"
+        preload="none"
+        data-hero-video
         poster={poster}
       >
         {video.map((s) => (
@@ -90,3 +86,27 @@ const imgClasses = `absolute inset-0 h-[140%] -top-[40%] w-full object-cover ${i
     background: linear-gradient(135deg, #7a2430 0%, #59010b 50%, #2d1918 100%);
   }
 </style>
+
+<script>
+  // Defer hero video: load after page is interactive, not on initial parse
+  const heroVideo = document.querySelector<HTMLVideoElement>('[data-hero-video]');
+  if (heroVideo) {
+    const loadHero = () => {
+      heroVideo.preload = 'auto';
+      heroVideo.load();
+      heroVideo.play?.().catch(() => {});
+    };
+    // Load after 1.5s or on first user interaction — whichever comes first
+    const timer = window.setTimeout(loadHero, 1500);
+    ['scroll', 'mousemove', 'touchstart'].forEach((evt) => {
+      window.addEventListener(
+        evt,
+        () => {
+          clearTimeout(timer);
+          loadHero();
+        },
+        { once: true, passive: true }
+      );
+    });
+  }
+</script>

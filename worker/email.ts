@@ -59,12 +59,12 @@ export async function sendDiagnosticInvite(
   lead: { nome: string; email: string; token: string }
 ): Promise<void> {
   const url = `${SITE_URL}/diagnostico?token=${encodeURIComponent(lead.token)}`;
-  const subject = 'Estás quase lá — diagnóstico de pele Skin Call';
+  const subject = 'Estás quase lá! Diagnóstico de pele Skin Call';
 
   const html = `
     <div style="font-family: Arial, Helvetica, sans-serif; line-height:1.6; color:#3b2a2a; max-width:560px; margin:0 auto;">
       <p>Olá,</p>
-      <p>vi que estás interessada na <strong>Skin Call</strong>. Estamos quase lá!</p>
+      <p>Vi que estás interessada na <strong>Skin Call</strong>. Estamos quase lá!</p>
       <p>Quando tiveres 5 minutos, preenche apenas este formulário de diagnóstico de pele para eu perceber o plano mais indicado para ti (é rápido e personaliza o meu acompanhamento):</p>
       <p style="text-align:center; margin:32px 0;">
         <a href="${url}" style="display:inline-block; background:#8a2831; color:#fbf5ef; text-decoration:none; padding:14px 28px; border-radius:999px; font-weight:600;">
@@ -72,19 +72,19 @@ export async function sendDiagnosticInvite(
         </a>
       </p>
       <p style="font-size:13px; color:#8a7a74;">Este link é pessoal e de uso único, e expira em 48h por questões de privacidade (RGPD).</p>
-      <p style="font-size:13px; color:#8a7a74;">Se tiveres qualquer dúvida, responde a este email.</p>
+      <p style="font-size:13px; color:#8a7a74;">Se tiveres qualquer dúvida, envia um email para <a href="mailto:hello@marianapita.pt" style="color:#8a2831;">hello@marianapita.pt</a>.</p>
       <p>Com carinho,<br/>Mariana Pita</p>
     </div>
   `;
 
-  const text = `Olá,\n\nvi que estás interessada na Skin Call. Estamos quase lá!\n\nQuando tiveres 5 minutos, preenche este formulário de diagnóstico de pele para eu perceber o plano mais indicado:\n\n${url}\n\nEste link é pessoal e de uso único, e expira em 48h.\n\nCom carinho,\nMariana Pita`;
+  const text = `Olá,\n\nvi que estás interessada na Skin Call. Estamos quase lá!\n\nQuando tiveres 5 minutos, preenche este formulário de diagnóstico de pele para eu perceber o plano mais indicado:\n\n${url}\n\nEste link é pessoal e de uso único, e expira em 48h.\n\nSe tiveres qualquer dúvida, envia um email para hello@marianapita.pt.\n\nCom carinho,\nMariana Pita`;
 
   await sendResend(env, { to: lead.email, subject, html, text });
 }
 
 // Pedido completo (stage 2) entregue à dona — o funil termina aqui.
 export async function sendOwnerRequest(env: Env, data: Record<string, string>): Promise<void> {
-  const subject = `Skin Call — diagnóstico real: ${data.nome}`;
+  const subject = `Skin Call - diagnóstico real: ${data.nome}`;
   const lines = [
     ['Nome', data.nome],
     ['Contacto', data.telefone],
@@ -99,7 +99,7 @@ export async function sendOwnerRequest(env: Env, data: Record<string, string>): 
 
   const html = `
     <div style="font-family: Arial, Helvetica, sans-serif; line-height:1.6; color:#3b2a2a;">
-      <p><strong>Novo pedido real de Skin Call:</strong></p>
+      <p><strong>Novo pedido de Skin Call:</strong></p>
       <table style="border-collapse:collapse; font-size:14px;">
         ${lines
           .filter(([, v]) => v)

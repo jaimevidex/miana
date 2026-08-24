@@ -13,6 +13,8 @@ export default defineConfig({
     sitemap(),
   ],
   image: {
-    domains: [],
+    service: {
+      entrypoint: 'astro/assets/services/sharp',
+    },
   },
 });
