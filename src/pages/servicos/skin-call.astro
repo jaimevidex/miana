@@ -4,6 +4,7 @@ import SkinCallForm from '../../components/forms/SkinCallForm.astro';
 import Hero from '../../components/Hero.astro';
 
 import skinCallHero from '../../assets/videos/skin-call-hero.mp4';
+import skinCallHeroPoster from '../../assets/images/skin-call-hero-poster.jpg';
 
 const planos = [
   {
@@ -62,6 +63,7 @@ const processo = [
     title="The Skin Call"
     sub="A tua pele analisada através da ciência. Uma rotina de skincare simplificada e intencional, desenhada para o teu dia a dia e necessidades."
     video={[{ src: skinCallHero, type: 'video/mp4' }]}
+    poster={skinCallHeroPoster.src}
   />
 
   <section id="intro" class="max-w-container mx-auto px-6 md:px-16 py-32">
