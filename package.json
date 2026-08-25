@@ -8,7 +8,9 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "worker:check": "tsc --noEmit -p worker/tsconfig.json"
+    "worker:check": "tsc --noEmit -p worker/tsconfig.json",
+    "test": "./tests/run.sh",
+    "test:remote": "./tests/run.sh https://marianapita.pt"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.2.1",
