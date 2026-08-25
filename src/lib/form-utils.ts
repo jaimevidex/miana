@@ -1,6 +1,6 @@
 // Utilitário de formulários do site — partilhado por todos os formulários.
 // Envia para o nosso Worker (POST /api/contact ou /api/lead), que entrega o pedido
-// por email à dona (hello@marianapita.pt) via Resend — sem dependência de Web3Forms.
+// por email à dona via Resend — sem dependência de Web3Forms.
 
 export const SUCCESS_MESSAGE =
   'Obrigada! O teu pedido foi registado. Responderei assim que possível, num prazo de até 48h com todas as informações.';
@@ -87,10 +87,11 @@ export async function submitForm(
     throw new Error(result.message || 'Erro ao enviar');
   } catch (err) {
     const msg = err instanceof Error ? err.message : '';
+    const ownerEmail = import.meta.env.PUBLIC_OWNER_EMAIL || 'hello@marianapita.pt';
     statusEl.textContent =
       msg && msg !== 'Erro ao enviar'
         ? msg
-        : 'Algo correu mal. Tenta novamente ou escreve para hello@marianapita.pt.';
+        : `Algo correu mal. Tenta novamente ou escreve para ${ownerEmail}.`;
     statusEl.className = 'mt-3 text-sm text-red-700';
     return false;
   }

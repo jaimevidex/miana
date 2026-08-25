@@ -1,8 +1,9 @@
 # Configuração do Cloudflare via Wrangler.
 # O site é um build estático do Astro (dist/), servido pelo binding ASSETS.
-# Um Worker (worker/index.ts) adiciona o funnel Skin Call (fase 2):
-#   - POST /api/lead        grava lead em KV LEADS e devolve link do diagnóstico
+# Um Worker (worker/index.ts) adiciona o funnel Skin Call e o dashboard admin:
+#   - POST /api/lead        grava lead no D1 e envia email de notificação
 #   - GET  /diagnostico     página privada pré-preenchida a partir do token
+#   - GET  /admin           dashboard admin (protegido por auth)
 #   - (tudo o resto)        serve os assets estáticos do Astro
 name = "miana"
 compatibility_date = "2026-08-06"
@@ -24,12 +25,17 @@ routes = [
 binding = "ASSETS"
 directory = "./dist"
 
-# Namespace KV onde ficam os leads (token, nome, email, telefone, plano), TTL 48h.
-# Preencher `id`/`preview_id` após criar o KV no dashboard (wrangler kv namespace create LEADS).
-[[kv_namespaces]]
-binding = "LEADS"
-id = "5dda5a40cac64dd586445d4ec701cabb"
-preview_id = "5dda"
+# D1 database — leads, diagnostics, sessions, rate_limits.
+[[d1_databases]]
+binding = "DB"
+database_name = "miana-db"
+database_id = "96baa0e0-4f83-4b29-a3fd-676202d7c173"
+
+# Bucket R2 para fotos do diagnóstico.
+# As fotos ficam na pasta "diagnostics" dentro do bucket (definido em worker/constants.ts).
+[[r2_buckets]]
+binding = "DIAG_PHOTOS"
+bucket_name = "media"
 
 # Variáveis de ambiente.
 # - EMAIL_ENABLED: enquanto a API do Resend não estiver operacional usamos stub (log em vez de enviar).
@@ -37,6 +43,13 @@ preview_id = "5dda"
 # - RESEND_API_KEY: chave de API do Resend (envio de email transacional, https://resend.com).
 #   Em deploy real: npx wrangler secret put RESEND_API_KEY
 # - OWNER_EMAIL: email da dona — recebe o pedido real do diagnóstico e os avisos leves.
+# - SITE_URL: URL base do site (fallback: https://marianapita.pt)
+# - FROM_EMAIL: email de origem para emails ao cliente (fallback: no-reply@marianapita.pt)
+# - FROM_NAME: nome de exibição do remetente (fallback: Mariana Pita Makeup)
+# - ADMIN_URL: URL base da dashboard admin (fallback: ${SITE_URL}/admin)
 [vars]
 EMAIL_ENABLED = "true"
 OWNER_EMAIL = "hello@marianapita.pt"
+SITE_URL = "https://marianapita.pt"
+FROM_EMAIL = "no-reply@marianapita.pt"
+FROM_NAME = "Mariana Pita Makeup"

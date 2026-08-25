@@ -7,11 +7,12 @@ const labelCls = 'block text-sm font-medium text-darkbrown';
 
 <form
   id="form-bridal"
-  action="/api/contact"
+  action="/api/lead"
   method="POST"
   novalidate
   class="grid gap-5"
 >
+  <input type="hidden" name="form_type" value="bridal-beauty" />
   <input type="hidden" name="subject" value="Pedido — Bridal &amp; Beauty" />
   <input type="checkbox" name="botcheck" class="hidden" style="display:none" />
 

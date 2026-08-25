@@ -1,13 +1,8 @@
-// Envio de email do funnel Skin Call via Resend (API REST, https://resend.com).
-// Em `wrangler.toml` indicamos `RESEND_API_KEY` (secret) e `EMAIL_ENABLED` (stub/log enquanto não ligarmos).
+// Envio de email — Resend API (produção) ou Mailpit SMTP (local dev).
 
 import type { Env } from './lib';
-
-const RESEND_URL = 'https://api.resend.com/emails';
-const FROM_EMAIL = 'no-reply@marianapita.pt';
-const FROM_NAME = 'Mariana Pita Makeup';
-const DEFAULT_OWNER_EMAIL = 'hello@marianapita.pt';
-const SITE_URL = 'https://marianapita.pt';
+import type { LeadType } from './lib';
+import { siteUrl, fromEmail, fromName, ownerEmail, adminLeadUrl } from './config';
 
 type ResendPayload = {
   to: string | string[];
@@ -16,30 +11,29 @@ type ResendPayload = {
   text: string;
 };
 
-function ownerEmail(env: Env): string {
-  return env.OWNER_EMAIL || DEFAULT_OWNER_EMAIL;
-}
-
 export function emailEnabled(env: Env): boolean {
   return env.EMAIL_ENABLED === 'true';
 }
 
-// Envia um email via API do Resend. Devolve true em caso de sucesso.
+// Detectar modo local: sem RESEND_API_KEY ou flag local
+function isLocal(env: Env): boolean {
+  return !env.RESEND_API_KEY || env.RESEND_API_KEY.startsWith('REPLACE');
+}
+
+// ─── Envio via Resend (produção) ────────────────────────────────────────────
+
 async function sendResend(env: Env, payload: ResendPayload): Promise<boolean> {
   const apiKey = env.RESEND_API_KEY;
-  if (!env.EMAIL_ENABLED || !apiKey || apiKey.startsWith('REPLACE')) {
-    console.log(`[email:stub] ${payload.subject} :: to=${payload.to}`);
-    return false;
-  }
+  if (!apiKey || apiKey.startsWith('REPLACE')) return false;
 
   try {
-    const res = await fetch(RESEND_URL, {
+    const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ ...payload, from: `${FROM_NAME} <${FROM_EMAIL}>` }),
+      body: JSON.stringify({ ...payload, from: `${fromName(env)} <${fromEmail(env)}>` }),
     });
     if (!res.ok) {
       const body = await res.text();
@@ -53,149 +47,152 @@ async function sendResend(env: Env, payload: ResendPayload): Promise<boolean> {
   }
 }
 
-// Email ao lead com o link (privado) para o formulário de diagnóstico pré-preenchido.
+// ─── Envio via Mailpit SMTP (local dev) ─────────────────────────────────────
+
+async function sendMailpit(payload: ResendPayload): Promise<boolean> {
+  try {
+    const nodemailer = await import('nodemailer');
+    const transport = nodemailer.createTransport({
+      host: '127.0.0.1',
+      port: 1025,
+      secure: false,
+      tls: { rejectUnauthorized: false },
+    });
+
+    const to = Array.isArray(payload.to) ? payload.to.join(', ') : payload.to;
+
+    await transport.sendMail({
+      from: `${fromName({} as Env)} <${fromEmail({} as Env)}>`,
+      to,
+      subject: payload.subject,
+      html: payload.html,
+      text: payload.text,
+    });
+
+    console.log(`[mailpit] Email enviado para ${to} — "${payload.subject}"`);
+    console.log(`[mailpit] Ver em http://localhost:8025`);
+    return true;
+  } catch (err) {
+    console.error('[mailpit] error:', err);
+    return false;
+  }
+}
+
+// ─── Envio unificado ────────────────────────────────────────────────────────
+
+async function sendEmail(env: Env, payload: ResendPayload): Promise<boolean> {
+  if (isLocal(env)) {
+    return sendMailpit(payload);
+  }
+  return sendResend(env, payload);
+}
+
+// ─── Notificação de nova lead (todos os tipos) ──────────────────────────────
+
+const TYPE_LABELS: Record<LeadType, string> = {
+  'skin-call': 'Skin Call',
+  'bridal-beauty': 'Bridal & Beauty',
+  'education': 'Education',
+};
+
+export async function sendLeadNotification(
+  env: Env,
+  lead: { id: string; nome: string; email: string; telefone: string; type: LeadType }
+): Promise<void> {
+  const typeLabel = TYPE_LABELS[lead.type];
+  const subject = `🔔 Novo Pedido — ${typeLabel}`;
+  const adminLink = adminLeadUrl(env, lead.id);
+
+  const html = `
+    <div style="font-family: Arial, Helvetica, sans-serif; line-height:1.6; color:#3b2a2a; max-width:480px; margin:0 auto;">
+      <p>Recebeste um novo pedido de <strong>${typeLabel}</strong>.</p>
+      <p><strong>${lead.nome}</strong> — ${lead.email} — ${lead.telefone}</p>
+      <p style="text-align:center; margin:32px 0;">
+        <a href="${adminLink}" style="display:inline-block; background:#8a2831; color:#fbf5ef; text-decoration:none; padding:14px 28px; border-radius:999px; font-weight:600;">
+          Ver na dashboard
+        </a>
+      </p>
+    </div>
+  `;
+
+  const text = `Novo pedido de ${typeLabel}: ${lead.nome} — ${lead.email} — ${lead.telefone}\n\nVer na dashboard: ${adminLink}`;
+
+  await sendEmail(env, { to: ownerEmail(env), subject, html, text });
+}
+
+// ─── Diagnóstico completo (Skin Call stage 2) ──────────────────────────────
+
+export async function sendDiagnosticComplete(
+  env: Env,
+  data: { nome: string; email: string; telefone: string },
+  leadId: string
+): Promise<void> {
+  const subject = `🔔 Diagnóstico de Preenchido — Skin Call`;
+  const adminLink = adminLeadUrl(env, leadId);
+
+  const html = `
+    <div style="font-family: Arial, Helvetica, sans-serif; line-height:1.6; color:#3b2a2a; max-width:480px; margin:0 auto;">
+      <p>A cliente <strong>${data.nome}</strong> preencheu o diagnóstico de pele.</p>
+      <p><strong>${data.nome}</strong> — ${data.email} — ${data.telefone}</p>
+      <p style="text-align:center; margin:32px 0;">
+        <a href="${adminLink}" style="display:inline-block; background:#8a2831; color:#fbf5ef; text-decoration:none; padding:14px 28px; border-radius:999px; font-weight:600;">
+          Ver diagnóstico
+        </a>
+      </p>
+    </div>
+  `;
+
+  const text = `Diagnóstico preenchido por ${data.nome} — ${data.email} — ${data.telefone}\n\nVer diagnóstico: ${adminLink}`;
+
+  await sendEmail(env, { to: ownerEmail(env), subject, html, text });
+}
+
+// ─── Link de diagnóstico enviado ao cliente ─────────────────────────────────
+
 export async function sendDiagnosticInvite(
   env: Env,
   lead: { nome: string; email: string; token: string }
 ): Promise<void> {
-  const url = `${SITE_URL}/diagnostico?token=${encodeURIComponent(lead.token)}`;
+  const url = `${siteUrl(env)}/diagnostico?token=${encodeURIComponent(lead.token)}`;
   const subject = 'Estás quase lá! Diagnóstico de pele Skin Call';
 
   const html = `
     <div style="font-family: Arial, Helvetica, sans-serif; line-height:1.6; color:#3b2a2a; max-width:560px; margin:0 auto;">
-      <p>Olá,</p>
-      <p>Vi que estás interessada na <strong>Skin Call</strong>. Estamos quase lá!</p>
-      <p>Quando tiveres 5 minutos, preenche apenas este formulário de diagnóstico de pele para eu perceber o plano mais indicado para ti (é rápido e personaliza o meu acompanhamento):</p>
+      <p>Olá ${lead.nome},</p>
+      <p>Estamos quase lá! Para eu perceber o plano mais indicado para ti, preciso que preenchas este breve diagnóstico de pele.</p>
       <p style="text-align:center; margin:32px 0;">
         <a href="${url}" style="display:inline-block; background:#8a2831; color:#fbf5ef; text-decoration:none; padding:14px 28px; border-radius:999px; font-weight:600;">
           Abrir diagnóstico
         </a>
       </p>
-      <p style="font-size:13px; color:#8a7a74;">Este link é pessoal e de uso único, e expira em 48h por questões de privacidade (RGPD).</p>
-      <p style="font-size:13px; color:#8a7a74;">Se tiveres qualquer dúvida, envia um email para <a href="mailto:hello@marianapita.pt" style="color:#8a2831;">hello@marianapita.pt</a>.</p>
+      <p style="font-size:13px; color:#8a7a74;">Este link é pessoal e de uso único.</p>
+      <p style="font-size:13px; color:#8a7a74;">Se tiveres qualquer dúvida, envia um email para <a href="mailto:${ownerEmail(env)}" style="color:#8a2831;">${ownerEmail(env)}</a>.</p>
       <p>Com carinho,<br/>Mariana Pita</p>
     </div>
   `;
 
-  const text = `Olá,\n\nvi que estás interessada na Skin Call. Estamos quase lá!\n\nQuando tiveres 5 minutos, preenche este formulário de diagnóstico de pele para eu perceber o plano mais indicado:\n\n${url}\n\nEste link é pessoal e de uso único, e expira em 48h.\n\nSe tiveres qualquer dúvida, envia um email para hello@marianapita.pt.\n\nCom carinho,\nMariana Pita`;
+  const text = `Olá ${lead.nome},\n\nEstamos quase lá! Preenche este diagnóstico de pele para eu perceber o plano mais indicado:\n\n${url}\n\nEste link é pessoal e de uso único.\n\nCom carinho,\nMariana Pita`;
 
-  await sendResend(env, { to: lead.email, subject, html, text });
+  await sendEmail(env, { to: lead.email, subject, html, text });
 }
 
-// Pedido completo (stage 2) entregue à dona — o funil termina aqui.
-export async function sendOwnerRequest(env: Env, data: Record<string, string>): Promise<void> {
-  const subject = `🔔 Skin Call - Diagonóstico Pele - ${data.nome}`;
-  const lines = [
-    ['Nome', data.nome],
-    ['Contacto', data.telefone],
-    ['Email', data.email],
-    ['Plano', data.plano],
-    ['Rotina', data.rotina],
-    ['Frequência', data.rotina_frequencia],
-    ['Preocupações', data.preocupacoes],
-    ['Alergias', data.alergias || '—'],
-    ['Consentimento', data.consent],
-  ];
+// ─── Email de orçamento enviado ao cliente ──────────────────────────────────
 
-  const html = `
-    <div style="font-family: Arial, Helvetica, sans-serif; line-height:1.6; color:#3b2a2a;">
-      <p>Nova resposta de diagonóstico de pele da <strong>Skin Call</strong>:</p>
-      <table style="border-collapse:collapse; font-size:14px;">
-        ${lines
-          .filter(([, v]) => v)
-          .map(
-            ([k, v]) => `
-          <tr><td style="padding:6px 12px 6px 0; color:#8a7a74; font-weight:600; vertical-align:top; white-space:nowrap;">${k}</td>
-          <td style="padding:6px 0;">${v}</td></tr>`
-          )
-          .join('')}
-      </table>
-      <p>Agora que tens os dados todos podes seguir para marcar uma videochamada.</p>
-    </div>
-  `;
-
-  const text = `Novo pedido real de Skin Call:\n\n${lines
-    .filter(([, v]) => v)
-    .map(([k, v]) => `${k}: ${v}`)
-    .join('\n')}`;
-
-  await sendResend(env, { to: ownerEmail(env), subject, html, text });
-}
-
-// Email genérico de formulário (Bridal, Education, etc.) entregue à dona.
-// `fields` é uma lista de pares [label, valor] já ordenada para o email.
-export async function sendFormEmail(
+export async function sendQuoteEmail(
   env: Env,
-  info: { subject: string; fields: [string, string][] }
+  to: string,
+  subject: string,
+  htmlBody: string
 ): Promise<void> {
   const html = `
-    <div style="font-family: Arial, Helvetica, sans-serif; line-height:1.6; color:#3b2a2a;">
-      <p><strong>${info.subject}:</strong></p>
-      <table style="border-collapse:collapse; font-size:14px;">
-        ${info.fields.filter(([, v]) => v).map(([k, v]) => `<tr><td style="padding:6px 12px 6px 0; color:#8a7a74; font-weight:600; vertical-align:top; white-space:nowrap;">${k}</td><td style="padding:6px 0;">${v}</td></tr>`).join('')}
-      </table>
+    <div style="font-family: Arial, Helvetica, sans-serif; line-height:1.6; color:#3b2a2a; max-width:480px; margin:0 auto;">
+      ${htmlBody}
+      <p style="font-size:13px; color:#8a7a74; margin-top:32px;">Se tiveres qualquer dúvida, envia um email para <a href="mailto:${ownerEmail(env)}" style="color:#8a2831;">${ownerEmail(env)}</a>.</p>
+      <p>Com carinho,<br/>Mariana Pita</p>
     </div>
   `;
 
-  const text = `${info.subject}:\n\n${info.fields.filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`).join('\n')}`;
+  const text = htmlBody.replace(/<[^>]+>/g, '');
 
-  await sendResend(env, { to: ownerEmail(env), subject: info.subject, html, text });
-}
-
-// Pedido de orçamento — email à Mariana com os dados da skin-call e link de diagnóstico.
-export async function sendQuoteRequest(
-  env: Env,
-  data: {
-    nome: string;
-    telefone: string;
-    email: string;
-    plano: string;
-    rotina: string;
-    rotina_frequencia: string;
-    preocupacoes: string;
-    token: string;
-  }
-): Promise<void> {
-  const diagUrl = `${SITE_URL}/diagnostico?token=${encodeURIComponent(data.token)}`;
-  const subject = `💰 Skin Call — Pedido de orçamento - ${data.nome}`;
-
-  const lines = [
-    ['Nome', data.nome],
-    ['Contacto', data.telefone],
-    ['Email', data.email],
-    ['Plano', data.plano],
-    ['Rotina', data.rotina || '—'],
-    ['Frequência', data.rotina_frequencia || '—'],
-    ['Preocupações', data.preocupacoes || '—'],
-  ];
-
-  const html = `
-    <div style="font-family: Arial, Helvetica, sans-serif; line-height:1.6; color:#3b2a2a;">
-      <p><strong>Novo pedido de orçamento — Skin Call:</strong></p>
-      <table style="border-collapse:collapse; font-size:14px;">
-        ${lines
-          .filter(([, v]) => v)
-          .map(
-            ([k, v]) => `
-          <tr><td style="padding:6px 12px 6px 0; color:#8a7a74; font-weight:600; vertical-align:top; white-space:nowrap;">${k}</td>
-          <td style="padding:6px 0;">${v}</td></tr>`
-          )
-          .join('')}
-      </table>
-      <p style="margin-top:24px;">
-        <a href="${diagUrl}" style="display:inline-block; background:#8a2831; color:#fbf5ef; text-decoration:none; padding:12px 24px; border-radius:999px; font-weight:600;">
-          Abrir diagnóstico
-        </a>
-      </p>
-      <p style="font-size:13px; color:#8a7a74; word-break:break-all;">${diagUrl}</p>
-      <p style="font-size:13px; color:#8a7a74;">Este link expira em 2 meses. Após análise, encaminha o link para a cliente.</p>
-    </div>
-  `;
-
-  const text = `Novo pedido de orçamento — Skin Call:\n\n${lines
-    .filter(([, v]) => v)
-    .map(([k, v]) => `${k}: ${v}`)
-    .join('\n')}\n\nLink de diagnóstico: ${diagUrl}\n\nEste link expira em 2 meses.`;
-
-  await sendResend(env, { to: ownerEmail(env), subject, html, text });
+  await sendEmail(env, { to, subject, html, text });
 }

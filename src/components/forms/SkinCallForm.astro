@@ -6,6 +6,7 @@ const radioCls = 'accent-burgundy';
 ---
 
 <form id="form-skin-call" action="/api/lead" method="POST" novalidate class="grid gap-6">
+  <input type="hidden" name="form_type" value="skin-call" />
   <input type="checkbox" name="botcheck" class="hidden" style="display:none" />
 
   <div class="grid sm:grid-cols-2 gap-x-32 gap-y-6">
@@ -170,8 +171,9 @@ const radioCls = 'accent-burgundy';
         }
       })
       .catch((err) => {
+        const ownerEmail = import.meta.env.PUBLIC_OWNER_EMAIL || 'hello@marianapita.pt';
         const msg = err?.message === 'Erro ao enviar'
-          ? 'Algo correu mal. Tenta novamente ou escreve para hello@marianapita.pt.'
+          ? `Algo correu mal. Tenta novamente ou escreve para ${ownerEmail}.`
           : err?.message || 'Algo correu mal. Tenta novamente.';
         status.textContent = msg;
         status.className = 'mt-3 text-sm text-red-700';

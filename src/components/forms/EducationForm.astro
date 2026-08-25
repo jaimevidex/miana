@@ -5,8 +5,9 @@ const labelCls = 'block text-sm font-medium text-darkbrown';
 const radioCls = 'accent-burgundy';
 ---
 
-<form id="form-education" action="/api/contact" method="POST" novalidate class="grid gap-5">
-  <input type="hidden" name="subject" value="Pedido — Beauty Education (Workshop)" />
+<form id="form-education" action="/api/lead" method="POST" novalidate class="grid gap-5">
+  <input type="hidden" name="form_type" value="education" />
+  <input type="hidden" name="subject" value="Pedido — Education" />
   <input type="checkbox" name="botcheck" class="hidden" style="display:none" />
 
   <div class="grid sm:grid-cols-2 gap-5">

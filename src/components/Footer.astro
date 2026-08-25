@@ -1,5 +1,6 @@
 ---
 const year = new Date().getFullYear();
+const ownerEmail = import.meta.env.PUBLIC_OWNER_EMAIL || 'hello@marianapita.pt';
 const navItems = [
   { label: 'Home', href: '/' },
   { label: 'Meet Mariana', href: '/sobre' },
@@ -31,8 +32,8 @@ const navItems = [
 
       <div class="flex flex-col gap-3">
         <span class="eyebrow !text-white mb-1">Contacto</span>
-        <a href="mailto:hello@marianapita.pt" class="text-sm text-offwhite/80 hover:text-powder">
-          hello@marianapita.pt
+        <a href={`mailto:${ownerEmail}`} class="text-sm text-offwhite/80 hover:text-powder">
+          {ownerEmail}
         </a>
         <a href="https://instagram.com/bymarianapita" target="_blank" rel="noopener" class="text-sm text-offwhite/80 hover:text-powder">
           @bymarianapita

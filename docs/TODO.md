@@ -55,14 +55,18 @@
 ### Código pronto (implementado, falta configurar credenciais no deploy)
 - [x] `wrangler.toml`: sair do estático puro → Worker com `assets` + `kv_namespaces` (`LEADS`) + binding `send_email`
 - [x] KV `LEADS`: gravar lead (nome/email/telefone/plano) com `token` único, TTL **48h** (`worker/lib.ts`)
-- [x] `POST /api/lead`: grava lead + devolve link `/diagnostico?token=…` + emails (invite ao lead, aviso ao dono)
+- [x] `POST /api/lead`: grava lead + devolve link `/diagnostico?token=…` + emails (aviso à dona com link dashboard)
 - [x] `GET /diagnostico?token=…`: página privada pré-preenchida (dados vêm do KV, não do browser) — `worker/diagnostico.ts`
-- [x] Email: **Resend** (API REST, grátis — 3.000/mês, 100/dia). Envia `no-reply@marianapita.pt` no invite do lead; o diagnóstico termina em `hello@marianapita.pt`. `EMAIL_ENABLED=false` em modo stub — `worker/email.ts`
+- [x] Email: **Resend** (API REST, grátis — 3.000/mês, 100/dia). Envia `no-reply@marianapita.pt` no invite do lead; o diagnóstico termina em `hello@marianapita.pt` com link para dashboard admin. `EMAIL_ENABLED=false` em modo stub — `worker/email.ts`
 - [x] Stage 2 diagnóstico: reintroduzidas as questões de rotina de pele como o formulário de diagnóstico; submete o "pedido real" **diretamente por email à dona** (eliminada dependência Web3Forms no backend) — `POST /api/diagnostico`
 - [x] Consentimento "Vou receber um email com link privado" antes do submit do stage 1
 - [x] Honeypot `botcheck` + rate-limit por IP (5/h) no Worker
 - [x] Limpeza automática via TTL 48h
 - [x] `worker/tsconfig.json` + `npm run worker:check` / `just worker-check` (typecheck do Worker)
+- [x] Configuração centralizada: `worker/config.ts` + `worker/constants.ts` (elimina hardcoded values)
+- [x] Emails: notificação à dona com link direto para dashboard admin (`/admin/lead/{id}`)
+- [x] R2 bucket: `media/diagnostics` (bucket `media`, folder `diagnostics`)
+- [x] Frontend: `PUBLIC_OWNER_EMAIL` em vez de `hello@marianapita.pt` hardcoded
 
 ### Para configurar antes do deploy (credenciais / conta)
 - [ ] Criar conta **Resend** e adicionar o domínio `marianapita.pt` (SPF/DKIM) — o Resend entrega os registos DNS para pores no `marianapita.pt`

@@ -1,16 +1,33 @@
-// Entry point do Worker — serve os assets estáticos do Astro e adiciona o funnel Skin Call.
+// Entry point do Worker — serve os assets estáticos do Astro e adiciona o funnel.
 //
 // Rotas:
-//   POST /api/lead            Stage 1: grava lead no KV, envia email com link, devolve { url }.
-//   GET  /diagnostico?token=  Página privada pré-preenchida (dados do KV, não do browser).
-//   POST /api/diagnostico     Stage 2: submete o diagnóstico como pedido real (email à dona).
-//   POST /api/contact         Formulários genéricos (Bridal, Education) — envia email à dona.
+//   POST /api/lead                 Cria lead (Skin Call, Bridal, Education)
+//   GET  /diagnostico?token=&page= Página privada multi-página do diagnóstico.
+//   POST /api/diagnostico/save     Guarda dados de uma página do diagnóstico.
+//   POST /api/diagnostico          Submete diagnóstico completo (Skin Call).
+//   GET  /admin/login              Página de login.
+//   POST /api/admin/login          Validar credenciais.
+//   POST /api/admin/logout         Destruir sessão.
+//   GET  /admin                    Dashboard (protegido).
+//   GET  /admin/lead/:id           Detalhe lead (protegido).
+//   POST /api/admin/lead/:id/status Mudar estado do lead.
+//   POST /api/admin/lead/:id/quote Enviar orçamento por email.
+//   POST /api/admin/lead/:id/diagnostic Invite - enviar link diagnóstico ao cliente.
+//   POST /api/admin/lead/:id/accept Aceitar orçamento → criar cliente.
+//   GET  /api/admin/photo/:key     Servir foto R2 (auth required).
 
-import { allowRequest, generateToken, isBot, isValidEmail, json, LEAD_TTL, readForm, validateLead, type Env, type Lead, type LeadInput } from './lib';
-import { sendQuoteRequest, sendFormEmail, sendOwnerRequest } from './email';
+import { eq, desc } from 'drizzle-orm';
+import { allowRequest, generateToken, isBot, isValidEmail, json, readForm, validateLead, type Env, type LeadType, FIELD_LABELS } from './lib';
+import { R2_FOLDER } from './constants';
+import { createDb } from './db';
+import { leads, diagnostics, users, clients } from './db/schema';
+import { sendLeadNotification, sendDiagnosticComplete, sendDiagnosticInvite, sendQuoteEmail } from './email';
 import { renderDiagnosticError, renderDiagnosticPage } from './diagnostico';
+import { createSession, validateSession, destroySession } from './auth/session';
+import { setSessionCookie, getSessionCookie, clearSessionCookie } from './auth/cookies';
+import { verifyPassword } from './auth/password';
+import { renderLoginPage, renderDashboard, renderLeadDetail, renderClientsList, renderClientDetail } from './admin';
 
-// OK: tripé CORS e honeypot. Todos os posts vêm do nosso próprio domínio, mas aceitamos origins.
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
@@ -25,76 +42,180 @@ export default {
 
     if (method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
 
+    // ─── API pública ─────────────────────────────────────────────────────
     if (path === '/api/lead' && method === 'POST') return handleLead(request, env);
-    if (path === '/api/contact' && method === 'POST') return handleContact(request, env);
+    if (path === '/api/diagnostico/save' && method === 'POST') return handleDiagnosticoSave(request, env);
     if (path === '/api/diagnostico' && method === 'POST') return handleDiagnostico(request, env);
     if (path === '/diagnostico' && method === 'GET') return handleDiagnosticPage(request, env);
 
-    // Tudo o resto: assets estáticos do Astro.
+    // ─── Admin auth ──────────────────────────────────────────────────────
+    if (path === '/admin/login' && method === 'GET') return renderLoginPage();
+    if (path === '/api/admin/login' && method === 'POST') return handleLogin(request, env);
+    if (path === '/api/admin/logout' && method === 'POST') return handleLogout(request, env);
+
+    // ─── Admin protegido ─────────────────────────────────────────────────
+    if (path.startsWith('/admin')) {
+      const userId = await requireAuth(request, env);
+      if (!userId) return new Response(null, { status: 302, headers: { Location: '/admin/login' } });
+
+      if (path === '/admin' && method === 'GET') return renderDashboard(env);
+      if (path === '/admin/clients' && method === 'GET') return renderClientsList(env);
+      if (path.startsWith('/admin/lead/') && method === 'GET') {
+        const id = path.split('/admin/lead/')[1];
+        return renderLeadDetail(env, id);
+      }
+      if (path.startsWith('/admin/client/') && method === 'GET') {
+        const id = path.split('/admin/client/')[1];
+        return renderClientDetail(env, id);
+      }
+    }
+
+    // ─── Admin API protegida ─────────────────────────────────────────────
+    if (path.startsWith('/api/admin/')) {
+      const userId = await requireAuth(request, env);
+      if (!userId) return json({ error: 'Não autenticado' }, 401);
+
+      if (path.startsWith('/api/admin/lead/') && path.endsWith('/status') && method === 'POST') {
+        const id = path.split('/api/admin/lead/')[1]?.replace('/status', '');
+        return handleUpdateStatus(request, env, id);
+      }
+      if (path.startsWith('/api/admin/lead/') && path.endsWith('/quote') && method === 'POST') {
+        const id = path.split('/api/admin/lead/')[1]?.replace('/quote', '');
+        return handleSendQuote(request, env, id, userId);
+      }
+      if (path.startsWith('/api/admin/lead/') && path.endsWith('/diagnostic-invite') && method === 'POST') {
+        const id = path.split('/api/admin/lead/')[1]?.replace('/diagnostic-invite', '');
+        return handleDiagnosticInvite(request, env, id);
+      }
+      if (path.startsWith('/api/admin/lead/') && path.endsWith('/accept') && method === 'POST') {
+        const id = path.split('/api/admin/lead/')[1]?.replace('/accept', '');
+        return handleAcceptLead(request, env, id);
+      }
+      if (path.startsWith('/api/admin/client/') && path.endsWith('/diagnostic-invite') && method === 'POST') {
+        const id = path.split('/api/admin/client/')[1]?.replace('/diagnostic-invite', '');
+        return handleClientDiagnosticInvite(request, env, id);
+      }
+      if (path.startsWith('/api/admin/photo/') && method === 'GET') {
+        const key = decodeURIComponent(path.split('/api/admin/photo/')[1] || '');
+        return handleServePhoto(env, key);
+      }
+    }
+
     return env.ASSETS.fetch(request as Request);
   },
 } satisfies ExportedHandler<Env>;
 
-// Stage 1 — guardar o lead e devolver o link do diagnóstico.
+// ─── Auth helpers ───────────────────────────────────────────────────────────
+
+async function requireAuth(request: Request, env: Env): Promise<string | null> {
+  const sessionId = getSessionCookie(request);
+  if (!sessionId) return null;
+  return validateSession(env, sessionId);
+}
+
+async function handleLogin(request: Request, env: Env): Promise<Response> {
+  try {
+    const body = await request.json() as { email: string; password: string };
+    const { email, password } = body;
+
+    if (!email || !password) {
+      return json({ success: false, error: 'Email e password são obrigatórios.' }, 400);
+    }
+
+    const db = createDb(env);
+    const userResult = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    const loginUser = userResult[0];
+
+    if (!loginUser) {
+      return json({ success: false, error: 'Credenciais inválidas.' }, 401);
+    }
+
+    const valid = await verifyPassword(password, loginUser.passwordHash);
+    if (!valid) {
+      return json({ success: false, error: 'Credenciais inválidas.' }, 401);
+    }
+
+    const sessionId = await createSession(env, loginUser.id);
+    const headers = new Headers();
+    setSessionCookie(headers, sessionId);
+    headers.set('Content-Type', 'application/json');
+
+    return new Response(JSON.stringify({ success: true, redirect: '/admin' }), { status: 200, headers });
+  } catch (e) {
+    console.error('[api/admin/login] error:', e);
+    return json({ success: false, error: 'Erro no servidor.' }, 500);
+  }
+}
+
+async function handleLogout(request: Request, env: Env): Promise<Response> {
+  const sessionId = getSessionCookie(request);
+  if (sessionId) await destroySession(env, sessionId);
+
+  const headers = new Headers();
+  clearSessionCookie(headers);
+  headers.set('Content-Type', 'application/json');
+
+  return new Response(JSON.stringify({ success: true, redirect: '/admin/login' }), { status: 200, headers });
+}
+
+// ─── Lead creation (todos os tipos) ─────────────────────────────────────────
+
 async function handleLead(request: Request, env: Env): Promise<Response> {
   const clientIP = request.headers.get('CF-Connecting-IP') || 'unknown';
 
   try {
     const form = await readForm(request);
+    if (isBot(form)) return json({ success: true });
 
-    if (isBot(form)) {
-      // Bot preencheu o honey pot — devolvemos sucesso falso, mas não gravamos nada.
-      return json({ success: true, url: '/servicos/skin-call' });
-    }
+    const type = (form.get('form_type') || 'skin-call') as LeadType;
+    const nome = ((form.get('nome') || '') as string).trim();
+    const telefone = ((form.get('telefone') || '') as string).trim();
+    const email = ((form.get('email') || '') as string).trim().toLowerCase();
 
-    const lead = {
-      nome: (form.get('nome') || '') as string,
-      telefone: (form.get('telefone') || '') as string,
-      email: ((form.get('email') || '') as string).trim().toLowerCase(),
-      plano: (form.get('plano') || '') as string,
-    };
-
-    const err = validateLead(lead);
+    const err = validateLead({ nome, telefone, email, type });
     if (err) return json({ success: false, error: err }, 400);
 
-    const allowed = await allowRequest(env, clientIP, lead.email);
+    const allowed = await allowRequest(env, clientIP, email);
     if (!allowed) {
       return json({ success: false, error: 'Demasiadas tentativas. Tenta mais tarde.' }, 429);
     }
 
-    const token = generateToken();
+    // Token só para Skin Call
+    const token = type === 'skin-call' ? generateToken() : '';
 
-    // Capturar campos extra da skin-call
-    const rotina = (form.get('rotina') || '') as string;
-    const rotina_frequencia = (form.get('rotina_frequencia') || '') as string;
-    const preocupacoesList = form.getAll('preocupacoes').map(String);
-    const preocupacoes_outro = (form.get('preocupacoes_outro') || '') as string;
-    const pele_tipo = form.getAll('pele_tipo').map(String);
-    const preocupacoes = [...preocupacoesList, ...(preocupacoes_outro ? [`Outra: ${preocupacoes_outro}`] : [])].join(', ');
+    // Recolher todos os campos do formulário (exclui os básicos e honeypot)
+    const skip = new Set(['botcheck', 'form_type', 'nome', 'telefone', 'email']);
+    const formData: Record<string, string> = {};
+    form.forEach((value, key) => {
+      if (skip.has(key)) return;
+      // Checkboxes: múltiplos valores
+      const existing = formData[key];
+      if (existing) {
+        formData[key] = existing + ', ' + String(value);
+      } else {
+        formData[key] = String(value);
+      }
+    });
 
-    const record: Lead = {
+    const id = crypto.randomUUID();
+    const now = Date.now();
+
+    const db = createDb(env);
+    await db.insert(leads).values([{
+      id,
       token,
-      ...lead,
-      rotina,
-      rotina_frequencia,
-      preocupacoes,
-      createdAt: Date.now(),
-    };
-    await env.LEADS.put(`lead:${token}`, JSON.stringify(record), { expirationTtl: LEAD_TTL });
+      type,
+      nome,
+      telefone,
+      email,
+      status: 'novo',
+      formData: JSON.stringify(formData),
+      createdAt: now,
+      updatedAt: now,
+    }]);
 
-    // Enviar email à Mariana com pedido de orçamento
-    await Promise.allSettled([
-      sendQuoteRequest(env, {
-        nome: lead.nome,
-        telefone: lead.telefone,
-        email: lead.email,
-        plano: lead.plano,
-        rotina,
-        rotina_frequencia,
-        preocupacoes,
-        token,
-      }),
-    ]);
+    // Notificação para a Mariana
+    await sendLeadNotification(env, { id, nome, email, telefone, type });
 
     return json({ success: true });
   } catch (e) {
@@ -103,93 +224,144 @@ async function handleLead(request: Request, env: Env): Promise<Response> {
   }
 }
 
-// Formulários genéricos (Bridal/Education) — envia um email à dona com os campos preenchidos.
-async function handleContact(request: Request, env: Env): Promise<Response> {
-  const clientIP = request.headers.get('CF-Connecting-IP') || 'unknown';
+// ─── Diagnóstico (Skin Call) ────────────────────────────────────────────────
 
+async function handleDiagnosticoSave(request: Request, env: Env): Promise<Response> {
   try {
-    const form = await readForm(request);
-    if (isBot(form)) return json({ success: true });
+    const body = await request.json() as { token: string; page: number; data: Record<string, string[]> };
+    const { token, page, data } = body;
 
-    const nome = ((form.get('nome') || '') as string).trim();
-    const email = ((form.get('email') || '') as string).trim().toLowerCase();
+    if (!token || !page) return json({ success: false, error: 'Faltam dados.' }, 400);
 
-    // Validação mínima: nome + email têm de existir (resto fica ao critério do formulário).
-    if (nome.length < 2) return json({ success: false, error: 'Falta o nome.' }, 400);
-    if (!isValidEmail(email)) return json({ success: false, error: 'Falta um email válido.' }, 400);
+    const db = createDb(env);
 
-    const allowed = await allowRequest(env, clientIP, email);
-    if (!allowed) return json({ success: false, error: 'Demasiadas tentativas. Tenta mais tarde.' }, 429);
+    const leadResult = await db.select().from(leads).where(eq(leads.token, token)).limit(1);
+    const leadRow = leadResult[0];
+    if (!leadRow) return json({ success: false, error: 'Token expirado ou inválido.' }, 410);
 
-    // Ignora campos de sistema/honeypot e monta os campos legíveis a partir do form.
-    const skip = new Set(['botcheck', 'access_key', 'subject']);
-    const subject = ((form.get('subject') || '') as string).trim() || 'Novo pedido';
-    const FIELD_LABELS: Record<string, string> = {
-      nome: 'Nome', telefone: 'Contacto telefónico', email: 'E-mail',
-      opcao_servico: 'Opção de serviço', data_casamento: 'Data do casamento',
-      hora_pronta: 'Hora de estar pronta', local_preparacao: 'Local da preparação',
-      local_prova: 'Local da prova', servicos_procurados: 'Serviços procurados',
-      numero_guests: 'Número de guests', addon_skin_call: 'Add-on Skin Call',
-      data_evento: 'Data do evento', hora_pronta_evento: 'Hora do evento',
-      local_evento: 'Local do evento', servicos_procurados_guests: 'Serviços procurados',
-      numero_pessoas: 'Número de pessoas', mensagem: 'Mensagem',
-      formato: 'Formato', local_workshop: 'Local do workshop', data_hora: 'Data e hora',
-      tipo: 'Tipo', modalidade: 'Modalidade', numero_participantes: 'Número de participantes',
-      regime: 'Regime',
-    };
+    const existingDiag = await db.select().from(diagnostics).where(eq(diagnostics.leadId, leadRow.id)).limit(1);
+    const diagRow = existingDiag[0];
+    const now = Date.now();
 
-    const fields: [string, string][] = [];
-    form.forEach((value, key) => {
-      if (skip.has(key)) return;
-      const label = FIELD_LABELS[key] || key.replace(/_/g, ' ');
-      fields.push([label, String(value)]);
-    });
+    const flatData: Record<string, string> = {};
+    for (const [key, values] of Object.entries(data)) {
+      flatData[key] = Array.isArray(values) ? values.join(', ') : String(values);
+    }
 
-    // Rapidamente: monta o assunto com o nome se não estiver incluído.
-    const finalSubject = subject.includes(nome) ? subject : `${subject} — ${nome}`;
+    if (diagRow) {
+      await db.update(diagnostics).set({ ...flatData, pageSaved: page, updatedAt: now }).where(eq(diagnostics.id, diagRow.id));
+    } else {
+      await db.insert(diagnostics).values([{
+        id: crypto.randomUUID(),
+        leadId: leadRow.id,
+        ...flatData,
+        pageSaved: page,
+        completed: 0,
+        createdAt: now,
+        updatedAt: now,
+      }]);
+    }
 
-    await sendFormEmail(env, { subject: finalSubject, fields });
-
-    return json({ success: true, message: 'Obrigada! O teu pedido foi registado. Entrarei em contacto dentro de 48h.' });
+    return json({ success: true });
   } catch (e) {
-    console.error('[api/contact] error:', e);
-    return json({ success: false, error: 'Erro no servidor. Tenta de novo.' }, 500);
+    console.error('[api/diagnostico/save] error:', e);
+    return json({ success: false, error: 'Erro ao guardar.' }, 500);
   }
 }
 
-// Stage 2 — submete o diagnóstico como pedido real.
 async function handleDiagnostico(request: Request, env: Env): Promise<Response> {
   try {
-    const form = await readForm(request);
-    if (isBot(form)) return json({ success: true, message: 'Enviado!' });
+    const contentType = request.headers.get('content-type') || '';
 
-    const token = (form.get('token') || '') as string;
+    let token: string;
+    let allData: Record<string, string[]> = {};
+    let photos: File[] = [];
+
+    if (contentType.includes('multipart/form-data')) {
+      const form = await request.formData();
+      token = (form.get('token') || '') as string;
+      form.forEach((value, key) => {
+        if (key === 'token') return;
+        if (value instanceof File) {
+          if (value.size > 0) photos.push(value);
+        } else {
+          if (!allData[key]) allData[key] = [];
+          allData[key].push(String(value));
+        }
+      });
+    } else {
+      const body = await request.json() as { token: string; data: Record<string, string[]> };
+      token = body.token;
+      allData = body.data || {};
+    }
+
     if (!token) return json({ success: false, error: 'Falta o token de acesso.' }, 400);
 
-    const raw = await env.LEADS.get(`lead:${token}`);
-    if (!raw) return json({ success: false, error: 'Este link expirou (2 meses) ou não é válido. Pede um novo.' }, 410);
+    const db = createDb(env);
 
-    const stored: Lead = JSON.parse(raw);
-    const payload = {
-      nome: (form.get('nome') || stored.nome) as string,
-      telefone: (form.get('telefone') || stored.telefone) as string,
-      email: ((form.get('email') || stored.email) as string).trim().toLowerCase(),
-      plano: (form.get('plano') || stored.plano) as string,
-      rotina: (form.get('rotina') || '') as string,
-      rotina_frequencia: (form.get('rotina_frequencia') || '') as string,
-      preocupacoes: form.getAll('preocupacoes').join(', '),
-      alergias: (form.get('alergias') || '') as string,
-      consent: (form.get('consent') === 'on') ? 'Sim' : 'Não',
-    };
+    const leadResult = await db.select().from(leads).where(eq(leads.token, token)).limit(1);
+    const stored = leadResult[0];
+    if (!stored) return json({ success: false, error: 'Este link expirou ou não é válido. Pede um novo.' }, 410);
 
-    const err = validateLead(payload);
-    if (err) return json({ success: false, error: err }, 400);
+    // Upload fotos para R2
+    const photoUrls: string[] = [];
+    if (env.DIAG_PHOTOS && photos.length > 0) {
+      for (let i = 0; i < photos.length; i++) {
+        const file = photos[i];
+        const ext = file.name.split('.').pop() || 'jpg';
+        const key = `${R2_FOLDER}/${token}/photo-${i + 1}.${ext}`;
+        await env.DIAG_PHOTOS.put(key, file.stream(), {
+          httpMetadata: { contentType: file.type },
+        });
+        photoUrls.push(key);
+      }
+    }
 
-    // Consome o token imediatamente (uso único).
-    await env.LEADS.delete(`lead:${token}`);
+    const flatData: Record<string, string> = {};
+    for (const [key, values] of Object.entries(allData)) {
+      if (Array.isArray(values)) {
+        flatData[key] = values.join(', ');
+      } else {
+        flatData[key] = String(values);
+      }
+    }
 
-    // Entrega o pedido real à dona.
-    await sendOwnerRequest(env, payload);
+    flatData.consent = allData.consent?.[0] === 'on' ? 'Sim' : 'Não';
+
+    const now = Date.now();
+
+    const existingDiag = await db.select().from(diagnostics).where(eq(diagnostics.leadId, stored.id)).limit(1);
+    const diagRow = existingDiag[0];
+
+    if (diagRow) {
+      await db.update(diagnostics).set({
+        ...flatData,
+        fotoFrente: photoUrls[0] || null,
+        fotoPerfilEsq: photoUrls[1] || null,
+        fotoPerfilDir: photoUrls[2] || null,
+        completed: 1,
+        updatedAt: now,
+      }).where(eq(diagnostics.id, diagRow.id));
+    } else {
+      await db.insert(diagnostics).values([{
+        id: crypto.randomUUID(),
+        leadId: stored.id,
+        ...flatData,
+        fotoFrente: photoUrls[0] || null,
+        fotoPerfilEsq: photoUrls[1] || null,
+        fotoPerfilDir: photoUrls[2] || null,
+        completed: 1,
+        createdAt: now,
+        updatedAt: now,
+      }]);
+    }
+
+    // Notificar Mariana
+    await sendDiagnosticComplete(env, {
+      nome: stored.nome,
+      email: stored.email,
+      telefone: stored.telefone,
+    }, stored.id);
 
     return json({
       success: true,
@@ -201,30 +373,236 @@ async function handleDiagnostico(request: Request, env: Env): Promise<Response> 
   }
 }
 
-// GET /diagnostico?token=… — página privada pré-preenchida.
 async function handleDiagnosticPage(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   const token = url.searchParams.get('token') || '';
+  const page = parseInt(url.searchParams.get('page') || '1', 10);
 
   if (!token) return renderDiagnosticError('missing');
 
-  const raw = await env.LEADS.get(`lead:${token}`);
-  if (!raw) {
-    // Dev fallback: show the page with mock data when token not found in KV
-    return renderDiagnosticPage({
+  const db = createDb(env);
+
+  const leadResult = await db.select().from(leads).where(eq(leads.token, token)).limit(1);
+  const stored = leadResult[0];
+
+  if (!stored) {
+    const mockLead = {
       token,
       nome: 'Dev User',
       telefone: '',
       email: '',
       plano: '',
       createdAt: Date.now(),
-    });
+    };
+    return renderDiagnosticPage(mockLead, page, {});
   }
 
   try {
-    const lead: Lead = JSON.parse(raw);
-    return renderDiagnosticPage(lead);
+    // Extrair plano do form_data JSON
+    const formData = stored.formData ? JSON.parse(stored.formData) : {};
+    const lead = {
+      token: stored.token || '',
+      nome: stored.nome,
+      telefone: stored.telefone,
+      email: stored.email,
+      plano: formData.plano || '',
+      createdAt: stored.createdAt,
+    };
+
+    const savedData = await loadSavedData(env, stored.id);
+    return renderDiagnosticPage(lead, page, savedData);
   } catch {
     return renderDiagnosticError('invalid');
+  }
+}
+
+async function loadSavedData(env: Env, leadId: string): Promise<Record<string, string[]>> {
+  const db = createDb(env);
+  const diagResult = await db.select().from(diagnostics).where(eq(diagnostics.leadId, leadId)).limit(1);
+  const diag = diagResult[0];
+
+  if (!diag) return {};
+
+  const merged: Record<string, string[]> = {};
+  const fieldsToConvert = [
+    'situacao', 'diagnosticoMedico', 'sonoTipo', 'aguaIngestao', 'alimentacao',
+    'exposicaoSolar', 'ambienteFatores', 'peleAcordar', 'pele2h', 'peleTarde',
+    'peleTextura', 'peleCor', 'peleToque', 'peleAmbiente', 'peleBorbulhas',
+    'peleFirmeza', 'peleContornoOlhos', 'rotinaConsistencia', 'rotinaMaquilhagemFreq',
+    'rotinaMaquilhagemRetirar', 'rotinaLavarRosto', 'preferenciasTempo',
+    'preferenciasTexturas', 'preferenciasDificuldades', 'preferenciasOrcamento',
+  ];
+
+  for (const field of fieldsToConvert) {
+    const value = diag[field as keyof typeof diag] as string | null;
+    if (value) {
+      merged[field] = value.split(', ');
+    }
+  }
+
+  return merged;
+}
+
+// ─── Admin API handlers ─────────────────────────────────────────────────────
+
+async function handleUpdateStatus(request: Request, env: Env, id: string | undefined): Promise<Response> {
+  if (!id) return json({ error: 'ID inválido' }, 400);
+
+  try {
+    const body = await request.json() as { status: string };
+    const { status } = body;
+
+    const validStatuses = [
+      'novo', 'orcamento_enviado', 'aguarda_resposta', 'em_analise',
+      'proposta_enviada', 'aceite', 'em_curso', 'concluido', 'recusado', 'desativo',
+    ];
+    if (!validStatuses.includes(status)) {
+      return json({ error: 'Estado inválido' }, 400);
+    }
+
+    const db = createDb(env);
+    await db.update(leads).set({ status, updatedAt: Date.now() }).where(eq(leads.id, id));
+
+    return json({ success: true });
+  } catch (e) {
+    console.error('[api/admin/lead/status] error:', e);
+    return json({ error: 'Erro ao atualizar estado' }, 500);
+  }
+}
+
+async function handleSendQuote(request: Request, env: Env, id: string | undefined, userId: string): Promise<Response> {
+  if (!id) return json({ error: 'ID inválido' }, 400);
+
+  try {
+    const body = await request.json() as { subject: string; html: string };
+    const { subject, html } = body;
+
+    if (!subject || !html) {
+      return json({ error: 'Assunto e corpo do email são obrigatórios.' }, 400);
+    }
+
+    const db = createDb(env);
+    const leadResult = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
+    const lead = leadResult[0];
+
+    if (!lead) return json({ error: 'Lead não encontrada.' }, 404);
+
+    // Enviar email ao cliente
+    await sendQuoteEmail(env, lead.email, subject, html);
+
+    // Atualizar estado da lead
+    await db.update(leads).set({ status: 'orcamento_enviado', updatedAt: Date.now() }).where(eq(leads.id, id));
+
+    return json({ success: true });
+  } catch (e) {
+    console.error('[api/admin/lead/quote] error:', e);
+    return json({ error: 'Erro ao enviar orçamento' }, 500);
+  }
+}
+
+async function handleDiagnosticInvite(request: Request, env: Env, id: string | undefined): Promise<Response> {
+  if (!id) return json({ error: 'ID inválido' }, 400);
+
+  try {
+    const db = createDb(env);
+    const leadResult = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
+    const lead = leadResult[0];
+
+    if (!lead) return json({ error: 'Lead não encontrada.' }, 404);
+    if (!lead.token) return json({ error: 'Esta lead não tem token de diagnóstico.' }, 400);
+
+    await sendDiagnosticInvite(env, {
+      nome: lead.nome,
+      email: lead.email,
+      token: lead.token,
+    });
+
+    return json({ success: true });
+  } catch (e) {
+    console.error('[api/admin/lead/diagnostic-invite] error:', e);
+    return json({ error: 'Erro ao enviar convite' }, 500);
+  }
+}
+
+async function handleAcceptLead(request: Request, env: Env, id: string | undefined): Promise<Response> {
+  if (!id) return json({ error: 'ID inválido' }, 400);
+
+  try {
+    const db = createDb(env);
+    const leadResult = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
+    const lead = leadResult[0];
+
+    if (!lead) return json({ error: 'Lead não encontrada.' }, 404);
+
+    const now = Date.now();
+
+    // Criar cliente
+    await db.insert(clients).values([{
+      id: crypto.randomUUID(),
+      leadId: lead.id,
+      type: lead.type,
+      nome: lead.nome,
+      telefone: lead.telefone,
+      email: lead.email,
+      data: lead.formData,
+      createdAt: now,
+      updatedAt: now,
+    }]);
+
+    // Atualizar estado da lead
+    await db.update(leads).set({ status: 'aceite', updatedAt: now }).where(eq(leads.id, id));
+
+    return json({ success: true });
+  } catch (e) {
+    console.error('[api/admin/lead/accept] error:', e);
+    return json({ error: 'Erro ao aceitar lead' }, 500);
+  }
+}
+
+async function handleClientDiagnosticInvite(request: Request, env: Env, id: string | undefined): Promise<Response> {
+  if (!id) return json({ error: 'ID inválido' }, 400);
+
+  try {
+    const db = createDb(env);
+    const clientResult = await db.select().from(clients).where(eq(clients.id, id)).limit(1);
+    const client = clientResult[0];
+
+    if (!client) return json({ error: 'Cliente não encontrado.' }, 404);
+
+    // Buscar a lead original para ter o token
+    const leadResult = await db.select().from(leads).where(eq(leads.id, client.leadId)).limit(1);
+    const lead = leadResult[0];
+
+    if (!lead || !lead.token) return json({ error: 'Lead original sem token de diagnóstico.' }, 400);
+
+    await sendDiagnosticInvite(env, {
+      nome: client.nome,
+      email: client.email,
+      token: lead.token,
+    });
+
+    return json({ success: true });
+  } catch (e) {
+    console.error('[api/admin/client/diagnostic-invite] error:', e);
+    return json({ error: 'Erro ao enviar convite' }, 500);
+  }
+}
+
+async function handleServePhoto(env: Env, key: string): Promise<Response> {
+  if (!env.DIAG_PHOTOS) return json({ error: 'R2 não configurado' }, 503);
+  if (!key) return json({ error: 'Key inválida' }, 400);
+
+  try {
+    const object = await env.DIAG_PHOTOS.get(key);
+    if (!object) return json({ error: 'Foto não encontrada' }, 404);
+
+    const headers = new Headers();
+    headers.set('Content-Type', object.httpMetadata?.contentType || 'image/jpeg');
+    headers.set('Cache-Control', 'private, max-age=3600');
+
+    return new Response(object.body, { headers });
+  } catch (e) {
+    console.error('[api/admin/photo] error:', e);
+    return json({ error: 'Erro ao carregar foto' }, 500);
   }
 }
