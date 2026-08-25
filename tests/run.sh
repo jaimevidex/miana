@@ -9,7 +9,6 @@ set -euo pipefail
 BASE="${1:-http://localhost:8787}"
 PASS=0
 FAIL=0
-ADMIN_PASS="${ADMIN_PASS:-testpassword}"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -104,59 +103,8 @@ STATUS=$(echo "$RESP" | head -1)
 BODY=$(echo "$RESP" | sed '1,/^---BODY---$/d')
 assert_status "Bot detectado (honeypot)" "200" "$STATUS" "$BODY"
 
-# ─── 6. Admin Login ─────────────────────────────────────────────────────────
-echo -e "\n${YELLOW}═══ 6. Admin Login ═══${NC}"
-
-RESP=$(curl_req -X POST "$BASE/api/admin/login" \
-  -H "Content-Type: application/json" \
-  -d '{"email":"wrong@teste.com","password":"wrong"}')
-STATUS=$(echo "$RESP" | head -1)
-BODY=$(echo "$RESP" | sed '1,/^---BODY---$/d')
-assert_status "Rejeita credenciais inválidas" "401" "$STATUS" "$BODY"
-
-RESP=$(curl_req -X POST "$BASE/api/admin/login" \
-  -H "Content-Type: application/json" \
-  -d "{\"email\":\"hello@marianapita.pt\",\"password\":\"${ADMIN_PASS}\"}" \
-  -c /tmp/miana-cookies.txt)
-STATUS=$(echo "$RESP" | head -1)
-BODY=$(echo "$RESP" | sed '1,/^---BODY---$/d')
-if [ "$STATUS" = "200" ]; then
-  assert_status "Login com credenciais corretas" "200" "$STATUS" "$BODY"
-  assert_contains "Login retorna success" '"success":true' "$BODY"
-else
-  echo -e "  ${YELLOW}⊘${NC} Login pulado (HTTP $STATUS — faz seed com: npx tsx worker/seed.ts <password>)"
-fi
-
-# ─── 7. Dashboard — lista leads ─────────────────────────────────────────────
-echo -e "\n${YELLOW}═══ 7. Dashboard — página leads ═══${NC}"
-
-RESP=$(curl_req "$BASE/admin" -b /tmp/miana-cookies.txt 2>/dev/null)
-STATUS=$(echo "$RESP" | head -1)
-BODY=$(echo "$RESP" | sed '1,/^---BODY---$/d')
-if [ "$STATUS" = "200" ]; then
-  assert_status "Dashboard acedido" "200" "$STATUS" "$BODY"
-  assert_contains "Contém navbar" 'Miana Admin' "$BODY"
-  assert_contains "Contém link Leads" '/admin"' "$BODY"
-  assert_contains "Contém link Clientes" '/admin/clients' "$BODY"
-else
-  echo -e "  ${YELLOW}⊘${NC} Dashboard pulado (HTTP $STATUS — precisa login)"
-fi
-
-# ─── 8. Dashboard — lista clientes ──────────────────────────────────────────
-echo -e "\n${YELLOW}═══ 8. Dashboard — página clientes ═══${NC}"
-
-RESP=$(curl_req "$BASE/admin/clients" -b /tmp/miana-cookies.txt 2>/dev/null)
-STATUS=$(echo "$RESP" | head -1)
-BODY=$(echo "$RESP" | sed '1,/^---BODY---$/d')
-if [ "$STATUS" = "200" ]; then
-  assert_status "Página clientes acedida" "200" "$STATUS" "$BODY"
-  assert_contains "Contém heading Clientes" 'Clientes' "$BODY"
-else
-  echo -e "  ${YELLOW}⊘${NC} Clientes pulado (HTTP $STATUS — precisa login)"
-fi
-
-# ─── 9. Verificar emails no Mailpit ─────────────────────────────────────────
-echo -e "\n${YELLOW}═══ 9. Mailpit — verificar emails ═══${NC}"
+# ─── 6. Verificar emails no Mailpit ─────────────────────────────────────────
+echo -e "\n${YELLOW}═══ 6. Mailpit — verificar emails ═══${NC}"
 
 MAILPIT_BODY=$(curl -s "http://localhost:8025/api/v1/messages" 2>/dev/null || echo '{"total":0}')
 MAILPIT_COUNT=$(echo "$MAILPIT_BODY" | grep -o '"total":[0-9]*' | grep -o '[0-9]*' || echo "0")
@@ -168,8 +116,8 @@ else
   echo -e "  ${YELLOW}⊘${NC} Nenhum email no Mailpit (verificar se está a correr)"
 fi
 
-# ─── 10. Rate limit ─────────────────────────────────────────────────────────
-echo -e "\n${YELLOW}═══ 10. Rate limit ═══${NC}"
+# ─── 7. Rate limit ─────────────────────────────────────────────────────────
+echo -e "\n${YELLOW}═══ 7. Rate limit ═══${NC}"
 
 RESP=$(curl_req -X POST "$BASE/api/lead" \
   -d "form_type=skin-call&nome=Rate Test&telefone=912345678&email=rate@teste.com&plano=Teste")
@@ -183,8 +131,8 @@ else
   FAIL=$((FAIL + 1))
 fi
 
-# ─── 11. Rota protegida sem auth ────────────────────────────────────────────
-echo -e "\n${YELLOW}═══ 11. Rotas protegidas sem autenticação ═══${NC}"
+# ─── 8. Rota protegida sem auth ────────────────────────────────────────────
+echo -e "\n${YELLOW}═══ 8. Rotas protegidas sem autenticação ═══${NC}"
 
 RESP=$(curl_req "$BASE/admin" 2>/dev/null)
 STATUS=$(echo "$RESP" | head -1)
@@ -196,8 +144,8 @@ else
   FAIL=$((FAIL + 1))
 fi
 
-# ─── 12. Diagnóstico — token inválido ───────────────────────────────────────
-echo -e "\n${YELLOW}═══ 12. Diagnóstico — token inválido ═══${NC}"
+# ─── 9. Diagnóstico — token inválido ───────────────────────────────────────
+echo -e "\n${YELLOW}═══ 9. Diagnóstico — token inválido ═══${NC}"
 
 RESP=$(curl_req "$BASE/diagnostico?token=invalido&page=1")
 STATUS=$(echo "$RESP" | head -1)

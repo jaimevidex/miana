@@ -35,7 +35,7 @@ async function main() {
     const now = Date.now();
 
     inserts.push(
-      `INSERT OR IGNORE INTO users (id, email, password_hash, name, created_at) VALUES ('${id}', '${user.email}', '${hash}', '${user.name}', ${now});`
+      `INSERT OR REPLACE INTO users (id, email, password_hash, name, created_at) VALUES ('${id}', '${user.email}', '${hash}', '${user.name}', ${now});`
     );
 
     console.log(`User: ${user.email}`);
