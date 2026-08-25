@@ -181,7 +181,7 @@ async function handleLead(request: Request, env: Env): Promise<Response> {
     }
 
     // Token só para Skin Call
-    const token = type === 'skin-call' ? generateToken() : '';
+    const token = type === 'skin-call' ? generateToken() : null;
 
     // Recolher todos os campos do formulário (exclui os básicos e honeypot)
     const skip = new Set(['botcheck', 'form_type', 'nome', 'telefone', 'email']);

@@ -14,7 +14,7 @@ export const users = sqliteTable('users', {
 // ─── Leads (todos os formulários) ───────────────────────────────────────────
 export const leads = sqliteTable('leads', {
   id: text('id').primaryKey(),
-  token: text('token').unique(),
+  token: text('token'),
   type: text('type').notNull(), // skin-call | bridal-beauty | education
   nome: text('nome').notNull(),
   telefone: text('telefone').notNull(),
