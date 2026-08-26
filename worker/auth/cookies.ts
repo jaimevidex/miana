@@ -4,7 +4,7 @@ const COOKIE_NAME = 'admin_session';
 const COOKIE_MAX_AGE = 7 * 24 * 60 * 60; // 7 dias em segundos
 
 /** cookiePath — caminho base para o cookie (admin only). */
-const COOKIE_PATH = '/admin';
+const COOKIE_PATH = '/';
 
 /** Define o cookie de sessão na resposta. */
 export function setSessionCookie(headers: Headers, sessionId: string): void {
