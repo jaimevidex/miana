@@ -411,7 +411,8 @@ async function handleDiagnosticPage(request: Request, env: Env): Promise<Respons
 
     const savedData = await loadSavedData(env, stored.id);
     return renderDiagnosticPage(lead, page, savedData);
-  } catch {
+  } catch (e) {
+    console.error('[diagnostico] page error:', e);
     return renderDiagnosticError('invalid');
   }
 }
@@ -424,19 +425,45 @@ async function loadSavedData(env: Env, leadId: string): Promise<Record<string, s
   if (!diag) return {};
 
   const merged: Record<string, string[]> = {};
-  const fieldsToConvert = [
-    'situacao', 'diagnosticoMedico', 'sonoTipo', 'aguaIngestao', 'alimentacao',
-    'exposicaoSolar', 'ambienteFatores', 'peleAcordar', 'pele2h', 'peleTarde',
-    'peleTextura', 'peleCor', 'peleToque', 'peleAmbiente', 'peleBorbulhas',
-    'peleFirmeza', 'peleContornoOlhos', 'rotinaConsistencia', 'rotinaMaquilhagemFreq',
-    'rotinaMaquilhagemRetirar', 'rotinaLavarRosto', 'preferenciasTempo',
-    'preferenciasTexturas', 'preferenciasDificuldades', 'preferenciasOrcamento',
+  const fieldsToConvert: [string, string][] = [
+    ['situacao', 'situacao'], ['diagnosticoMedico', 'diagnostico_medico'],
+    ['sonoTipo', 'sono_tipo'], ['aguaIngestao', 'agua_ingestao'],
+    ['alimentacao', 'alimentacao'], ['exposicaoSolar', 'exposicao_solar'],
+    ['ambienteFatores', 'ambiente_fatores'], ['peleAcordar', 'pele_acordar'],
+    ['pele2h', 'pele_2h'], ['peleTarde', 'pele_tarde'],
+    ['peleTextura', 'pele_textura'], ['peleCor', 'pele_cor'],
+    ['peleToque', 'pele_toque'], ['peleAmbiente', 'pele_ambiente'],
+    ['peleBorbulhas', 'pele_borbulhas'], ['peleFirmeza', 'pele_firmeza'],
+    ['peleContornoOlhos', 'pele_contorno_olhos'],
+    ['rotinaConsistencia', 'rotina_consistencia'],
+    ['rotinaMaquilhagemFreq', 'rotina_maquilhagem_freq'],
+    ['rotinaMaquilhagemRetirar', 'rotina_maquilhagem_retirar'],
+    ['rotinaLavarRosto', 'rotina_lavar_rosto'],
+    ['preferenciasTempo', 'preferencias_tempo'],
+    ['preferenciasTexturas', 'preferencias_texturas'],
+    ['preferenciasDificuldades', 'preferencias_dificuldades'],
+    ['preferenciasOrcamento', 'preferencias_orcamento'],
+    ['stressNivel', 'stress_nivel'], ['sonoLado', 'sono_lado'],
+    ['sonoFronha', 'sono_fronha'], ['alimentacaoOutro', 'alimentacao_outro'],
+    ['peleTexturaOutro', 'pele_textura_outro'], ['peleCorOutro', 'pele_cor_outro'],
+    ['peleToqueOutro', 'pele_toque_outro'], ['rotinaManha', 'rotina_manha'],
+    ['rotinaNoite', 'rotina_noite'], ['rotinaEsfoliacao', 'rotina_esfoliacao'],
+    ['rotinaMascaras', 'rotina_mascaras'], ['rotinaDispositivos', 'rotina_dispositivos'],
+    ['rotinaFavorito', 'rotina_favorito'], ['rotinaOdeia', 'rotina_odeia'],
+    ['rotinaPinceis', 'rotina_pinceis'], ['rotinaTelemovel', 'rotina_telemovel'],
+    ['rotinaMexerRosto', 'rotina_mexer_rosto'], ['rotinaEspremer', 'rotina_espremer'],
+    ['rotinaDepilacao', 'rotina_depilacao'],
+    ['preferenciasTexturasOutro', 'preferencias_texturas_outro'],
+    ['preferenciasDificuldadesOutro', 'preferencias_dificuldades_outro'],
+    ['prioridade1', 'prioridade_1'], ['prioridade2', 'prioridade_2'],
+    ['perguntaNaoPodeFicar', 'pergunta_nao_pode_ficar'],
+    ['maisAlgumaCoisa', 'mais_alguma_coisa'],
   ];
 
-  for (const field of fieldsToConvert) {
-    const value = diag[field as keyof typeof diag] as string | null;
+  for (const [camel, snake] of fieldsToConvert) {
+    const value = diag[camel as keyof typeof diag] as string | null;
     if (value) {
-      merged[field] = value.split(', ');
+      merged[snake] = value.split(', ');
     }
   }
 

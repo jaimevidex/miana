@@ -121,8 +121,8 @@ export function maskEmail(email: string): string {
   return `${head}${'*'.repeat(Math.max(1, local.length - 2))}@${domain}`;
 }
 
-export function htmlEscape(value: string): string {
-  return value
+export function htmlEscape(value: string | null | undefined): string {
+  return (value ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
