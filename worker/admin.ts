@@ -196,6 +196,7 @@ export function renderLoginPage(): Response {
       try {
         const res = await fetch('/api/admin/login', {
           method: 'POST',
+          credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: document.getElementById('email').value,
@@ -491,6 +492,7 @@ export async function renderLeadDetail(env: Env, id: string): Promise<Response> 
       try {
         const res = await fetch('/api/admin/lead/${lead.id}/status', {
           method: 'POST',
+          credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status }),
         });
@@ -517,6 +519,7 @@ export async function renderLeadDetail(env: Env, id: string): Promise<Response> 
       try {
         const res = await fetch('/api/admin/lead/${lead.id}/quote', {
           method: 'POST',
+          credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             subject: document.getElementById('quote-subject').value,
@@ -543,7 +546,7 @@ export async function renderLeadDetail(env: Env, id: string): Promise<Response> 
       msg.textContent = 'A enviar link...';
       msg.className = 'status';
       try {
-        const res = await fetch('/api/admin/lead/${lead.id}/diagnostic-invite', { method: 'POST' });
+        const res = await fetch('/api/admin/lead/${lead.id}/diagnostic-invite', { method: 'POST', credentials: 'same-origin' });
         const data = await res.json();
         if (data.success) {
           msg.textContent = 'Link de diagnóstico enviado!';
@@ -564,7 +567,7 @@ export async function renderLeadDetail(env: Env, id: string): Promise<Response> 
       msg.textContent = 'A criar cliente...';
       msg.className = 'status';
       try {
-        const res = await fetch('/api/admin/lead/${lead.id}/accept', { method: 'POST' });
+        const res = await fetch('/api/admin/lead/${lead.id}/accept', { method: 'POST', credentials: 'same-origin' });
         const data = await res.json();
         if (data.success) {
           msg.textContent = 'Cliente criado com sucesso!';
@@ -794,7 +797,7 @@ export async function renderClientDetail(env: Env, id: string): Promise<Response
       msg.textContent = 'A enviar link...';
       msg.className = 'status';
       try {
-        const res = await fetch('/api/admin/client/${client.id}/diagnostic-invite', { method: 'POST' });
+        const res = await fetch('/api/admin/client/${client.id}/diagnostic-invite', { method: 'POST', credentials: 'same-origin' });
         const data = await res.json();
         if (data.success) {
           msg.textContent = 'Link de diagnóstico enviado!';
