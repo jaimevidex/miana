@@ -420,7 +420,7 @@ export async function renderLeadDetail(env: Env, id: string): Promise<Response> 
     <div class="actions">
       <button class="btn btn-outline btn-sm" onclick="openModal('quote-modal')">Enviar Orçamento</button>
       ${lead.type === 'skin-call' ? '<button class="btn btn-outline btn-sm" onclick="sendDiagnosticInvite()">Enviar Link Diagnóstico</button>' : ''}
-      <button class="btn btn-success btn-sm" onclick="acceptLead()">Orçamento Aceite</button>
+      <button class="btn btn-success btn-sm" onclick="openModal('accept-modal')">Orçamento Aceite</button>
       <button class="btn btn-sm" onclick="updateStatus('em_analise')">Em Análise</button>
       <button class="btn btn-sm" onclick="updateStatus('aguarda_resposta')">Aguarda Resposta</button>
       <button class="btn btn-sm" onclick="updateStatus('concluido')">Concluído</button>
@@ -454,6 +454,20 @@ export async function renderLeadDetail(env: Env, id: string): Promise<Response> 
     </div>
   `;
 
+  const acceptModalHtml = `
+    <div id="accept-modal" class="modal-overlay">
+      <div class="modal" style="max-width:420px;text-align:center">
+        <h2 style="margin-bottom:12px">Aceitar Orçamento</h2>
+        <p style="color:#8a7a74;margin-bottom:24px">Isto vai criar um cliente com os dados desta lead. Desejas continuar?</p>
+        <div style="display:flex;gap:12px;justify-content:center">
+          <button class="btn btn-outline" onclick="closeModal('accept-modal')">Cancelar</button>
+          <button class="btn btn-success" onclick="acceptLead()">Sim, aceitar</button>
+        </div>
+        <p id="accept-status" class="status" role="status" aria-live="polite"></p>
+      </div>
+    </div>
+  `;
+
   const content = `
     <a href="/admin" class="back-link">← Voltar à lista</a>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
@@ -479,6 +493,7 @@ export async function renderLeadDetail(env: Env, id: string): Promise<Response> 
     </div>
 
     ${quoteModalHtml}
+    ${acceptModalHtml}
   `;
 
   const script = `
@@ -562,8 +577,7 @@ export async function renderLeadDetail(env: Env, id: string): Promise<Response> 
     }
 
     async function acceptLead() {
-      if (!confirm('Aceitar orçamento e criar cliente?')) return;
-      const msg = document.getElementById('action-msg');
+      const msg = document.getElementById('accept-status');
       msg.textContent = 'A criar cliente...';
       msg.className = 'status';
       try {
