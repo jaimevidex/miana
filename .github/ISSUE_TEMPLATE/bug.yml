@@ -1,0 +1,23 @@
+name: Bug report
+description: Something broken on the site or admin
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: Expected vs actual
+    validations:
+      required: true
+  - type: input
+    id: where
+    attributes:
+      label: URL / route
+      placeholder: /admin/leads or /servicos/bridal
+  - type: dropdown
+    id: env
+    attributes:
+      label: Environment
+      options: [production, local]
+    validations:
+      required: true

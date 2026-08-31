@@ -1,0 +1,21 @@
+name: Feature
+description: New capability or improvement
+labels: [enhancement]
+body:
+  - type: textarea
+    id: why
+    attributes:
+      label: Problem / goal
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed approach
+  - type: dropdown
+    id: tipo
+    attributes:
+      label: Tipo
+      options: [dev, cliente]
+    validations:
+      required: true

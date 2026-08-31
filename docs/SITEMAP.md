@@ -1,4 +1,4 @@
-# SITEMAP — Estrutura, Navegação e Formulários
+# SITEMAP - Estrutura, Navegação e Formulários
 
 Estado: 🟢 completo
 
@@ -8,8 +8,8 @@ Estado: 🟢 completo
 
 | Ordem | Página | Tipo de Conteúdo | Formulário Integrado |
 |---|---|---|---|
-| 1 | **Home / Início** | Visão geral da marca, 3 cards de serviços, testemunhos, CTA final | — |
-| 2 | **Meet Mariana** | História, percurso (Bioquímica/Cosmetologia), 3 pilares da marca | — |
+| 1 | **Home / Início** | Visão geral da marca, 3 cards de serviços, testemunhos, CTA final | - |
+| 2 | **Meet Mariana** | História, percurso (Bioquímica/Cosmetologia), 3 pilares da marca | - |
 | 3 | **Bridal & Beauty** | Conceito glow/sunkissed, The Bridal Experience, Guests & Events | **Formulário 1** |
 | 4 | **The Skin Call** | Conceito científico, processo em 4 passos, 4 Planos de acompanhamento | **Formulário 2 (Quiz)** |
 | 5 | **Beauty Education** | Conceito formativo, Automaquilhagem 1:1, Skincare Education, Group Sessions | **Formulário 3** |

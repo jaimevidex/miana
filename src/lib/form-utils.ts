@@ -1,6 +1,6 @@
-// Utilitário de formulários do site — partilhado por todos os formulários.
+// Utilitário de formulários do site - partilhado por todos os formulários.
 // Envia para o nosso Worker (POST /api/contact ou /api/lead), que entrega o pedido
-// por email à dona via Resend — sem dependência de Web3Forms.
+// por email à dona via Resend - sem dependência de Web3Forms.
 
 export const SUCCESS_MESSAGE =
   'Obrigada! O teu pedido foi registado. Responderei assim que possível, num prazo de até 48h com todas as informações.';

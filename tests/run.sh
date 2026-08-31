@@ -1,5 +1,5 @@
 #!/bin/bash
-# ─── Testes automatizados — Miana Worker ────────────────────────────────────
+# ─── Testes automatizados - Miana Worker ────────────────────────────────────
 # Corre com wrangler dev a funcionar: npx wrangler dev
 # Uso: ./tests/run.sh [base_url]
 # Default: http://localhost:8787
@@ -32,7 +32,7 @@ assert_status() {
     echo -e "  ${GREEN}✓${NC} $desc (HTTP $actual)"
     PASS=$((PASS + 1))
   else
-    echo -e "  ${RED}✗${NC} $desc — esperado $expected, recebi $actual"
+    echo -e "  ${RED}✗${NC} $desc - esperado $expected, recebi $actual"
     echo "    Body: ${body:0:200}"
     FAIL=$((FAIL + 1))
   fi
@@ -44,7 +44,7 @@ assert_contains() {
     echo -e "  ${GREEN}✓${NC} $desc"
     PASS=$((PASS + 1))
   else
-    echo -e "  ${RED}✗${NC} $desc — não encontrei '$needle'"
+    echo -e "  ${RED}✗${NC} $desc - não encontrei '$needle'"
     FAIL=$((FAIL + 1))
   fi
 }
@@ -63,7 +63,7 @@ assert_contains "Resposta contém success" '"success":true' "$BODY"
 echo -e "\n${YELLOW}═══ 2. Formulário Bridal & Beauty ═══${NC}"
 
 RESP=$(curl_req -X POST "$BASE/api/lead" \
-  -d "form_type=bridal-beauty&nome=Maria Santos&telefone=913456789&email=maria@teste.com&subject=Pedido+—+Bridal+%26+Beauty&opcao_servico=Bride&data_casamento=2026-10-15&hora_pronta=09:00&local_preparacao=Hotel&local_prova=Salao&servicos_procurados=Makeup+%2B+Hair&numero_guests=4&addon_skin_call=Sim")
+  -d "form_type=bridal-beauty&nome=Maria Santos&telefone=913456789&email=maria@teste.com&subject=Pedido+-+Bridal+%26+Beauty&opcao_servico=Bride&data_casamento=2026-10-15&hora_pronta=09:00&local_preparacao=Hotel&local_prova=Salao&servicos_procurados=Pack&guests_makeup=1&guests_hair=2&guests_pack=1&addon_skin_call=Sim")
 STATUS=$(echo "$RESP" | head -1)
 BODY=$(echo "$RESP" | sed '1,/^---BODY---$/d')
 assert_status "Bridal lead criado" "200" "$STATUS" "$BODY"
@@ -73,14 +73,14 @@ assert_contains "Resposta contém success" '"success":true' "$BODY"
 echo -e "\n${YELLOW}═══ 3. Formulário Education ═══${NC}"
 
 RESP=$(curl_req -X POST "$BASE/api/lead" \
-  -d "form_type=education&nome=Joana Costa&telefone=914567890&email=joana@teste.com&subject=Pedido+—+Education&formato=Automaquilhagem&local_workshop=Centro&data_hora=2026-09-20T14:00&tipo=Particular&mensagem=Quero+aprender")
+  -d "form_type=education&nome=Joana Costa&telefone=914567890&email=joana@teste.com&subject=Pedido+-+Education&formato=Automaquilhagem&local_workshop=Centro&data_hora=2026-09-20T14:00&tipo=Particular&mensagem=Quero+aprender")
 STATUS=$(echo "$RESP" | head -1)
 BODY=$(echo "$RESP" | sed '1,/^---BODY---$/d')
 assert_status "Education lead criado" "200" "$STATUS" "$BODY"
 assert_contains "Resposta contém success" '"success":true' "$BODY"
 
-# ─── 4. Validação — dados inválidos ─────────────────────────────────────────
-echo -e "\n${YELLOW}═══ 4. Validação — dados inválidos ═══${NC}"
+# ─── 4. Validação - dados inválidos ─────────────────────────────────────────
+echo -e "\n${YELLOW}═══ 4. Validação - dados inválidos ═══${NC}"
 
 RESP=$(curl_req -X POST "$BASE/api/lead" \
   -d "form_type=skin-call&nome=A&telefone=123&email=invalido")
@@ -94,8 +94,8 @@ STATUS=$(echo "$RESP" | head -1)
 BODY=$(echo "$RESP" | sed '1,/^---BODY---$/d')
 assert_status "Rejeita email inválido" "400" "$STATUS" "$BODY"
 
-# ─── 5. Honeypot — bot detection ────────────────────────────────────────────
-echo -e "\n${YELLOW}═══ 5. Honeypot — bot detection ═══${NC}"
+# ─── 5. Honeypot - bot detection ────────────────────────────────────────────
+echo -e "\n${YELLOW}═══ 5. Honeypot - bot detection ═══${NC}"
 
 RESP=$(curl_req -X POST "$BASE/api/lead" \
   -d "form_type=skin-call&nome=Bot&telefone=912345678&email=bot@teste.com&plano=Teste&botcheck=spam")
@@ -104,13 +104,13 @@ BODY=$(echo "$RESP" | sed '1,/^---BODY---$/d')
 assert_status "Bot detectado (honeypot)" "200" "$STATUS" "$BODY"
 
 # ─── 6. Verificar emails no Mailpit ─────────────────────────────────────────
-echo -e "\n${YELLOW}═══ 6. Mailpit — verificar emails ═══${NC}"
+echo -e "\n${YELLOW}═══ 6. Mailpit - verificar emails ═══${NC}"
 
-MAILPIT_BODY=$(curl -s "http://localhost:8025/api/v1/messages" 2>/dev/null || echo '{"total":0}')
+MAILPIT_BODY=$(curl -s "http://localhost:8026/api/v1/messages" 2>/dev/null || echo '{"total":0}')
 MAILPIT_COUNT=$(echo "$MAILPIT_BODY" | grep -o '"total":[0-9]*' | grep -o '[0-9]*' || echo "0")
 if [ "$MAILPIT_COUNT" -gt 0 ] 2>/dev/null; then
   echo -e "  ${GREEN}✓${NC} $MAILPIT_COUNT email(s) capturado(s) no Mailpit"
-  echo -e "    Ver em: http://localhost:8025"
+    echo -e "    Ver em: http://localhost:8026"
   PASS=$((PASS + 1))
 else
   echo -e "  ${YELLOW}⊘${NC} Nenhum email no Mailpit (verificar se está a correr)"
@@ -144,8 +144,8 @@ else
   FAIL=$((FAIL + 1))
 fi
 
-# ─── 9. Diagnóstico — token inválido ───────────────────────────────────────
-echo -e "\n${YELLOW}═══ 9. Diagnóstico — token inválido ═══${NC}"
+# ─── 9. Diagnóstico - token inválido ───────────────────────────────────────
+echo -e "\n${YELLOW}═══ 9. Diagnóstico - token inválido ═══${NC}"
 
 RESP=$(curl_req "$BASE/diagnostico?token=invalido&page=1")
 STATUS=$(echo "$RESP" | head -1)

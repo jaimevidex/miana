@@ -1,4 +1,4 @@
-// Gestão de sessões em D1 — criar, validar, destruir.
+// Gestão de sessões em D1 - criar, validar, destruir.
 // Sessões duram 7 dias. Token é um UUID aleatório.
 
 import { eq, and, gt } from 'drizzle-orm';
@@ -18,6 +18,13 @@ function generateSessionId(): string {
     if (i === 4 || i === 6 || i === 8) return '-' + hex;
     return hex;
   }).join('');
+}
+
+/** Gera um token CSRF aleatório. */
+export function generateCsrfToken(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return [...bytes].map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 /** Cria uma nova sessão e devolve o token. */

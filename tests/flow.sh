@@ -1,5 +1,5 @@
 #!/bin/bash
-# ─── Teste de fluxo completo — Skin Call ─────────────────────────────────────
+# ─── Teste de fluxo completo - Skin Call ─────────────────────────────────────
 # Testa: lead → orçamento → aceitar → criar cliente → diagnóstico
 # Requer: wrangler dev a correr + seed feito
 
@@ -23,7 +23,7 @@ assert() {
     echo -e "  ${GREEN}✓${NC} $desc"
     PASS=$((PASS + 1))
   else
-    echo -e "  ${RED}✗${NC} $desc — esperado '$expected', recebi '$actual'"
+    echo -e "  ${RED}✗${NC} $desc - esperado '$expected', recebi '$actual'"
     FAIL=$((FAIL + 1))
   fi
 }
@@ -34,7 +34,7 @@ assert_contains() {
     echo -e "  ${GREEN}✓${NC} $desc"
     PASS=$((PASS + 1))
   else
-    echo -e "  ${RED}✗${NC} $desc — não encontrei '$needle'"
+    echo -e "  ${RED}✗${NC} $desc - não encontrei '$needle'"
     FAIL=$((FAIL + 1))
   fi
 }
@@ -67,18 +67,18 @@ LEAD_ROW=$(curl -s "$BASE/admin" -b /tmp/miana-flow-test.txt | grep -o 'flow@tes
 echo -e "  ${GREEN}✓${NC} Lead criado para flow@teste.com"
 
 # Buscar lead via query D1 (usando API interna não existe, vamos extrair do HTML)
-# Vamos usar o token que foi gerado — buscar via diagnostic page
+# Vamos usar o token que foi gerado - buscar via diagnostic page
 echo -e "  Nota: Buscar lead ID manualmente se necessário"
 
 # ─── Step 2: Verificar email notificação ────────────────────────────────────
 echo -e "\n${YELLOW}═══ Step 2: Verificar email de notificação ═══${NC}"
 
 sleep 1
-MSGS=$(curl -s "http://localhost:8025/api/v1/messages" 2>/dev/null || echo '{"total":0}')
+MSGS=$(curl -s "http://localhost:8026/api/v1/messages" 2>/dev/null || echo '{"total":0}')
 TOTAL=$(echo "$MSGS" | grep -o '"total":[0-9]*' | grep -o '[0-9]*' || echo "0")
 if [ "$TOTAL" -gt 0 ] 2>/dev/null; then
   echo -e "  ${GREEN}✓${NC} $TOTAL email(s) no Mailpit"
-  echo -e "    Ver: http://localhost:8025"
+    echo -e "    Ver: http://localhost:8026"
   PASS=$((PASS + 1))
 else
   echo -e "  ${YELLOW}⊘${NC} Mailpit não disponível ou sem emails"

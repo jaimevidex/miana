@@ -1,0 +1,33 @@
+---
+description: Miana stack and architecture conventions
+alwaysApply: true
+---
+# Miana project rules
+
+## Stack
+
+- Frontend: Astro 4 + Tailwind → static `dist/` served by Worker `ASSETS`
+- Backend: Cloudflare Worker (`worker/`), D1 via Drizzle, R2 for diagnostic photos
+- Email: Resend in prod, Mailpit locally (`just dev`)
+- No KV for app data - rate limits and sessions live in D1
+
+## Conventions
+
+- Timestamps in D1 are **milliseconds** (`Date.now()`)
+- Lead types: `skin-call` | `bridal` | `beauty` | `education`
+- Lead statuses: `novo` | `pendente` | `aceite` | `eliminado`
+- Pricing/timing/contacts: read from `settings` via `pricing.ts` / scheduling helpers - do not hardcode new prices in templates
+- Quote templates in `worker/templates/*` already call `wrapEmail` - `sendQuoteEmail` must not wrap again with the same footer
+- Prefer editing existing Worker modules over inventing new frameworks
+- Client escalation items → `docs/CLIENT-TODO.md` (PT) + Notion; engineering → `TODO.md`
+
+## Dev
+
+- Full stack: `just dev` (:8787). UI-only: `just dev-astro` (:4321)
+- Never commit passwords or `.dev.vars` / `.env`
+- After Worker changes: `npm run worker:check` and `./tests/run.sh` when the API is up
+
+## Docs
+
+- Architecture: `docs/ARCHITECTURE.md`
+- Dev/ECC/CI: `docs/DEV.md`

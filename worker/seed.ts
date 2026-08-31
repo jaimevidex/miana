@@ -1,4 +1,4 @@
-// Seed script — cria utilizadores admin na D1.
+// Seed script - cria utilizadores admin na D1.
 // Uso: npx tsx worker/seed.ts <password1> [password2]
 //
 // Exemplo:

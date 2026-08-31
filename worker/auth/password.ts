@@ -1,5 +1,5 @@
 // Hash e verificação de passwords com PBKDF2 via WebCrypto.
-// Sem dependências externas — usa APIs nativas do runtime Cloudflare Workers.
+// Sem dependências externas - usa APIs nativas do runtime Cloudflare Workers.
 
 const ALGORITHM = 'PBKDF2';
 const HASH = 'SHA-256';

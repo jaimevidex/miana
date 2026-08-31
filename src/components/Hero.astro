@@ -98,7 +98,7 @@ const imgClasses = `absolute inset-0 h-[140%] -top-[40%] w-full object-cover ${i
       heroVideo.load();
       heroVideo.play?.().catch(() => {});
     };
-    // Load after 1.5s or on first user interaction — whichever comes first
+    // Load after 1.5s or on first user interaction - whichever comes first
     const timer = window.setTimeout(loadHero, 1500);
     ['scroll', 'mousemove', 'touchstart'].forEach((evt) => {
       window.addEventListener(

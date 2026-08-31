@@ -1,4 +1,4 @@
-# MARIANA — Website Copy & Brand Architecture
+# MARIANA - Website Copy & Brand Architecture
 
 ---
 

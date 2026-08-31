@@ -1,0 +1,36 @@
+﻿1. Separar Bridal de Beauty no tipo de Lead e de Cliente, ficndo com 4 tipos de lead e 4 tipos de cliente
+2. Se a pessoa clicar em Bridal no assunto escrever Orçamento Bridal by Mariana Pita;
+Se a pessoa clicar em Beauty no assunto escrever Orçamento Beauty by Mariana Pita 
+Se for workshop no assunto escreves orçamento workshop by Mariana Pita se for SkinCall no assunto orçamento SkinCall by Mariana Pita 
+3. Colocar Templates editáveis no corpo da mensagem de enviar orçamento. Um template diferente para cada tipo Beauty / Bridal / SkinCall / Workshop. Adicionar também assinatura bonita. Templates com valores editavies para ser construido para cada lead incluindo cálculo dos valores.
+Tendo isto em conta:
+- Noiva Hair 250€
+- Noiva Makeup 250€
+- Noiva Pack 475€
+- Guest Hair 60€
+- Guest Makeup 60€
+- Guest Pack 110€
+- SkinCall 1 Sessão - 80€
+- SkinCall 2 Sessão - 150€
+- SkinCall 3 Sessão - 210€
+- SkinCall 4 Sessão - 260€
+- Valor de deslocação (vai ser alterado na lead manualmente obrigatoriamente antes de enviar orçamento)
+   4. A partir da Lead temos 3 ações e 4 estados:
+Estados:
+1- Novo
+2- Pendente
+3- Aceite
+4- Eliminado
+Ações
+1- Enviar orçamento - muda o estado da lead para pendente
+2- Orçamento aceite - muda o estado da lead para aceite
+3- Eliminar - muda o estado para eliminado
+   5. Botão para adicionar Cliente manualmente
+   6. ??Tentar manter sequência dos emails??
+   7. O envio do link de diagnóstico é uma ação dentro do cliente quando cliente é de skin call (não dentro da lead)
+   8. Nos clientes de Beauty and Bridal fazer uma sugestão de horário tendo em conta a hora de estar pronta e podes ter estas guias do tempo dos elementos:
+- 15 minutos de arrival e setup no inicio
+- 45 minutos guests da bridal e também de beauty
+- 1 hora bridal
+   9. Dar para editar os campos dos Clientes e Leads manualmente.
+   10. Secção de controlo de variáveis na dashboard de admin sendo isto tanto os valores como os tempos.

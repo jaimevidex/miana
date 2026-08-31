@@ -13,7 +13,7 @@ const labelCls = 'block text-sm font-medium text-darkbrown';
   class="grid gap-5"
 >
   <input type="hidden" name="form_type" value="bridal-beauty" />
-  <input type="hidden" name="subject" value="Pedido — Bridal &amp; Beauty" />
+  <input type="hidden" name="subject" value="Pedido - Bridal &amp; Beauty" />
   <input type="checkbox" name="botcheck" class="hidden" style="display:none" />
 
   <div class="grid sm:grid-cols-2 gap-5">
@@ -27,10 +27,10 @@ const labelCls = 'block text-sm font-medium text-darkbrown';
     </div>
   </div>
 
-<div>
-      <label class={labelCls} for="b-email">E-mail <span class="text-burgundy">*</span></label>
-      <input id="b-email" name="email" type="email" required class={inputCls} />
-    </div>
+  <div>
+    <label class={labelCls} for="b-email">E-mail <span class="text-burgundy">*</span></label>
+    <input id="b-email" name="email" type="email" required class={inputCls} />
+  </div>
 
   <fieldset>
     <legend class={labelCls}>Opção de Serviço <span class="text-burgundy">*</span></legend>
@@ -68,29 +68,43 @@ const labelCls = 'block text-sm font-medium text-darkbrown';
         <input id="b-trial-location" name="local_prova" type="text" required class={inputCls} />
       </div>
     </div>
-    <div class="grid sm:grid-cols-2 gap-5">
-      <fieldset>
-        <legend class={labelCls}>Que serviços procuras? <span class="text-burgundy">*</span></legend>
-        <div class="flex flex-wrap gap-6 mt-2">
-          <label class="inline-flex items-center gap-2 text-sm">
-            <input type="radio" name="servicos_procurados" value="Makeup" required class={radioCls} />
-            Makeup
-          </label>
-          <label class="inline-flex items-center gap-2 text-sm">
-            <input type="radio" name="servicos_procurados" value="Makeup + Hair" required class={radioCls} />
-            Makeup + Hair
-          </label>
-          <label class="inline-flex items-center gap-2 text-sm">
-            <input type="radio" name="servicos_procurados" value="Hair" required class={radioCls} />
-            Hair
-          </label>
-        </div>
-      </fieldset>
-      <div>
-        <label class={labelCls} for="b-guests">Número de guests <span class="text-burgundy">*</span></label>
-        <input id="b-guests" name="numero_guests" type="number" min="0" required class={inputCls} />
+
+    <fieldset>
+      <legend class={labelCls}>Serviço da noiva <span class="text-burgundy">*</span></legend>
+      <div class="flex flex-wrap gap-6 mt-2">
+        <label class="inline-flex items-center gap-2 text-sm">
+          <input type="radio" name="servicos_procurados" value="Makeup" required class={radioCls} />
+          Makeup
+        </label>
+        <label class="inline-flex items-center gap-2 text-sm">
+          <input type="radio" name="servicos_procurados" value="Hair" required class={radioCls} />
+          Hair
+        </label>
+        <label class="inline-flex items-center gap-2 text-sm">
+          <input type="radio" name="servicos_procurados" value="Pack" required class={radioCls} />
+          Pack Makeup & Hair
+        </label>
       </div>
-    </div>
+    </fieldset>
+
+    <fieldset>
+      <legend class={labelCls}>Número de guests por serviço <span class="text-burgundy">*</span></legend>
+      <div class="grid sm:grid-cols-3 gap-5 mt-3">
+        <div>
+          <label class={labelCls} for="b-guests-makeup">Makeup</label>
+          <input id="b-guests-makeup" name="guests_makeup" type="number" min="0" value="0" required class={inputCls} />
+        </div>
+        <div>
+          <label class={labelCls} for="b-guests-hair">Hair</label>
+          <input id="b-guests-hair" name="guests_hair" type="number" min="0" value="0" required class={inputCls} />
+        </div>
+        <div>
+          <label class={labelCls} for="b-guests-pack">Pack Makeup & Hair</label>
+          <input id="b-guests-pack" name="guests_pack" type="number" min="0" value="0" required class={inputCls} />
+        </div>
+      </div>
+    </fieldset>
+
     <fieldset>
       <legend class={labelCls}>Queres adicionar o Add-on Skin Call? <span class="text-burgundy">*</span></legend>
       <div class="flex flex-wrap gap-6 mt-2">

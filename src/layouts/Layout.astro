@@ -16,7 +16,7 @@ const { title, description, ogImage = '/images/og-default.jpg', hasHero = false 
 const siteURL = new URL(Astro.site ?? 'https://marianapita.pt');
 const canonicalURL = new URL(Astro.url.pathname, siteURL);
 
-// Analytics / verificação — ativos apenas quando o respetivo PUBLIC_* tem valor.
+// Analytics / verificação - ativos apenas quando o respetivo PUBLIC_* tem valor.
 const gaId = import.meta.env.PUBLIC_GA_ID?.trim() || '';
 const pixelId = import.meta.env.PUBLIC_META_PIXEL_ID?.trim() || '';
 const gscToken = import.meta.env.PUBLIC_GSC_VERIFICATION?.trim() || '';
@@ -66,13 +66,13 @@ const analyticsGate = `(function(){
     <meta property="og:url" content={canonicalURL} />
     <meta name="twitter:card" content="summary_large_image" />
 
-    <!-- Google Analytics 4 + Meta Pixel — carregados só após consentimento de cookies (ver CookieBanner) -->
+    <!-- Google Analytics 4 + Meta Pixel - carregados só após consentimento de cookies (ver CookieBanner) -->
     {gaId && <script is:inline set:html={analyticsGate}></script>}
 
-    <!-- Google Search Console — cópia a tag de verificação fornecida pelo Google e cola-a aqui -->
+    <!-- Google Search Console - cópia a tag de verificação fornecida pelo Google e cola-a aqui -->
     {gscToken && <meta name="google-site-verification" content={gscToken} />}
 
-    <!-- Cloudflare Web Analytics — só ativo se PUBLIC_CF_ANALYTICS_TOKEN estiver definido em .env (sem cookies) -->
+    <!-- Cloudflare Web Analytics - só ativo se PUBLIC_CF_ANALYTICS_TOKEN estiver definido em .env (sem cookies) -->
     {cfToken && (
       <script
         defer
@@ -81,7 +81,7 @@ const analyticsGate = `(function(){
       ></script>
     )}
 
-    <!-- Fontes: Playfair Display + Open Sans (social), Pinyon Script (assinatura) — ver docs/DESIGN.md -->
+    <!-- Fontes: Playfair Display + Open Sans (social), Pinyon Script (assinatura) - ver docs/DESIGN.md -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

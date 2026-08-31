@@ -3,7 +3,7 @@
 const COOKIE_NAME = 'admin_session';
 const COOKIE_MAX_AGE = 7 * 24 * 60 * 60; // 7 dias em segundos
 
-/** cookiePath — caminho base para o cookie (admin only). */
+/** cookiePath - caminho base para o cookie (admin only). */
 const COOKIE_PATH = '/';
 
 /** Define o cookie de sessão na resposta. */

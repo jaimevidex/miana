@@ -1,0 +1,23 @@
+---
+description: Agent writing and scoping conventions for Miana
+alwaysApply: true
+---
+# Agent conventions
+
+## Typography: hyphens only
+
+- Never use em dashes (—) or en dashes (–) anywhere in the codebase
+- Always use ASCII hyphens (`-`) in code, comments, docs, UI copy, commit messages, and PR text
+- Also avoid them in chat replies about this project when drafting copy meant to land in the repo
+- Examples: `skin-call`, `lead - status`, `Pré-consulta` (not `skin–call` or `lead — status`)
+
+## Scope before complex / new-ticket work
+
+When the request looks like a new ticket, feature, or anything non-trivial (multi-file, unclear acceptance criteria, product decisions, or new flows):
+
+1. **Explore first** - scan the relevant parts of the codebase (Worker routes, forms, schema, docs, existing patterns) before proposing or writing code
+2. **Ask many clarifying questions** - surface open decisions early: in/out of scope, lead types/statuses, admin vs public, email copy, pricing/settings, migrations, edge cases, and how success is measured
+3. **Confirm scope** - summarize assumptions and wait for alignment when requirements are ambiguous; do not invent product behavior
+4. **Only then implement** - small, obvious fixes can skip this; anything that could sprawl must not
+
+Prefer over-asking on scope over building the wrong thing.

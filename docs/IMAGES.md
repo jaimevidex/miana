@@ -1,4 +1,4 @@
-# IMAGENS — Inventário e Regras
+# IMAGENS - Inventário e Regras
 
 > **Convenção actual (2026-08):** as imagens e vídeos do site vão para `public/images/` e `public/videos/`, com nomes legíveis por localização (ex: `public/images/hero-home.jpg`, `public/videos/mariana.mp4`, `public/videos/brides.mp4`). Quando colocares uma imagem e disseres onde entra, o nome é mudado automaticamente para algo digestible desse lugar.
 
@@ -50,10 +50,10 @@
 ## Regras de performance (imagens)
 
 - **Formato**: WebP (fallback JPEG) gerado por `astro:assets`.
-- **Responsivo**: larguras 400 / 800 / 1200 / 1800px — cada visor recebe o tamanho certo (mobile não descarrega o de 1800px).
+- **Responsivo**: larguras 400 / 800 / 1200 / 1800px - cada visor recebe o tamanho certo (mobile não descarrega o de 1800px).
 - **Qualidade**: q80; máximo ~300KB por imagem servida.
 - **Lazy-loading**: `loading="lazy"` + `decoding="async"` (o `<Image/>` do Astro já aplica por omissão).
-- **Proporções**: retrato 4:5 / quadrado 1:1 — evitar 16:9 que "achata" o layout.
+- **Proporções**: retrato 4:5 / quadrado 1:1 - evitar 16:9 que "achata" o layout.
 - **Alt text**: sempre descritivo, escrito à mão.
 
 ---
@@ -64,17 +64,17 @@
 
 ### Regras obrigatórias
 - **Nunca** embutir vídeo grande no hero ou em auto-play com som.
-- **Poster + lazy**: usar sempre uma imagem de capa (`poster`) + `preload="metadata"` — o vídeo só carrega o essencial até o utilizador dar play.
-- Loop sem áudio (`muted`, `loop`, `playsinline`, `autoplay` apenas se for loop visual curto e sem som) — o mobile não reproduz autoplay com áudio.
-- **Comprimir para web**: H.264 (MP4) + AAC, reels ≤ ~10–15MB, duração curta.
-- **Embed quando possível**: Instagram/YouTube embeds para conteúdos longos — o ficheiro fica lá fora e só carrega sob demanda.
+- **Poster + lazy**: usar sempre uma imagem de capa (`poster`) + `preload="metadata"` - o vídeo só carrega o essencial até o utilizador dar play.
+- Loop sem áudio (`muted`, `loop`, `playsinline`, `autoplay` apenas se for loop visual curto e sem som) - o mobile não reproduz autoplay com áudio.
+- **Comprimir para web**: H.264 (MP4) + AAC, reels ≤ ~10-15MB, duração curta.
+- **Embed quando possível**: Instagram/YouTube embeds para conteúdos longos - o ficheiro fica lá fora e só carrega sob demanda.
 
 ### Limites de peso (referência)
 | Tipo | Tamanho máx. | Formato |
 |---|---|---|
-| Loop curto (hero/seção) | ~3–5MB | WebM/MP4 (H.264), 720p–1080p |
-| Reel/vertical | ~10–15MB | MP4 (H.264), ≤ 60s |
-| Clip longo | Embed Instagram/YouTube | — |
+| Loop curto (hero/seção) | ~3-5MB | WebM/MP4 (H.264), 720p-1080p |
+| Reel/vertical | ~10-15MB | MP4 (H.264), ≤ 60s |
+| Clip longo | Embed Instagram/YouTube | - |
 
 ### Componente
 - Usar `src/components/Video.astro` (já existente): aceita `poster`, `loop`, `muted`, `preload`, e apenas renderiza o `<video>` com estas boas práticas.

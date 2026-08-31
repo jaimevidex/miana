@@ -9,13 +9,13 @@ name = "miana"
 compatibility_date = "2026-08-06"
 compatibility_flags = ["nodejs_compat"]
 
-# Desativa o subdomínio público *.workers.dev — o site só fica nos domínios custom.
+# Desativa o subdomínio público *.workers.dev - o site só fica nos domínios custom.
 workers_dev = false
 
 # Entry point do Worker que adiciona a API do funnel.
 main = "worker/index.ts"
 
-# Domínio custom — liga o worker a marianapita.pt.
+# Domínio custom - liga o worker a marianapita.pt.
 routes = [
   { pattern = "marianapita.pt", custom_domain = true },
   { pattern = "www.marianapita.pt", custom_domain = true }
@@ -25,7 +25,7 @@ routes = [
 binding = "ASSETS"
 directory = "./dist"
 
-# D1 database — leads, diagnostics, sessions, rate_limits.
+# D1 database - leads, diagnostics, sessions, rate_limits.
 [[d1_databases]]
 binding = "DB"
 database_name = "miana-db"
@@ -42,7 +42,7 @@ bucket_name = "media"
 #   Em deploy real: npx wrangler secret put EMAIL_ENABLED
 # - RESEND_API_KEY: chave de API do Resend (envio de email transacional, https://resend.com).
 #   Em deploy real: npx wrangler secret put RESEND_API_KEY
-# - OWNER_EMAIL: email da dona — recebe o pedido real do diagnóstico e os avisos leves.
+# - OWNER_EMAIL: email da dona - recebe o pedido real do diagnóstico e os avisos leves.
 # - SITE_URL: URL base do site (fallback: https://marianapita.pt)
 # - FROM_EMAIL: email de origem para emails ao cliente (fallback: no-reply@marianapita.pt)
 # - FROM_NAME: nome de exibição do remetente (fallback: Mariana Pita Makeup)

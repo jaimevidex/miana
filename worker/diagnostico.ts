@@ -1,4 +1,4 @@
-// Página privada `/diagnostico` — formulário multi-página server-rendered a partir do token.
+// Página privada `/diagnostico` - formulário multi-página server-rendered a partir do token.
 import type { Env } from './lib';
 import type { DiagnosticLead } from './lib';
 import { htmlEscape } from './lib';
@@ -45,6 +45,7 @@ fieldset .lbl{margin-bottom:8px}
 .file-group{margin-top:8px}
 .file-group label{display:block;font-size:13px;color:#7a6a64;margin-bottom:4px}
 .file-group input[type=file]{font-size:14px}
+.hidden{display:none}
 `;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -65,14 +66,77 @@ function radioOpts(name: string, opts: string[], selected: string = ''): string 
 function textareaField(id: string, name: string, label: string, value: string, placeholder: string = ''): string {
   return `<div>
     <label class="lbl" for="${id}">${htmlEscape(label)} <span class="req">*</span></label>
-    <textarea id="${id}" name="${name}" required class="in" placeholder="${htmlEscape(placeholder)}">${htmlEscape(value)}</textarea>
+    <textarea id="${id}" name="${name}" required class="in" placeholder="${htmlEscape(placeholder)}" autocomplete="off">${htmlEscape(value)}</textarea>
   </div>`;
 }
+
+/** Texto revelado quando a opção "Outro" está selecionada - obrigatório só nesse caso. */
+function outroTextField(id: string, name: string, value: string = '', visible: boolean = false): string {
+  return `<div id="${id}-wrap" class="${visible ? '' : 'hidden'}" style="margin-top:8px">
+    <label class="lbl" for="${id}">Descreve <span class="req" ${visible ? '' : 'hidden'}>*</span></label>
+    <textarea id="${id}" name="${name}" class="in" placeholder="Especifica se aplicável..." ${visible ? 'required' : ''} autocomplete="off">${htmlEscape(value)}</textarea>
+  </div>`;
+}
+
+/** JS partilhado: mostrar/esconder campo Outro e torná-lo obrigatório só quando selecionado. */
+const WIRE_OUTRO_JS = `
+function wireOutro(form, groupName, wrapId, optionValue) {
+  optionValue = optionValue || 'Outro';
+  const wrap = document.getElementById(wrapId);
+  const input = wrap && wrap.querySelector('textarea, input');
+  const reqMark = wrap && wrap.querySelector('.req');
+  const sync = () => {
+    const checked = form.querySelectorAll('input[name="' + groupName + '"]:checked');
+    const hasOutro = Array.from(checked).some((c) => c.value === optionValue);
+    if (wrap) wrap.classList.toggle('hidden', !hasOutro);
+    if (reqMark) reqMark.hidden = !hasOutro;
+    if (input) {
+      if (hasOutro) {
+        input.required = true;
+      } else {
+        input.required = false;
+        input.value = '';
+        input.style.borderColor = '';
+      }
+    }
+  };
+  form.querySelectorAll('input[name="' + groupName + '"]').forEach((el) => el.addEventListener('change', sync));
+  sync();
+}
+`;
+
+/** Limpa drafts locais do diagnóstico (session/localStorage) após submissão. */
+const CLEAR_DIAG_BROWSER_STATE_JS = `
+function clearDiagnosticBrowserState(token) {
+  try {
+    const stores = [window.sessionStorage, window.localStorage];
+    for (const store of stores) {
+      if (!store) continue;
+      const toRemove = [];
+      for (let i = 0; i < store.length; i++) {
+        const key = store.key(i);
+        if (!key) continue;
+        const lower = key.toLowerCase();
+        if (
+          lower.startsWith('diag:') ||
+          lower.startsWith('diagnostico:') ||
+          lower.startsWith('diag-') ||
+          lower.includes('diagnostico') ||
+          (token && key.includes(token))
+        ) {
+          toRemove.push(key);
+        }
+      }
+      toRemove.forEach((k) => store.removeItem(k));
+    }
+  } catch (e) {}
+}
+`;
 
 function inputField(id: string, name: string, label: string, value: string, type: string = 'text', placeholder: string = ''): string {
   return `<div>
     <label class="lbl" for="${id}">${htmlEscape(label)} <span class="req">*</span></label>
-    <input id="${id}" name="${name}" type="${type}" required value="${htmlEscape(value)}" class="in" placeholder="${htmlEscape(placeholder)}" />
+    <input id="${id}" name="${name}" type="${type}" required value="${htmlEscape(value)}" class="in" placeholder="${htmlEscape(placeholder)}" autocomplete="off" />
   </div>`;
 }
 
@@ -90,7 +154,7 @@ function htmlShell(title: string, content: string, script: string = ''): string 
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, nofollow" />
-  <title>${htmlEscape(title)} — Skin Call</title>
+  <title>${htmlEscape(title)} - Skin Call</title>
   <style>${CSS}</style>
 </head>
 <body>
@@ -110,8 +174,9 @@ function renderPage1(lead: DiagnosticLead): string {
     ${progressDots(1, 3)}
     <h1>Análise da tua Pele</h1>
     <p class="sub">Para que a nossa chamada seja o mais proveitosa possível, precisas de preencher este formulário detalhado. Todas as informações serão usadas exclusivamente para analisar a tua pele e rotina, sendo confidenciais.</p>
+    <p class="sub">O formulário tem 3 páginas, e a cada página é necessário preencher os campos obrigatórios. Quando a questão não se aplica, colocar "Não se aplica". Se não tiveres tempo para preencher todos os campos, podes guardar o formulário e continuar mais tarde.</p>
 
-    <form id="form-diag" class="grid" novalidate>
+    <form id="form-diag" class="grid" novalidate autocomplete="off">
       <input type="hidden" name="token" value="${lead.token}" />
       <input type="hidden" name="_page" value="1" />
 
@@ -153,10 +218,11 @@ function renderPage1(lead: DiagnosticLead): string {
             'Melasma',
             'Lúpus ou outra doença autoimune com manifestação cutânea',
             'Nenhum / Nunca fui diagnosticada com doenças de pele',
+            'Outro',
           ])}
         </div>
+        ${outroTextField('diag-diag-outro', 'diagnostico_outro', '')}
       </fieldset>
-      ${textareaField('diag-diag-outro', 'diagnostico_outro', 'Outro diagnóstico médico:', '', 'Especifica se aplicável...')}
       ${textareaField('diag-medicacao-oral', 'medicacao_oral', 'Já fizeste medicação oral para a pele no passado? Se sim, qual?', '', 'Descreve...')}
       ${textareaField('diag-medicacao-topica', 'medicacao_topica', 'Já usaste medicação tópica para a pele no passado? Se sim, qual? Como reagiu a tua pele?', '', 'Ex: Tretinoína, Ketrel, Differin, Ácido Azelaico de farmácia...')}
       ${textareaField('diag-tratamentos', 'tratamentos_esteticos', 'Fizeste tratamentos estéticos/dermatológicos nos últimos 6 meses ou tiveste alguma má experiência em gabinete?', '', 'Ex: Peelings químicos, Microagulhamento, Laser, Botox...')}
@@ -187,8 +253,10 @@ function renderPage1(lead: DiagnosticLead): string {
     </form>`;
 
   const script = `
+    ${WIRE_OUTRO_JS}
     const form = document.getElementById('form-diag');
     const status = document.getElementById('diag-status');
+    wireOutro(form, 'diagnostico_medico', 'diag-diag-outro-wrap');
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       // Validar campos obrigatórios
@@ -232,16 +300,34 @@ function renderPage1(lead: DiagnosticLead): string {
     });
   `;
 
-  return htmlShell('Análise da Pele — Página 1', content, script);
+  return htmlShell('Análise da Pele - Página 1', content, script);
 }
 
 // ─── Página 2: Estilo & Hábitos de Vida + A Tua Pele ────────────────────────
+function withOutroOption(selected: string[] | undefined, outroValue: string | undefined): string[] {
+  const s = [...(selected || [])];
+  if (outroValue && !s.includes('Outro')) s.push('Outro');
+  return s;
+}
+
 function renderPage2(lead: DiagnosticLead, data: Record<string, string[]>): string {
+  const alimentacaoOutro = data.alimentacao_outro?.[0] || '';
+  const ambienteOutro = data.ambiente_fatores_outro?.[0] || '';
+  const peleAcordarOutro = data.pele_acordar_outro?.[0] || '';
+  const pele2hOutro = data.pele_2h_outro?.[0] || '';
+  const peleTardeOutro = data.pele_tarde_outro?.[0] || '';
+  const peleTexturaOutro = data.pele_textura_outro?.[0] || '';
+  const peleCorOutro = data.pele_cor_outro?.[0] || '';
+  const peleToqueOutro = data.pele_toque_outro?.[0] || '';
+  const peleAmbienteOutro = data.pele_ambiente_outro?.[0] || '';
+  const peleBorbulhasOutro = data.pele_borbulhas_outro?.[0] || '';
+  const peleFirmezaOutro = data.pele_firmeza_outro?.[0] || '';
+
   const content = `
     ${progressDots(2, 3)}
     <h1>Análise da tua Pele</h1>
 
-    <form id="form-diag" class="grid" novalidate>
+    <form id="form-diag" class="grid" novalidate autocomplete="off">
       <input type="hidden" name="token" value="${lead.token}" />
       <input type="hidden" name="_page" value="2" />
 
@@ -288,8 +374,10 @@ function renderPage2(lead: DiagnosticLead, data: Record<string, string[]>): stri
             'Vegetariana/vegan',
             'Consumo muito café (a partir de 4 cafés por dia)',
             'Salto refeições com frequência',
-          ], data.alimentacao)}
+            'Outro',
+          ], withOutroOption(data.alimentacao, alimentacaoOutro))}
         </div>
+        ${outroTextField('diag-alimentacao-outro', 'alimentacao_outro', alimentacaoOutro, !!alimentacaoOutro)}
       </fieldset>
 
       <fieldset>
@@ -310,8 +398,11 @@ function renderPage2(lead: DiagnosticLead, data: Record<string, string[]>): stri
             'Pratico natação',
             'Uso máscara no trabalho',
             'Estou frequentemente exposta a luz azul (ecrãs)',
-          ], data.ambiente_fatores)}
+            'Outro',
+            'Nenhuma das anteriores',
+          ], withOutroOption(data.ambiente_fatores, ambienteOutro))}
         </div>
+        ${outroTextField('diag-ambiente-outro', 'ambiente_fatores_outro', ambienteOutro, !!ambienteOutro)}
       </fieldset>
 
       <h2>A Tua Pele</h2>
@@ -319,39 +410,45 @@ function renderPage2(lead: DiagnosticLead, data: Record<string, string[]>): stri
       <fieldset>
         <legend class="lbl">Ao acordar, qual é a primeira sensação na pele do rosto? <span class="req">*</span></legend>
         <div class="grid" style="margin-top:8px">
-          ${radioOpts('pele_acordar', [
+          ${checkboxOpts('pele_acordar', [
             'Oleosa no rosto todo (brilho visível e sensação de filme escorregadio)',
             'Oleosa apenas na Zona T (testa, nariz e queixo) e normal nas bochechas',
             'Confortável e equilibrada',
             'Muito seca, a repuxar ou a escamar',
             'Vermelha, quente ou irritada',
-          ], data.pele_acordar?.[0])}
+            'Outro',
+          ], withOutroOption(data.pele_acordar, peleAcordarOutro))}
         </div>
+        ${outroTextField('diag-pele-acordar-outro', 'pele_acordar_outro', peleAcordarOutro, !!peleAcordarOutro)}
       </fieldset>
 
       <fieldset>
         <legend class="lbl">Duas horas após lavares o rosto (sem aplicar qualquer creme), como está a tua pele? <span class="req">*</span></legend>
         <div class="grid" style="margin-top:8px">
-          ${radioOpts('pele_2h', [
+          ${checkboxOpts('pele_2h', [
             'Começa a produzir óleo rapidamente',
             'Fica baça, repuxa e tens vontade imediata de pôr hidratante',
             'Mantém-se confortável sem necessidade de aplicar nada',
             'Começa a arder ou a ficar com manchas vermelhas',
-          ], data.pele_2h?.[0])}
+            'Outro',
+          ], withOutroOption(data.pele_2h, pele2hOutro))}
         </div>
+        ${outroTextField('diag-pele-2h-outro', 'pele_2h_outro', pele2hOutro, !!pele2hOutro)}
       </fieldset>
 
       <fieldset>
-        <legend class="lbl">À tarde, qual é a tua maior frustração visual no espelho? <span class="req">*</span></legend>
+        <legend class="lbl">À tarde, algum destes cenários é comum? <span class="req">*</span></legend>
         <div class="grid" style="margin-top:8px">
-          ${radioOpts('pele_tarde', [
+          ${checkboxOpts('pele_tarde', [
             'Brilho excessivo que parece "gordura" (onde a maquilhagem derrete ou desaparece)',
             'Pele a escamar, com zonas secas (onde a maquilhagem craquela)',
             'Aspeto cansado, baço e sem luminosidade',
             'Vermelhidão intensa nas maçãs do rosto ou à volta do nariz',
             'Não tenho nenhuma destas preocupações',
-          ], data.pele_tarde?.[0])}
+            'Outro',
+          ], withOutroOption(data.pele_tarde, peleTardeOutro))}
         </div>
+        ${outroTextField('diag-pele-tarde-outro', 'pele_tarde_outro', peleTardeOutro, !!peleTardeOutro)}
       </fieldset>
 
       <fieldset>
@@ -363,8 +460,10 @@ function renderPage2(lead: DiagnosticLead, data: Record<string, string[]>): stri
             'Zonas ásperas e a escamar',
             'Bolinhas brancas muito duras ao toque, que não doem, não inflamam e parecem estar "presas" sob a pele há meses',
             'Não tenho nenhuma destas preocupações',
-          ], data.pele_textura)}
+            'Outro',
+          ], withOutroOption(data.pele_textura, peleTexturaOutro))}
         </div>
+        ${outroTextField('diag-pele-textura-outro', 'pele_textura_outro', peleTexturaOutro, !!peleTexturaOutro)}
       </fieldset>
 
       <fieldset>
@@ -376,8 +475,10 @@ function renderPage2(lead: DiagnosticLead, data: Record<string, string[]>): stri
             'Sinto que as manchas parecem escurecer com a exposição ao calor',
             'Noto que as marcas deixadas por borbulhas antigas demoram meses a desaparecer',
             'Não tenho nenhuma destas preocupações',
-          ], data.pele_cor)}
+            'Outro',
+          ], withOutroOption(data.pele_cor, peleCorOutro))}
         </div>
+        ${outroTextField('diag-pele-cor-outro', 'pele_cor_outro', peleCorOutro, !!peleCorOutro)}
       </fieldset>
 
       <fieldset>
@@ -388,8 +489,10 @@ function renderPage2(lead: DiagnosticLead, data: Record<string, string[]>): stri
             'Sinto a pele "fina", repuxada e brilhante (aspeto plastificado), mas a escamar em certas zonas',
             'Sinto que a pele absorve os cremes instantaneamente, mas minutos depois volta a ficar seca',
             'Não tenho nenhuma destas preocupações',
-          ], data.pele_toque)}
+            'Outro',
+          ], withOutroOption(data.pele_toque, peleToqueOutro))}
         </div>
+        ${outroTextField('diag-pele-toque-outro', 'pele_toque_outro', peleToqueOutro, !!peleToqueOutro)}
       </fieldset>
 
       <fieldset>
@@ -397,11 +500,13 @@ function renderPage2(lead: DiagnosticLead, data: Record<string, string[]>): stri
         <div class="grid" style="margin-top:8px">
           ${checkboxOpts('pele_ambiente', [
             'Sinto a pele a ficar vermelha, quente ou reativa perante fatores externos',
-            'Tenho tendência a ficar com marcas vermelhas ao tocar na pele, urticária ou comichão',
+            'Tenho tendência a ficar com marcas vermelhas ao tocar na pele, comichão',
             'Noto zonas de escamação ou pequenas vermelhidões concentradas em áreas específicas',
             'Não tenho nenhuma destas preocupações',
-          ], data.pele_ambiente)}
+            'Outro',
+          ], withOutroOption(data.pele_ambiente, peleAmbienteOutro))}
         </div>
+        ${outroTextField('diag-pele-ambiente-outro', 'pele_ambiente_outro', peleAmbienteOutro, !!peleAmbienteOutro)}
       </fieldset>
 
       <fieldset>
@@ -417,8 +522,10 @@ function renderPage2(lead: DiagnosticLead, data: Record<string, string[]>): stri
             'Tenho o hábito compulsivo de mexer, espremer ou raspar as lesões',
             'Noto uma textura de "grãozinhos" ou borbulhas pequeninas e uniformes',
             'Não tenho nenhuma destas preocupações',
-          ], data.pele_borbulhas)}
+            'Outro',
+          ], withOutroOption(data.pele_borbulhas, peleBorbulhasOutro))}
         </div>
+        ${outroTextField('diag-pele-borbulhas-outro', 'pele_borbulhas_outro', peleBorbulhasOutro, !!peleBorbulhasOutro)}
       </fieldset>
 
       <fieldset>
@@ -428,8 +535,10 @@ function renderPage2(lead: DiagnosticLead, data: Record<string, string[]>): stri
             'Noto que as linhas de expressão só aparecem quando sorrio ou gesticulo',
             'Noto linhas ou rugas visíveis mesmo com o rosto totalmente em repouso',
             'Sinto uma perda de firmeza ou elasticidade no contorno do rosto, pescoço ou colo',
-          ], data.pele_firmeza)}
+            'Outro',
+          ], withOutroOption(data.pele_firmeza, peleFirmezaOutro))}
         </div>
+        ${outroTextField('diag-pele-firmeza-outro', 'pele_firmeza_outro', peleFirmezaOutro, !!peleFirmezaOutro)}
       </fieldset>
 
       <fieldset>
@@ -440,7 +549,8 @@ function renderPage2(lead: DiagnosticLead, data: Record<string, string[]>): stri
             'Olheiras castanhas/escuras',
             'Cavidade funda',
             'Inchaço / Bolsas matinais',
-            'Linhlas finas de desidratação / Pés de galinha',
+            'Linhas finas de desidratação / Pés de galinha',
+            'Não tenho nenhuma destas preocupações',
           ], data.pele_contorno_olhos)}
         </div>
       </fieldset>
@@ -453,8 +563,20 @@ function renderPage2(lead: DiagnosticLead, data: Record<string, string[]>): stri
     </form>`;
 
   const script = `
+    ${WIRE_OUTRO_JS}
     const form = document.getElementById('form-diag');
     const status = document.getElementById('diag-status');
+    wireOutro(form, 'alimentacao', 'diag-alimentacao-outro-wrap');
+    wireOutro(form, 'ambiente_fatores', 'diag-ambiente-outro-wrap');
+    wireOutro(form, 'pele_acordar', 'diag-pele-acordar-outro-wrap');
+    wireOutro(form, 'pele_2h', 'diag-pele-2h-outro-wrap');
+    wireOutro(form, 'pele_tarde', 'diag-pele-tarde-outro-wrap');
+    wireOutro(form, 'pele_textura', 'diag-pele-textura-outro-wrap');
+    wireOutro(form, 'pele_cor', 'diag-pele-cor-outro-wrap');
+    wireOutro(form, 'pele_toque', 'diag-pele-toque-outro-wrap');
+    wireOutro(form, 'pele_ambiente', 'diag-pele-ambiente-outro-wrap');
+    wireOutro(form, 'pele_borbulhas', 'diag-pele-borbulhas-outro-wrap');
+    wireOutro(form, 'pele_firmeza', 'diag-pele-firmeza-outro-wrap');
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       let valid = true;
@@ -466,6 +588,10 @@ function renderPage2(lead: DiagnosticLead, data: Record<string, string[]>): stri
           valid = false;
           el.style.borderColor = '#b3261e';
         }
+      });
+      // Checkbox groups marked required in the legend (no HTML required on each box)
+      ['alimentacao', 'ambiente_fatores', 'pele_acordar', 'pele_2h', 'pele_tarde', 'pele_textura', 'pele_cor', 'pele_toque', 'pele_ambiente', 'pele_borbulhas', 'pele_firmeza', 'pele_contorno_olhos', 'sono_tipo'].forEach((name) => {
+        if (form.querySelectorAll('input[name="' + name + '"]:checked').length === 0) valid = false;
       });
       if (!valid) { status.textContent = 'Faltam alguns campos obrigatórios.'; status.className = 'status err'; return; }
       status.textContent = 'A guardar...';
@@ -497,16 +623,31 @@ function renderPage2(lead: DiagnosticLead, data: Record<string, string[]>): stri
     });
   `;
 
-  return htmlShell('Análise da Pele — Página 2', content, script);
+  return htmlShell('Análise da Pele - Página 2', content, script);
 }
 
 // ─── Página 3: Rotina Atual + Preferências + Fotos ──────────────────────────
 function renderPage3(lead: DiagnosticLead, data: Record<string, string[]>): string {
+  const texturasOutro = data.preferencias_texturas_outro?.[0] || '';
+  const dificuldadesOutro = data.preferencias_dificuldades_outro?.[0] || '';
+  const lavarRostoOutro = data.rotina_lavar_rosto_outro?.[0] || '';
+  const texturasSelected = (() => {
+    const s = [...(data.preferencias_texturas || [])];
+    if (texturasOutro && !s.includes('Outro')) s.push('Outro');
+    return s;
+  })();
+  const dificuldadesSelected = (() => {
+    const s = [...(data.preferencias_dificuldades || [])];
+    if (dificuldadesOutro && !s.includes('Outro')) s.push('Outro');
+    return s;
+  })();
+  const maquilhagemSelected = data.rotina_maquilhagem_retirar?.[0] || '';
+
   const content = `
     ${progressDots(3, 3)}
     <h1>Análise da tua Pele</h1>
 
-    <form id="form-diag" class="grid" novalidate>
+    <form id="form-diag" class="grid" novalidate autocomplete="off">
       <input type="hidden" name="token" value="${lead.token}" />
       <input type="hidden" name="_page" value="3" />
 
@@ -519,14 +660,15 @@ function renderPage3(lead: DiagnosticLead, data: Record<string, string[]>): stri
         <legend class="lbl">Quantos dias por semana cumpres a tua rotina completa de manhã e à noite sem falhar? <span class="req">*</span></legend>
         <div class="grid" style="margin-top:8px">
           ${radioOpts('rotina_consistencia', [
-            '7 dias por semana (100% consistente)',
-            '4 a 6 dias por semana (falho por vezes à noite)',
-            '1 a 3 dias por semana (apenas quando me lembro ou tenho tempo)',
+            '7 dias por semana',
+            '4 a 6 dias por semana',
+            '1 a 3 dias por semana',
+            'Há semanas que não cumpo a rotina',
           ], data.rotina_consistencia?.[0])}
         </div>
       </fieldset>
 
-      ${textareaField('diag-esfoliacao', 'rotina_esfoliacao', 'Fazes esfoliação físicas (com grãozinhos/fricção)? Com que frequência?', data.rotina_esfoliacao?.[0])}
+      ${textareaField('diag-esfoliacao', 'rotina_esfoliacao', 'Fazes esfoliação física (com grãozinhos/fricção)? Com que frequência?', data.rotina_esfoliacao?.[0])}
       ${textareaField('diag-mascaras', 'rotina_mascaras', 'Usas máscaras? Quais? Com que frequência?', data.rotina_mascaras?.[0])}
       ${textareaField('diag-dispositivos', 'rotina_dispositivos', 'Usas dispositivos de limpeza (ex: escovas de silicone, Foreo)? Com que frequência?', data.rotina_dispositivos?.[0])}
       ${textareaField('diag-favorito', 'rotina_favorito', 'Existe algum produto do qual não prescindes por nada e que sentes que transforma a tua pele?', data.rotina_favorito?.[0])}
@@ -540,19 +682,21 @@ function renderPage3(lead: DiagnosticLead, data: Record<string, string[]>): stri
             'Diariamente (Apenas algo leve)',
             '2 a 3 vezes por semana',
             'Apenas em ocasiões especiais ou raramente',
+            'Nunca',
           ], data.rotina_maquilhagem_freq?.[0])}
         </div>
       </fieldset>
 
       <fieldset>
-        <legend class="lbl">Como costumas retirar a maquilhagem no final do dia? <span class="req">*</span></legend>
+        <legend class="lbl">Habitualmente, como retiras a maquilhagem no final do dia? <span class="req">*</span></legend>
         <div class="grid" style="margin-top:8px">
           ${radioOpts('rotina_maquilhagem_retirar', [
             'Óleo ou bálsamo desmaquilhante',
             'Água micelar',
             'Apenas com o gel de limpeza',
             'Toalhitas desmaquilhantes',
-          ], data.rotina_maquilhagem_retirar?.[0])}
+            'Não aplicável',
+          ], maquilhagemSelected)}
         </div>
       </fieldset>
 
@@ -564,8 +708,10 @@ function renderPage3(lead: DiagnosticLead, data: Record<string, string[]>): stri
             'Lavo com água tépida',
             'Seco com a toalha habitual (das mãos ou do corpo)',
             'Seco com uma toalha de utilização única/descartável',
-          ], data.rotina_lavar_rosto)}
+            'Outro',
+          ], withOutroOption(data.rotina_lavar_rosto, lavarRostoOutro))}
         </div>
+        ${outroTextField('diag-lavar-rosto-outro', 'rotina_lavar_rosto_outro', lavarRostoOutro, !!lavarRostoOutro)}
       </fieldset>
 
       ${textareaField('diag-pinceis', 'rotina_pinceis', 'Com que frequência lavas os pincéis e esponjas de maquilhagem?', data.rotina_pinceis?.[0])}
@@ -596,10 +742,11 @@ function renderPage3(lead: DiagnosticLead, data: Record<string, string[]>): stri
             'Demasiado aquosas',
             'Perfumes/Cheiros fortes',
             'Nenhum dos anteriores',
-          ], data.preferencias_texturas)}
+            'Outro',
+          ], texturasSelected)}
         </div>
+        ${outroTextField('diag-texturas-outro', 'preferencias_texturas_outro', texturasOutro, texturasSelected.includes('Outro'))}
       </fieldset>
-      ${textareaField('diag-texturas-outro', 'preferencias_texturas_outro', 'Outro (qual?):', data.preferencias_texturas_outro?.[0])}
 
       <fieldset>
         <legend class="lbl">Qual é a tua maior dificuldade em manter uma rotina? <span class="req">*</span></legend>
@@ -611,10 +758,11 @@ function renderPage3(lead: DiagnosticLead, data: Record<string, string[]>): stri
             'Não saber a ordem dos produtos',
             'Não saber que produtos devo usar',
             'Não tenho essa dificuldade',
-          ], data.preferencias_dificuldades)}
+            'Outro',
+          ], dificuldadesSelected)}
         </div>
+        ${outroTextField('diag-dificuldades-outro', 'preferencias_dificuldades_outro', dificuldadesOutro, dificuldadesSelected.includes('Outro'))}
       </fieldset>
-      ${textareaField('diag-dificuldades-outro', 'preferencias_dificuldades_outro', 'Outro (qual?):', data.preferencias_dificuldades_outro?.[0])}
 
       <fieldset>
         <legend class="lbl">Orçamento médio pretendido para a nova rotina: <span class="req">*</span></legend>
@@ -635,23 +783,23 @@ function renderPage3(lead: DiagnosticLead, data: Record<string, string[]>): stri
       <h2>Avaliação Visual</h2>
       <div>
         <label class="lbl">Upload de Fotos da Pele <span class="req">*</span></label>
-        <p class="hint">Por favor, anexa 3 fotos da tua pele sem qualquer maquilhagem, creme ou filtro, tiradas com luz natural de janela (sem luz direta):<br/>1. Frente | 2. Perfil Esquerdo | 3. Perfil Direito</p>
+        <p class="hint">Por favor, anexa 3 fotos da tua pele sem qualquer maquilhagem, creme ou filtro, tiradas com luz natural de janela (sem luz direta):<br/>1. Frente | 2. Perfil Esquerdo | 3. Perfil Direito<br/>Formatos: JPG, PNG ou HEIC (iPhone) - HEIC é convertido automaticamente.</p>
         <div class="file-group">
-          <label>Foto 1 — Frente</label>
-          <input type="file" name="foto1" accept="image/*" required />
+          <label>Foto 1 - Frente</label>
+          <input type="file" name="foto1" accept="image/*,.heic,.heif,image/heic,image/heif" required />
         </div>
         <div class="file-group">
-          <label>Foto 2 — Perfil Esquerdo</label>
-          <input type="file" name="foto2" accept="image/*" required />
+          <label>Foto 2 - Perfil Esquerdo</label>
+          <input type="file" name="foto2" accept="image/*,.heic,.heif,image/heic,image/heif" required />
         </div>
         <div class="file-group">
-          <label>Foto 3 — Perfil Direito</label>
-          <input type="file" name="foto3" accept="image/*" required />
+          <label>Foto 3 - Perfil Direito</label>
+          <input type="file" name="foto3" accept="image/*,.heic,.heif,image/heic,image/heif" required />
         </div>
       </div>
 
       <div style="margin-top:16px">
-        <label class="lbl"><input type="checkbox" name="consent" required class="accent-burgundy" /> Li e aceito que os meus dados sejam usados para o meu acompanhamento de pele, e que o pedido seja contactado pela Mariana. <span class="req">*</span></label>
+        <label class="lbl"><input type="checkbox" name="consent" required class="accent-burgundy" /> Li e aceito que os meus dados sejam usados para o meu acompanhamento de pele, e que seja contactado/a pela Mariana. <span class="req">*</span></label>
       </div>
 
       <div class="btn-row">
@@ -667,9 +815,40 @@ function renderPage3(lead: DiagnosticLead, data: Record<string, string[]>): stri
     </div>`;
 
   const script = `
+    ${WIRE_OUTRO_JS}
+    ${CLEAR_DIAG_BROWSER_STATE_JS}
     const form = document.getElementById('form-diag');
     const status = document.getElementById('diag-status');
     const done = document.getElementById('diag-done');
+    wireOutro(form, 'rotina_lavar_rosto', 'diag-lavar-rosto-outro-wrap');
+    wireOutro(form, 'preferencias_texturas', 'diag-texturas-outro-wrap');
+    wireOutro(form, 'preferencias_dificuldades', 'diag-dificuldades-outro-wrap');
+    async function photoToJpeg(file) {
+      const name = (file.name || '').toLowerCase();
+      const type = (file.type || '').toLowerCase();
+      const heic = type.includes('heic') || type.includes('heif') || name.endsWith('.heic') || name.endsWith('.heif');
+      if (!heic) return file;
+      const jpegName = file.name.replace(/[.]hei[cf]$/i, '.jpg');
+      try {
+        const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' }).catch(function() { return createImageBitmap(file); });
+        const canvas = document.createElement('canvas');
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+        canvas.getContext('2d').drawImage(bitmap, 0, 0);
+        bitmap.close();
+        const blob = await new Promise(function(resolve, reject) {
+          canvas.toBlob(function(b) { b ? resolve(b) : reject(new Error('toBlob')); }, 'image/jpeg', 0.9);
+        });
+        return new File([blob], jpegName, { type: 'image/jpeg' });
+      } catch (err) {}
+      try {
+        const mod = await import('https://cdn.jsdelivr.net/npm/heic-to@1.5.2/+esm');
+        const jpeg = await mod.heicTo({ blob: file, type: 'image/jpeg', quality: 0.9 });
+        return new File([jpeg], jpegName, { type: 'image/jpeg' });
+      } catch (err) {
+        return file;
+      }
+    }
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       if (done.dataset.done) return;
@@ -686,9 +865,18 @@ function renderPage3(lead: DiagnosticLead, data: Record<string, string[]>): stri
         }
       });
       if (!valid) { status.textContent = 'Faltam alguns campos obrigatórios (incluindo fotos).'; status.className = 'status err'; return; }
+      if (form.querySelectorAll('input[name="rotina_lavar_rosto"]:checked').length === 0) {
+        status.textContent = 'Faltam alguns campos obrigatórios (incluindo fotos).';
+        status.className = 'status err';
+        return;
+      }
       status.textContent = 'A enviar diagnóstico...';
       const fd = new FormData(form);
       try {
+        for (const key of ['foto1', 'foto2', 'foto3']) {
+          const f = fd.get(key);
+          if (f instanceof File && f.size > 0) fd.set(key, await photoToJpeg(f));
+        }
         const res = await fetch('/api/diagnostico', {
           method: 'POST',
           body: fd,
@@ -696,10 +884,17 @@ function renderPage3(lead: DiagnosticLead, data: Record<string, string[]>): stri
         });
         const data = await res.json();
         if (data.success) {
+          const token = fd.get('token');
+          clearDiagnosticBrowserState(token ? String(token) : '');
+          form.reset();
           done.dataset.done = '1';
           form.style.display = 'none';
           done.style.display = 'block';
           done.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          try {
+            const next = '/diagnostico?token=' + encodeURIComponent(String(token || '')) + '&page=4';
+            history.replaceState(null, '', next);
+          } catch (e) {}
         } else {
           status.textContent = data.error || 'Algo correu mal. Tenta de novo.';
           status.className = 'status err';
@@ -711,7 +906,7 @@ function renderPage3(lead: DiagnosticLead, data: Record<string, string[]>): stri
     });
   `;
 
-  return htmlShell('Análise da Pele — Página 3', content, script);
+  return htmlShell('Análise da Pele - Página 3', content, script);
 }
 
 // ─── Página de sucesso ───────────────────────────────────────────────────────

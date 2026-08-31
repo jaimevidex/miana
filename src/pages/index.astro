@@ -17,7 +17,7 @@ const servicos = [
   },
   {
     titulo: 'The Skin Call',
-    desc: 'Consultoria 1:1 focada na biologia e química da tua pele. O teu plano de skincare personalizado, sem complicações.',
+    desc: 'Aconselhamento 1:1 focado na biologia e química da tua pele. O teu plano de skincare personalizado, sem complicações.',
     href: '/servicos/skin-call',
     image: homeSkinCall,
   },
@@ -43,25 +43,25 @@ const testemunhos = [
     autor: 'Rita',
   },
   {
-    texto: 'Fui maquilhada pela Mariana para o meu casamento e foi incrível! Fizemos a prova e, no dia do casamento, dei feedback do que queria alterar, e essas alterações foram executadas na perfeição.',
-    autor: 'Dhara',
+    texto: 'Estou muito satisfeita com os produtos que a Mariana me aconselhou para a minha pele. Estou a adorar... A minha pele nunca esteve tão bem. Muito grata, adorei.',
+    autor: 'Liliana',
   },
   {
     texto: 'Trabalhar com a Mariana foi 10000/10. Para além da makeup incrível, a melhor parte foi a simpatia, pontualidade e cuidado enquanto estava a maquilhar. Não é "maquilho e pronto". Nota-se o cuidado com o conforto das clientes, que podem sentir-se bem em dar a sua opinião!',
     autor: 'Adriana',
   },
   {
-    texto: 'Estou muito satisfeita com os produtos que a Mariana me aconselhou para a minha pele. Estou a adorar... A minha pele nunca esteve tão bem. Muito grata, adorei.',
-    autor: 'Liliana',
-  },
-  {
     texto: 'A Mariana ajudou-me a descomplicar o skincare. Percebi que não precisava de ter mil produtos, a minha pele não tolera tanta coisa. Com uma rotina simples, a minha pele está menos oleosa, mas mais hidratada. Ahh e a minha carteira também agradeceu. A Mariana explica tudo de forma super clara, prática e é uma querida',
     autor: 'Cristiana',
+  },
+  {
+    texto: 'Fui maquilhada pela Mariana para o meu casamento e foi incrível! Fizemos a prova e, no dia do casamento, dei feedback do que queria alterar, e essas alterações foram executadas na perfeição.',
+    autor: 'Dhara',
   },
 ];
 ---
 
-<Layout title="Mariana — Science-Led Skincare & Effortless Beauty" description="Unimos a ciência da pele à arte da maquilhagem. Rituais de skincare personalizados e maquilhagem glowy e sunkissed para noivas, eventos e educação." hasHero>
+<Layout title="Mariana - Science-Led Skincare & Effortless Beauty" description="Unimos a ciência da pele à arte da maquilhagem. Rituais de skincare personalizados e maquilhagem glowy e sunkissed para noivas, eventos e educação." hasHero>
   <Hero image={heroHome} />
 
   <section id="filosofia" class="max-w-container mx-auto px-6 md:px-16 py-32">
@@ -111,7 +111,7 @@ const testemunhos = [
             <div class="t-card shrink-0">
               <figure class="flex h-full flex-col rounded-sm border border-darkbrown/10 bg-white px-6 py-5">
                 <blockquote class="text-darkbrown/80 text-sm leading-relaxed">"{t.texto}"</blockquote>
-                <figcaption class="mt-4 text-burgundy font-semibold text-xs uppercase tracking-widest">— {t.autor}</figcaption>
+                <figcaption class="mt-4 text-burgundy font-semibold text-xs uppercase tracking-widest">- {t.autor}</figcaption>
               </figure>
             </div>
           ))}

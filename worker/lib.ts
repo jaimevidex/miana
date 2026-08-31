@@ -1,7 +1,7 @@
-// Helpers partilhados do Worker — formulários, leads, diagnóstico.
+// Helpers partilhados do Worker - formulários, leads, diagnóstico.
 // Sem dependências externas: usa APIs nativas do runtime Cloudflare Workers.
 
-import { LEAD_TTL, RATE_WINDOW, RATE_MAX, KV_KEYS } from './constants';
+import { LEAD_TTL, RATE_WINDOW, RATE_MAX, RATE_KEY_PREFIX } from './constants';
 
 export { LEAD_TTL, RATE_WINDOW, RATE_MAX };
 
@@ -20,7 +20,15 @@ export interface Env {
 }
 
 // ─── Tipos de formulário ────────────────────────────────────────────────────
-export type LeadType = 'skin-call' | 'bridal-beauty' | 'education';
+export type LeadType = 'skin-call' | 'bridal' | 'beauty' | 'education';
+
+/** Labels legíveis para cada tipo de lead. */
+export const TYPE_LABELS: Record<LeadType, string> = {
+  'skin-call': 'Skin Call',
+  'bridal': 'Bridal',
+  'beauty': 'Beauty',
+  'education': 'Education',
+};
 
 export interface LeadInput {
   nome: string;
@@ -63,17 +71,28 @@ export interface DiagnosticData {
   sono_fronha?: string;
   agua_ingestao?: string[];
   alimentacao?: string[];
+  alimentacao_outro?: string;
   exposicao_solar?: string[];
   ambiente_fatores?: string[];
+  ambiente_fatores_outro?: string;
   pele_acordar?: string[];
+  pele_acordar_outro?: string;
   pele_2h?: string[];
+  pele_2h_outro?: string;
   pele_tarde?: string[];
+  pele_tarde_outro?: string;
   pele_textura?: string[];
+  pele_textura_outro?: string;
   pele_cor?: string[];
+  pele_cor_outro?: string;
   pele_toque?: string[];
+  pele_toque_outro?: string;
   pele_ambiente?: string[];
+  pele_ambiente_outro?: string;
   pele_borbulhas?: string[];
+  pele_borbulhas_outro?: string;
   pele_firmeza?: string[];
+  pele_firmeza_outro?: string;
   pele_contorno_olhos?: string[];
   rotina_manha?: string;
   rotina_noite?: string;
@@ -85,7 +104,9 @@ export interface DiagnosticData {
   rotina_odeia?: string;
   rotina_maquilhagem_freq?: string[];
   rotina_maquilhagem_retirar?: string[];
+  rotina_maquilhagem_retirar_outro?: string;
   rotina_lavar_rosto?: string[];
+  rotina_lavar_rosto_outro?: string;
   rotina_pinceis?: string;
   rotina_telemovel?: string;
   rotina_mexer_rosto?: string;
@@ -134,7 +155,7 @@ export function isValidEmail(email: string): boolean {
   return EMAIL_RE.test(email);
 }
 
-/** Validação básica — nome, telefone, email são sempre obrigatórios. */
+/** Validação básica - nome, telefone, email são sempre obrigatórios. */
 export function validateLead(body: LeadInput): string | null {
   if (!body.nome || body.nome.trim().length < 2) return 'O nome deve ter pelo menos 2 caracteres.';
   if (!body.telefone || body.telefone.trim().length < 6) return 'O telefone deve ter pelo menos 6 caracteres.';
@@ -171,7 +192,7 @@ export function json(data: unknown, status = 200): Response {
 // ─── Rate Limit ─────────────────────────────────────────────────────────────
 
 function rateKey(clientIP: string, _email: string): string {
-  return `${KV_KEYS.RATE_LIMIT}${clientIP}`;
+  return `${RATE_KEY_PREFIX}${clientIP}`;
 }
 
 import { eq } from 'drizzle-orm';
@@ -228,8 +249,11 @@ export const FIELD_LABELS: Record<string, string> = {
   hora_pronta: 'Hora de estar pronta',
   local_preparacao: 'Local da preparação',
   local_prova: 'Local da prova',
-  servicos_procurados: 'Serviços procurados',
-  numero_guests: 'Número de guests',
+  servicos_procurados: 'Serviço da noiva',
+  guests_makeup: 'Guests makeup',
+  guests_hair: 'Guests hair',
+  guests_pack: 'Guests pack',
+  numero_guests: 'Número de guests (legado)',
   addon_skin_call: 'Add-on Skin Call',
   data_evento: 'Data do evento',
   hora_pronta_evento: 'Hora do evento',

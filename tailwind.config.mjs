@@ -4,7 +4,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Ver docs/DESIGN.md — não adicionar cores fora deste sistema sem atualizar o documento.
+        // Ver docs/DESIGN.md - não adicionar cores fora deste sistema sem atualizar o documento.
         burgundy: '#59010B',
         powder: '#BDDAF4',
         offwhite: '#FFFDF7',

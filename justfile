@@ -10,7 +10,7 @@ dev-astro:
     npm run dev
 
 # Dev do FUNIL completo (Worker + assets + API). Build + wrangler dev (porta 8787).
-# Inicia Mailpit para emails locais (SMTP :1025, UI http://localhost:8025).
+# Inicia Mailpit para emails locais (SMTP :1026, UI http://localhost:8026).
 dev:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -19,10 +19,10 @@ dev:
     pkill -9 -f "wrangler dev --port 8787" 2>/dev/null || true
     sleep 1
     # Arranca Mailpit se não estiver a correr
-    if ! lsof -ti :1025 >/dev/null 2>&1; then
-        mailpit &
+    if ! lsof -ti :1026 >/dev/null 2>&1; then
+        mailpit --smtp "0.0.0.0:1026" --listen "0.0.0.0:8026" &
         sleep 1
-        echo "Mailpit: SMTP :1025 | UI http://localhost:8025"
+        echo "Mailpit: SMTP :1026 | UI http://localhost:8026"
     fi
     npm run build
     npx wrangler dev --port 8787
@@ -32,7 +32,7 @@ down:
     #!/usr/bin/env bash
     for pid in $(lsof -ti :8787 || true); do kill -9 "$pid" 2>/dev/null || true; done
     pkill -9 -f "wrangler dev --port 8787" 2>/dev/null || true
-    for pid in $(lsof -ti :1025 || true); do kill -9 "$pid" 2>/dev/null || true; done
+    for pid in $(lsof -ti :1026 || true); do kill -9 "$pid" 2>/dev/null || true; done
     pkill -9 -f mailpit 2>/dev/null || true
     echo "Dev server e Mailpit parados."
 
@@ -96,7 +96,7 @@ video-compress SRC OUT:
     mkdir -p public/videos
     ffmpeg -y -i "{{SRC}}" -vf "scale=-2:1080" -c:v libx264 -crf 23 -preset slow -movflags +faststart -an "public/videos/{{OUT}}.mp4"
 
-# Comprimir com corte de duração (segundos) — útil para loops.
+# Comprimir com corte de duração (segundos) - útil para loops.
 # Uso: just video-loop "src/assets/0812 (1).mp4" mariana 8
 video-loop SRC OUT DUR:
     mkdir -p public/videos

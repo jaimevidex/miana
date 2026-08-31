@@ -1,6 +1,6 @@
-# BRIEF — Mariana (Science-Led Skincare & Effortless Beauty)
+# BRIEF - Mariana (Science-Led Skincare & Effortless Beauty)
 
-> Este ficheiro é a fonte de verdade do projeto — nada deve ser assumido sem estar aqui.
+> Este ficheiro é a fonte de verdade do projeto - nada deve ser assumido sem estar aqui.
 
 Estado: 🟢 completo
 
@@ -15,7 +15,7 @@ Estado: 🟢 completo
 | Fonte/tipografia já usada nas redes sociais? | Estilo editorial/moderno (combinação de Sans-Serif limpa com detalhes refinados). |
 | Tem manual de marca? | Não formalizado, mas com linha de comunicação e posicionamento 100% definidos. |
 | Tom da marca (elegante/luxo, romântico, editorial, minimalista, divertido)? | **Editorial, minimalista, científico mas acessível, intencional e *glowy*.** |
-| Sites de referência que goste (2–3 links)? | *[A preencher com referências visuais da Mariana]* |
+| Sites de referência que goste (2-3 links)? | *[A preencher com referências visuais da Mariana]* |
 
 ---
 

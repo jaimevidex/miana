@@ -1,0 +1,15 @@
+---
+description: Worker and admin SSR patterns
+globs: worker/**/*.ts
+alwaysApply: false
+---
+# Worker patterns
+
+- Keep `worker/index.ts` as a thin router; put handlers in `worker/routes/`
+- Admin HTML stays SSR string templates in `worker/admin.ts` (or `worker/admin/`) - match existing CSS/JS patterns
+- Use `createDb(env)` + Drizzle schema; do not raw-SQL unless migrating
+- Public forms: honeypot + `allowRequest` rate limit
+- Admin mutating APIs: require session + CSRF (`csrf_token` cookie equals `X-CSRF-Token`)
+- Diagnostic invalid token: error page in production; mock "Dev User" only when local (`!RESEND_API_KEY` or placeholder)
+- Manual clients: `lead_id` may be null - schema must allow it
+- R2 keys under folder from `constants` / `r2Folder()`; serve via authenticated `/api/admin/photo/:key`

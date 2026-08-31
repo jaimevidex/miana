@@ -67,7 +67,7 @@ const bg = toneByCategory[category] ?? '#EFE7E0';
     else im.addEventListener('load', () => reveal(im), { once: true });
   });
 
-  // Videos — load + play only when entering viewport
+  // Videos - load + play only when entering viewport
   const videoObserver = new IntersectionObserver(
     (entries) => {
       for (const entry of entries) {

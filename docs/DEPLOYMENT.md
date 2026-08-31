@@ -2,11 +2,11 @@
 
 ## Stack de hosting
 - **Build:** Astro (`npm run build` → gera `/dist` estático)
-- **Hosting:** Cloudflare (Worker com Static Assets via Wrangler) — subdomínio: `miana.maquiadora-site.workers.dev`
+- **Hosting:** Cloudflare (Worker com Static Assets via Wrangler) - subdomínio: `miana.maquiadora-site.workers.dev`
 - **DNS/Domínio:** `marianapita.pt` registado no OVH, nameservers apontados para Cloudflare (`julian.ns.cloudflare.com` / `lucy.ns.cloudflare.com`)
-- **Formulários:** enviados via Worker para o `POST /api/contact` do próprio site — ver `worker/index.ts` e `worker/email.ts` (email via Resend)
+- **Formulários:** enviados via Worker para o `POST /api/contact` do próprio site - ver `worker/index.ts` e `worker/email.ts` (email via Resend)
 
-## Deploy (Wrangler — já executado)
+## Deploy (Wrangler - já executado)
 
 Pré-requisitos:
 - `npx wrangler login` (fluxo OAuth, uma vez)
@@ -14,7 +14,7 @@ Pré-requisitos:
 
 Passos:
 1. `npm run build` (gera/destino `dist`)
-2. `npx wrangler deploy` — usa `wrangler.toml` (`[assets] directory = "./dist"`)
+2. `npx wrangler deploy` - usa `wrangler.toml` (`[assets] directory = "./dist"`)
 
 Nota: nestes versão, Pages é delegado para Workers. O domínio custom liga-se com `wrangler domains` depois de o domínio ficar **Active** no Cloudflare.
 
