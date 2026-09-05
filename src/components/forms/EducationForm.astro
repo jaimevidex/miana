@@ -1,6 +1,6 @@
 ---
 const inputCls =
-  'mt-1 w-full border border-darkbrown/20 rounded-sm px-4 py-3 bg-white focus:border-burgundy outline-none';
+  'mt-1 w-full border border-powder/40 rounded-sm px-4 py-3 bg-powder/40 focus:border-burgundy outline-none';
 const labelCls = 'block text-sm font-medium text-darkbrown';
 const radioCls = 'accent-burgundy';
 ---
@@ -34,7 +34,7 @@ const radioCls = 'accent-burgundy';
         { v: 'Skincare Education', t: 'Skincare Education' },
         { v: 'Friends & Bachelorette Parties', t: 'Friends & Bachelorette Parties' },
       ].map((f) => (
-        <label class="inline-flex items-center gap-3 text-sm bg-white border border-darkbrown/10 rounded-sm px-4 py-3">
+        <label class="inline-flex items-center gap-3 text-sm bg-powder/40 border border-powder/40 rounded-sm px-4 py-3">
           <input type="radio" name="formato" value={f.v} required class={radioCls} data-formato={f.v} />
           <span>{f.t}</span>
         </label>
@@ -105,7 +105,7 @@ const radioCls = 'accent-burgundy';
 
   <div>
     <label class={labelCls} for="e-notes">Mensagem (opcional)</label>
-    <textarea id="e-notes" name="mensagem" rows={5} class="mt-1 w-full border border-darkbrown/20 rounded-sm px-4 py-3 bg-white focus:border-burgundy outline-none resize-y"></textarea>
+    <textarea id="e-notes" name="mensagem" rows={5} class="mt-1 w-full border border-powder/40 rounded-sm px-4 py-3 bg-powder/40 focus:border-burgundy outline-none resize-y"></textarea>
   </div>
 
   <p class="text-xs text-darkbrown/60"><span class="text-burgundy">*</span> Campos obrigatórios</p>

@@ -35,7 +35,7 @@ Estado: 🟢 completo
   2. Hora a que tens de estar pronta `[ Horário ]`
   3. Local da preparação `[ Texto ]`
   4. Local da prova `[ Texto ]`
-  5. Que serviços procuras? `Makeup` | `Makeup + Hair`
+  5. Que serviços procuras? `Makeup` | `Pack Makeup & Hair`
   6. Número de guests `[ Número ]`
   7. Queres adicionar o Add-on Skin Call? `Sim` | `Não`
 
@@ -43,7 +43,7 @@ Estado: 🟢 completo
   1. Data do evento `[ Data ]`
   2. Hora a que tens de estar pronta `[ Horário ]`
   3. Local do serviço / preparação `[ Texto ]`
-  4. Que serviços procuras? `Makeup` | `Makeup + Hair`
+  4. Que serviços procuras? `Makeup` | `Pack Makeup & Hair`
   5. Número de pessoas `[ Número ]`
 
 ---
@@ -86,7 +86,7 @@ Estado: 🟢 completo
 
 ## Rodapé (Footer)
 
-* **Logótipo / Nome:** MARIANA (Science-Led Skincare & Effortless Beauty)
+* **Logótipo / Nome:** MARIANA (Skincare Routines & Sunkissed Bridal Makeup)
 * **Contacto Directo:** `mpitamakeup@gmail.com`
 * **Redes Sociais:** Instagram (`@marianapita_makeup`)
 * **Localização / Atuação:** Lisboa & Santarém (Atendimento presencial / *on location* & consultorias online)

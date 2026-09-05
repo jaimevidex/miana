@@ -24,6 +24,26 @@ import {
   handleExportClients,
   handleServePhoto,
 } from './routes/handlers';
+import {
+  handleGetConversation,
+  handleMarkConversationRead,
+  handleSendConversationMessage,
+  handleQuoteTemplate,
+  handleTermsTemplate,
+  handleScheduleTemplate,
+  handleScheduleFormTemplate,
+  handleServeEmailAttachment,
+  handleGoogleConnect,
+  handleGoogleCallback,
+  handleGoogleDisconnect,
+  handleGoogleStatus,
+  handleDevInbound,
+} from './routes/conversation';
+import { handleIncomingEmail } from './email-inbound';
+
+function conversationIdFrom(path: string, prefix: string, suffix: string): string {
+  return path.slice(prefix.length, path.length - suffix.length);
+}
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -117,8 +137,43 @@ export default {
           : '';
         return handleServePhoto(env, fromQuery || fromPath);
       }
+
+      if (path === '/api/admin/conversation' && method === 'GET') {
+        return handleGetConversation(request, env, undefined);
+      }
+      if (path.startsWith('/api/admin/conversation/') && path.endsWith('/messages') && method === 'POST') {
+        return handleSendConversationMessage(request, env, conversationIdFrom(path, '/api/admin/conversation/', '/messages'), userId);
+      }
+      if (path.startsWith('/api/admin/conversation/') && path.endsWith('/read') && method === 'POST') {
+        return handleMarkConversationRead(env, conversationIdFrom(path, '/api/admin/conversation/', '/read'));
+      }
+      if (path.startsWith('/api/admin/conversation/') && path.endsWith('/schedule-form') && method === 'POST') {
+        return handleScheduleFormTemplate(request, env, conversationIdFrom(path, '/api/admin/conversation/', '/schedule-form'));
+      }
+      if (path.startsWith('/api/admin/conversation/') && method === 'GET') {
+        return handleGetConversation(request, env, path.slice('/api/admin/conversation/'.length));
+      }
+      if (path === '/api/admin/templates/quote' && method === 'GET') return handleQuoteTemplate(env, request);
+      if (path === '/api/admin/templates/terms' && method === 'GET') return handleTermsTemplate(env, request);
+      if (path === '/api/admin/templates/schedule' && method === 'GET') return handleScheduleTemplate(env, request);
+      if ((path === '/api/admin/email-attachment' || path.startsWith('/api/admin/email-attachment/')) && method === 'GET') {
+        const fromQuery = url.searchParams.get('key') || '';
+        const fromPath = path.startsWith('/api/admin/email-attachment/')
+          ? decodeURIComponent(path.slice('/api/admin/email-attachment/'.length))
+          : '';
+        return handleServeEmailAttachment(env, fromQuery || fromPath);
+      }
+      if (path === '/api/admin/google/connect' && method === 'GET') return handleGoogleConnect(request, env);
+      if (path === '/api/admin/google/callback' && method === 'GET') return handleGoogleCallback(request, env);
+      if (path === '/api/admin/google/disconnect' && method === 'POST') return handleGoogleDisconnect(env);
+      if (path === '/api/admin/google/status' && method === 'GET') return handleGoogleStatus(env);
+      if (path === '/api/admin/dev/inbound' && method === 'POST') return handleDevInbound(request, env);
     }
 
     return env.ASSETS.fetch(request as Request);
+  },
+
+  async email(message: ForwardableEmailMessage, env: Env): Promise<void> {
+    await handleIncomingEmail(message, env);
   },
 } satisfies ExportedHandler<Env>;

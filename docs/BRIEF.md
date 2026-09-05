@@ -1,4 +1,4 @@
-# BRIEF - Mariana (Science-Led Skincare & Effortless Beauty)
+# BRIEF - Mariana (Skincare Routines & Sunkissed Bridal Makeup)
 
 > Este ficheiro é a fonte de verdade do projeto - nada deve ser assumido sem estar aqui.
 

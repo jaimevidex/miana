@@ -14,6 +14,11 @@ Espelho da vista Notion `Tipo = cliente`. Actualizar em conjunto com a Notion DB
 ## Aberto
 
 - [ ] Confirmar textos finais dos emails (convite diagnóstico, orçamentos, notificações)
+- [ ] Substituir placeholders: PDF de termos, copy de pagamento, marcar sessões, marcar e formulário
+- [ ] Dados reais de pagamento (IBAN / MB Way / titular) em Settings
+- [ ] Confirmar MX de marianapita.pt e activar Cloudflare Email Routing (hello@ → Worker + cópia na caixa)
+- [ ] Confirmar no Resend que o From `hello@marianapita.pt` está autorizado (SPF inclui Resend + Google)
+- [ ] Criar projecto Google Cloud (Calendar API + OAuth) e ligar em Settings
 - [ ] Conteúdo / imagens em falta (ver também inventário em `IMAGES.md`)
 - [ ] Confirmar preços e tempos default na dashboard Settings
 - [ ] Analytics IDs (GA / Meta Pixel / GSC) se ainda por configurar

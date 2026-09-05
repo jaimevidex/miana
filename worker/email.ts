@@ -5,27 +5,87 @@ import { TYPE_LABELS } from './lib';
 import { siteUrl, fromEmail, fromName, ownerEmail, adminLeadUrl, adminClientUrl } from './config';
 import { getContacts } from './pricing';
 
-type ResendPayload = {
+export type EmailAttachment = {
+  filename: string;
+  contentType: string;
+  content: Uint8Array;
+};
+
+export type SendEmailInput = {
   to: string | string[];
   subject: string;
   html: string;
   text: string;
+  replyTo?: string;
+  messageId?: string;
+  inReplyTo?: string;
+  references?: string;
+  attachments?: EmailAttachment[];
+};
+
+export type SendEmailResult = {
+  ok: boolean;
+  messageId: string;
+  resendId?: string;
 };
 
 export function emailEnabled(env: Env): boolean {
   return env.EMAIL_ENABLED === 'true';
 }
 
-// Detectar modo local: sem RESEND_API_KEY ou flag local
-function isLocal(env: Env): boolean {
+export function isLocal(env: Env): boolean {
   return !env.RESEND_API_KEY || env.RESEND_API_KEY.startsWith('REPLACE');
+}
+
+export function newRfcMessageId(env: Env, token: string): string {
+  const domain = fromEmail(env).split('@')[1] || 'marianapita.pt';
+  return `<msg.${token}@mail.${domain}>`;
+}
+
+function htmlToText(html: string): string {
+  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function toBase64(bytes: Uint8Array): string {
+  let binary = '';
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
+function buildHeaders(payload: SendEmailInput): Record<string, string> {
+  const headers: Record<string, string> = {};
+  if (payload.messageId) headers['Message-ID'] = payload.messageId;
+  if (payload.inReplyTo) headers['In-Reply-To'] = payload.inReplyTo;
+  if (payload.references) headers['References'] = payload.references;
+  return headers;
 }
 
 // ─── Envio via Resend (produção) ────────────────────────────────────────────
 
-async function sendResend(env: Env, payload: ResendPayload): Promise<boolean> {
+async function sendResend(env: Env, payload: SendEmailInput, messageId: string): Promise<SendEmailResult> {
   const apiKey = env.RESEND_API_KEY;
-  if (!apiKey || apiKey.startsWith('REPLACE')) return false;
+  if (!apiKey || apiKey.startsWith('REPLACE')) return { ok: false, messageId };
+
+  const body: Record<string, unknown> = {
+    from: `${fromName(env)} <${fromEmail(env)}>`,
+    to: payload.to,
+    subject: payload.subject,
+    html: payload.html,
+    text: payload.text,
+  };
+  if (payload.replyTo) body.reply_to = payload.replyTo;
+  const headers = buildHeaders({ ...payload, messageId });
+  if (Object.keys(headers).length) body.headers = headers;
+  if (payload.attachments?.length) {
+    body.attachments = payload.attachments.map((a) => ({
+      filename: a.filename,
+      content: toBase64(a.content),
+      content_type: a.contentType,
+    }));
+  }
 
   try {
     const res = await fetch('https://api.resend.com/emails', {
@@ -34,23 +94,30 @@ async function sendResend(env: Env, payload: ResendPayload): Promise<boolean> {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ ...payload, from: `${fromName(env)} <${fromEmail(env)}>` }),
+      body: JSON.stringify(body),
     });
+    const raw = await res.text();
     if (!res.ok) {
-      const body = await res.text();
-      console.error(`[resend] ${res.status}`, body);
-      return false;
+      console.error(`[resend] ${res.status}`, raw);
+      return { ok: false, messageId };
     }
-    return true;
+    let resendId: string | undefined;
+    try {
+      const parsed = JSON.parse(raw) as { id?: string };
+      resendId = parsed.id;
+    } catch {
+      /* ignore */
+    }
+    return { ok: true, messageId, resendId };
   } catch (err) {
     console.error('[resend] error:', err);
-    return false;
+    return { ok: false, messageId };
   }
 }
 
 // ─── Envio via Mailpit SMTP (local dev) ─────────────────────────────────────
 
-async function sendMailpit(payload: ResendPayload): Promise<boolean> {
+async function sendMailpit(env: Env, payload: SendEmailInput, messageId: string): Promise<SendEmailResult> {
   try {
     const nodemailer = await import('nodemailer');
     const transport = nodemailer.createTransport({
@@ -63,29 +130,41 @@ async function sendMailpit(payload: ResendPayload): Promise<boolean> {
     const to = Array.isArray(payload.to) ? payload.to.join(', ') : payload.to;
 
     await transport.sendMail({
-      from: `${fromName({} as Env)} <${fromEmail({} as Env)}>`,
+      from: `${fromName(env)} <${fromEmail(env)}>`,
       to,
+      replyTo: payload.replyTo,
       subject: payload.subject,
       html: payload.html,
       text: payload.text,
+      messageId,
+      inReplyTo: payload.inReplyTo,
+      references: payload.references,
+      attachments: payload.attachments?.map((a) => ({
+        filename: a.filename,
+        content: toBase64(a.content),
+        encoding: 'base64' as const,
+        contentType: a.contentType,
+      })),
     });
 
     console.log(`[mailpit] Email enviado para ${to} - "${payload.subject}"`);
     console.log(`[mailpit] Ver em http://localhost:8026`);
-    return true;
+    return { ok: true, messageId };
   } catch (err) {
     console.error('[mailpit] error:', err);
-    return false;
+    return { ok: false, messageId };
   }
 }
 
 // ─── Envio unificado ────────────────────────────────────────────────────────
 
-async function sendEmail(env: Env, payload: ResendPayload): Promise<boolean> {
+export async function sendEmail(env: Env, payload: SendEmailInput): Promise<SendEmailResult> {
+  const messageId = payload.messageId || newRfcMessageId(env, crypto.randomUUID());
+  const withId = { ...payload, messageId };
   if (isLocal(env)) {
-    return sendMailpit(payload);
+    return sendMailpit(env, withId, messageId);
   }
-  return sendResend(env, payload);
+  return sendResend(env, withId, messageId);
 }
 
 // ─── Notificação de nova lead (todos os tipos) ──────────────────────────────
@@ -142,15 +221,18 @@ export async function sendDiagnosticComplete(
   await sendEmail(env, { to: contacts.email || ownerEmail(env), subject, html, text });
 }
 
-// ─── Link de diagnóstico enviado ao cliente ─────────────────────────────────
+export type DiagnosticInviteContent = {
+  subject: string;
+  html: string;
+  text: string;
+};
 
-export async function sendDiagnosticInvite(
+export function diagnosticInviteContent(
   env: Env,
-  lead: { nome: string; email: string; token: string }
-): Promise<void> {
+  lead: { nome: string; token: string }
+): DiagnosticInviteContent {
   const url = `${siteUrl(env)}/diagnostico?token=${encodeURIComponent(lead.token)}`;
   const subject = 'Estás quase lá! Diagnóstico de pele Skin Call';
-
   const html = `
     <div style="font-family: Arial, Helvetica, sans-serif; line-height:1.6; color:#3b2a2a; max-width:560px; margin:0 auto;">
       <p>Olá ${lead.nome},</p>
@@ -165,10 +247,18 @@ export async function sendDiagnosticInvite(
       <p>Com carinho,<br/>Mariana Pita</p>
     </div>
   `;
-
   const text = `Olá ${lead.nome},\n\nEstamos quase lá! Preenche este diagnóstico de pele para eu perceber o plano mais indicado:\n\n${url}\n\nEste link é pessoal e de uso único.\n\nCom carinho,\nMariana Pita`;
+  return { subject, html, text };
+}
 
-  await sendEmail(env, { to: lead.email, subject, html, text });
+// ─── Link de diagnóstico enviado ao cliente ─────────────────────────────────
+
+export async function sendDiagnosticInvite(
+  env: Env,
+  lead: { nome: string; email: string; token: string }
+): Promise<SendEmailResult> {
+  const content = diagnosticInviteContent(env, lead);
+  return sendEmail(env, { to: lead.email, ...content });
 }
 
 // ─── Email de orçamento enviado ao cliente ──────────────────────────────────
@@ -178,8 +268,9 @@ export async function sendQuoteEmail(
   env: Env,
   to: string,
   subject: string,
-  htmlBody: string
-): Promise<void> {
-  const text = htmlBody.replace(/<[^>]+>/g, '');
-  await sendEmail(env, { to, subject, html: htmlBody, text });
+  htmlBody: string,
+  extras?: Pick<SendEmailInput, 'replyTo' | 'messageId' | 'inReplyTo' | 'references' | 'attachments'>
+): Promise<SendEmailResult> {
+  const text = htmlToText(htmlBody);
+  return sendEmail(env, { to, subject, html: htmlBody, text, ...extras });
 }

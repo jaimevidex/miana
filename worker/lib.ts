@@ -17,6 +17,10 @@ export interface Env {
   FROM_EMAIL?: string;
   FROM_NAME?: string;
   ADMIN_URL?: string;
+  EMAIL_FORWARD_TO?: string;
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
+  SEND_EMAIL?: { send: (message: unknown) => Promise<void> };
 }
 
 // ─── Tipos de formulário ────────────────────────────────────────────────────

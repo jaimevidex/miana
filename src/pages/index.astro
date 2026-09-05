@@ -43,8 +43,16 @@ const testemunhos = [
     autor: 'Rita',
   },
   {
+    texto: 'Querida Mariana, muito obrigada por todo o carinho, disponibilidade, profissionalismo e alegria com que me maquilhaste no dia do meu casamento. Fui elogiada pela maquilhagem e durou a noite inteira! Estava tão linda que não queria tirar 🥹 adorei conhecer-te e obrigada por tudo!!! Estamos muito felizes ❤️❤️❤️',
+    autor: 'Bride Maria',
+  },
+  {
     texto: 'Estou muito satisfeita com os produtos que a Mariana me aconselhou para a minha pele. Estou a adorar... A minha pele nunca esteve tão bem. Muito grata, adorei.',
     autor: 'Liliana',
+  },
+  {
+    texto: 'Trabalhar com a Mariana foi muito especial. Adoro a forma como adapta a maquilhagem a cada pessoa e ocasião, para um resultado mais natural ou para algo mais marcado. Muito talentosa e cuidadosa no que faz e uma pessoa extremamente querida, o que torna toda a experiência ainda melhor. 🤍',
+    autor: 'Daniela',
   },
   {
     texto: 'Trabalhar com a Mariana foi 10000/10. Para além da makeup incrível, a melhor parte foi a simpatia, pontualidade e cuidado enquanto estava a maquilhar. Não é "maquilho e pronto". Nota-se o cuidado com o conforto das clientes, que podem sentir-se bem em dar a sua opinião!',
@@ -56,12 +64,12 @@ const testemunhos = [
   },
   {
     texto: 'Fui maquilhada pela Mariana para o meu casamento e foi incrível! Fizemos a prova e, no dia do casamento, dei feedback do que queria alterar, e essas alterações foram executadas na perfeição.',
-    autor: 'Dhara',
+    autor: 'Bride Dhara',
   },
 ];
 ---
 
-<Layout title="Mariana - Science-Led Skincare & Effortless Beauty" description="Unimos a ciência da pele à arte da maquilhagem. Rituais de skincare personalizados e maquilhagem glowy e sunkissed para noivas, eventos e educação." hasHero>
+<Layout title="Mariana - Skincare Routines & Sunkissed Bridal Makeup" description="Unimos a ciência da pele à arte da maquilhagem. Rituais de skincare personalizados e maquilhagem glowy e sunkissed para noivas, eventos e educação." hasHero>
   <Hero image={heroHome} />
 
   <section id="filosofia" class="max-w-container mx-auto px-6 md:px-16 py-32">
@@ -109,7 +117,7 @@ const testemunhos = [
         <div class="flex" data-t-track>
           {testemunhos.map((t) => (
             <div class="t-card shrink-0">
-              <figure class="flex h-full flex-col rounded-sm border border-darkbrown/10 bg-white px-6 py-5">
+              <figure class="flex h-full flex-col rounded-sm border border-powder/40 bg-powder/40 px-6 py-5">
                 <blockquote class="text-darkbrown/80 text-sm leading-relaxed">"{t.texto}"</blockquote>
                 <figcaption class="mt-4 text-burgundy font-semibold text-xs uppercase tracking-widest">- {t.autor}</figcaption>
               </figure>

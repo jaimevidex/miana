@@ -1,6 +1,6 @@
 ---
 const inputCls =
-  'mt-1 w-full border border-darkbrown/20 rounded-sm px-4 py-3 bg-white focus:border-burgundy outline-none';
+  'mt-1 w-full border border-powder/40 rounded-sm px-4 py-3 bg-powder/40 focus:border-burgundy outline-none';
 const labelCls = 'block text-sm font-medium text-darkbrown';
 const radioCls = 'accent-burgundy';
 ---
@@ -37,7 +37,7 @@ const radioCls = 'accent-burgundy';
             { v: 'Full Year Call (Plano 12M)', t: 'Full Year Call - Plano 12M' },
             { v: 'Ainda não sei', t: 'Ainda não sei' },
           ].map((p) => (
-            <label class="inline-flex items-start gap-3 text-sm bg-white border border-darkbrown/10 rounded-sm px-4 py-3">
+            <label class="inline-flex items-start gap-3 text-sm bg-powder/40 border border-powder/40 rounded-sm px-4 py-3">
               <input type="radio" name="plano" value={p.v} required class={`${radioCls} mt-0.5`} />
               <span>{p.t}</span>
             </label>
@@ -59,7 +59,7 @@ const radioCls = 'accent-burgundy';
             'Só quando me lembro',
             'Ainda não tenho rotina',
           ].map((o) => (
-            <label class="inline-flex items-start gap-3 text-sm bg-white border border-darkbrown/10 rounded-sm px-4 py-3">
+            <label class="inline-flex items-start gap-3 text-sm bg-powder/40 border border-powder/40 rounded-sm px-4 py-3">
               <input type="radio" name="rotina_frequencia" value={o} required class={`${radioCls} mt-0.5`} />
               <span>{o}</span>
             </label>
@@ -79,7 +79,7 @@ const radioCls = 'accent-burgundy';
             'Mista',
             'Sensível / reativa',
           ].map((o) => (
-            <label class="inline-flex items-start gap-3 text-sm bg-white border border-darkbrown/10 rounded-sm px-4 py-3">
+            <label class="inline-flex items-start gap-3 text-sm bg-powder/40 border border-powder/40 rounded-sm px-4 py-3">
               <input type="checkbox" name="pele_tipo" value={o} class={`${radioCls} mt-0.5`} />
               <span>{o}</span>
             </label>
@@ -102,7 +102,7 @@ const radioCls = 'accent-burgundy';
             'Pontos negros / filamentos sebáceos',
             'Outra',
           ].map((o) => (
-            <label class="inline-flex items-start gap-3 text-sm bg-white border border-darkbrown/10 rounded-sm px-4 py-3">
+            <label class="inline-flex items-start gap-3 text-sm bg-powder/40 border border-powder/40 rounded-sm px-4 py-3">
               <input type="checkbox" name="preocupacoes" value={o} class={`${radioCls} mt-0.5`} />
               <span>{o}</span>
             </label>

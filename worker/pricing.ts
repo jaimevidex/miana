@@ -103,3 +103,24 @@ export async function getContacts(env: Env): Promise<Contacts> {
     address: map.contact_address || CONTACT_FALLBACKS.address,
   };
 }
+
+export interface PaymentDetails {
+  iban: string;
+  accountName: string;
+  mbway: string;
+}
+
+export const PAYMENT_FALLBACKS: PaymentDetails = {
+  iban: '[IBAN - substituir]',
+  accountName: '[Titular da conta - substituir]',
+  mbway: '[MB Way - substituir]',
+};
+
+export async function getPaymentDetails(env: Env): Promise<PaymentDetails> {
+  const map = await loadSettingsMap(env);
+  return {
+    iban: map.payment_iban || PAYMENT_FALLBACKS.iban,
+    accountName: map.payment_account_name || PAYMENT_FALLBACKS.accountName,
+    mbway: map.payment_mbway || PAYMENT_FALLBACKS.mbway,
+  };
+}

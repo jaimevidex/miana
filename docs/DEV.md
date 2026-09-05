@@ -29,6 +29,7 @@ EMAIL_ENABLED=true
 RESEND_API_KEY=REPLACE_ME
 OWNER_EMAIL=hello@marianapita.pt
 SITE_URL=http://localhost:8787
+FROM_EMAIL=hello@marianapita.pt
 ```
 
 ## Database
@@ -46,9 +47,19 @@ Never commit real passwords. Rotate if they were ever committed.
 ```bash
 just dev          # terminal 1
 npm test          # terminal 2 - ./tests/run.sh
+npx tsx tests/email-match.ts
 ./tests/flow.sh   # admin e2e (needs seeded user)
 npm run worker:check
 ```
+
+## Email inbound (Cloudflare Email Routing)
+
+Outbound vai de `hello@marianapita.pt` (Resend). Respostas entram no Worker via Email Routing (handler `email` em `worker/index.ts`) e uma cópia deve continuar na caixa hello@.
+
+1. Confirmar MX actual (provavelmente Google). Email Routing exige MX Cloudflare.
+2. Activar Email Routing; destino verificado = caixa actual; regra `hello@` → este Worker **e** o destino.
+3. Opcional: `EMAIL_FORWARD_TO` se o Worker tiver de fazer `message.forward()`.
+4. Local: Mailpit para outbound. Inbound: `npx tsx tests/email-match.ts` e, com `just dev`, `POST /api/admin/dev/inbound` (só local).
 
 ## ECC (Cursor, global)
 

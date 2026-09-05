@@ -28,7 +28,7 @@ export function parseGuestCounts(formData: Record<string, string>): {
 }
 
 export function normalizeBrideService(servicos: string): BrideService {
-  if (servicos === 'Makeup + Hair' || servicos === 'Pack') return 'Pack';
+  if (servicos === 'Pack Makeup & Hair' || servicos === 'Pack') return 'Pack';
   if (servicos === 'Makeup' || servicos === 'Hair') return servicos;
   return servicos || 'Pack';
 }
@@ -37,7 +37,7 @@ export function brideServiceLabel(servicos: string): string {
   const s = normalizeBrideService(servicos);
   if (s === 'Makeup') return 'Makeup';
   if (s === 'Hair') return 'Hair';
-  if (s === 'Pack') return 'Pack (Makeup + Hair)';
+  if (s === 'Pack') return 'Pack (Pack Makeup & Hair)';
   return s;
 }
 

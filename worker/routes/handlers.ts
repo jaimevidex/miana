@@ -3,8 +3,8 @@
 import { eq, desc, like, or, gte, lte, and } from 'drizzle-orm';
 import { allowRequest, generateToken, isBot, isValidEmail, json, readForm, validateLead, type Env, type LeadType } from '../lib';
 import { createDb } from '../db';
-import { leads, diagnostics, users, clients, quoteEmails, settings as settingsTable } from '../db/schema';
-import { sendLeadNotification, sendDiagnosticComplete, sendDiagnosticInvite, sendQuoteEmail } from '../email';
+import { leads, diagnostics, users, clients, settings as settingsTable } from '../db/schema';
+import { sendLeadNotification, sendDiagnosticComplete, diagnosticInviteContent } from '../email';
 import { renderDiagnosticError, renderDiagnosticPage } from '../diagnostico';
 import { createSession, destroySession, generateCsrfToken } from '../auth/session';
 import { setSessionCookie, getSessionCookie, clearSessionCookie } from '../auth/cookies';
@@ -13,6 +13,12 @@ import { getPricing } from '../pricing';
 import { getCookieValue } from '../http';
 import { generateQuoteHtml, generateQuoteSubject } from '../services/quotes';
 import { isSafePhotoKey, isUploadedPhoto, MAX_PHOTOS, MAX_PHOTO_BYTES, prepareStoredPhoto, sniffImageType } from '../photos';
+import {
+  getOrCreateConversationForLead,
+  getOrCreateConversationForClient,
+  sendConversationMessage,
+  linkConversationToClient,
+} from '../conversation';
 
 export async function handleLogin(request: Request, env: Env): Promise<Response> {
   try {
@@ -618,6 +624,7 @@ export async function handleUpdateSettings(request: Request, env: Env): Promise<
     const now = Date.now();
 
     for (const [key, value] of Object.entries(body)) {
+      if (key === 'google_calendar_refresh_token') continue;
       await db.insert(settingsTable).values({ key, value, updatedAt: now }).onConflictDoUpdate({
         target: settingsTable.key,
         set: { value, updatedAt: now },
@@ -649,21 +656,16 @@ export async function handleSendQuote(request: Request, env: Env, id: string | u
     if (!lead) return json({ error: 'Lead não encontrada.' }, 404);
     if (isLeadLocked(lead.status)) return json({ error: LEAD_LOCKED_MSG }, 409);
 
-    // Enviar email ao cliente
-    await sendQuoteEmail(env, lead.email, subject, html);
-
-    // Guardar no histórico
-    await db.insert(quoteEmails).values([{
-      id: crypto.randomUUID(),
-      leadId: lead.id,
-      html,
+    const conv = await getOrCreateConversationForLead(env, lead.id);
+    const result = await sendConversationMessage(env, {
+      conversationId: conv.id,
+      to: lead.email,
       subject,
-      sentAt: Date.now(),
-      sentBy: userId,
-    }]);
-
-    // Atualizar estado da lead
-    await db.update(leads).set({ status: 'pendente', updatedAt: Date.now() }).where(eq(leads.id, id));
+      html,
+      userId,
+      templateKind: 'quote',
+    });
+    if (!result.ok) return json({ error: result.error || 'Erro ao enviar orçamento' }, 502);
 
     return json({ success: true });
   } catch (e) {
@@ -684,11 +686,17 @@ export async function handleDiagnosticInvite(request: Request, env: Env, id: str
     if (isLeadLocked(lead.status)) return json({ error: LEAD_LOCKED_MSG }, 409);
     if (!lead.token) return json({ error: 'Esta lead não tem token de diagnóstico.' }, 400);
 
-    await sendDiagnosticInvite(env, {
-      nome: lead.nome,
-      email: lead.email,
-      token: lead.token,
+    const content = diagnosticInviteContent(env, { nome: lead.nome, token: lead.token });
+    const conv = await getOrCreateConversationForLead(env, lead.id);
+    const result = await sendConversationMessage(env, {
+      conversationId: conv.id,
+      to: lead.email,
+      subject: content.subject,
+      html: content.html,
+      userId: 'system',
+      templateKind: 'diagnostic_invite',
     });
+    if (!result.ok) return json({ error: result.error || 'Erro ao enviar convite' }, 502);
 
     return json({ success: true });
   } catch (e) {
@@ -729,6 +737,7 @@ export async function handleAcceptLead(request: Request, env: Env, id: string | 
     }]);
 
     await db.update(leads).set({ status: 'aceite', updatedAt: now }).where(eq(leads.id, id));
+    await linkConversationToClient(env, lead.id, clientId);
 
     return json({ success: true, id: clientId });
   } catch (e) {
@@ -754,11 +763,17 @@ export async function handleClientDiagnosticInvite(request: Request, env: Env, i
 
     if (!lead || !lead.token) return json({ error: 'Lead original sem token de diagnóstico.' }, 400);
 
-    await sendDiagnosticInvite(env, {
-      nome: client.nome,
-      email: client.email,
-      token: lead.token,
+    const content = diagnosticInviteContent(env, { nome: client.nome, token: lead.token });
+    const conv = await getOrCreateConversationForClient(env, client.id);
+    const result = await sendConversationMessage(env, {
+      conversationId: conv.id,
+      to: client.email,
+      subject: content.subject,
+      html: content.html,
+      userId: 'system',
+      templateKind: 'diagnostic_invite',
     });
+    if (!result.ok) return json({ error: result.error || 'Erro ao enviar convite' }, 502);
 
     return json({ success: true });
   } catch (e) {

@@ -1,4 +1,4 @@
-# PLAN - Website MARIANA (Science-Led Skincare & Effortless Beauty)
+# PLAN - Website MARIANA (Skincare Routines & Sunkissed Bridal Makeup)
 
 > Plano completo de implementação. Fonte: docs (BRIEF, SITEMAP, CONTENT, DESIGN, IMAGES), todos 🟢 completos.
 

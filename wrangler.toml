@@ -44,12 +44,14 @@ bucket_name = "media"
 #   Em deploy real: npx wrangler secret put RESEND_API_KEY
 # - OWNER_EMAIL: email da dona - recebe o pedido real do diagnóstico e os avisos leves.
 # - SITE_URL: URL base do site (fallback: https://marianapita.pt)
-# - FROM_EMAIL: email de origem para emails ao cliente (fallback: no-reply@marianapita.pt)
+# - FROM_EMAIL: email de origem para emails ao cliente (fallback: hello@marianapita.pt)
+# - EMAIL_FORWARD_TO: caixa real para cópia inbound (opcional, se o Worker fizer forward)
+# - GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET: OAuth Calendar (Meet)
 # - FROM_NAME: nome de exibição do remetente (fallback: Mariana Pita Makeup)
 # - ADMIN_URL: URL base da dashboard admin (fallback: ${SITE_URL}/admin)
 [vars]
 EMAIL_ENABLED = "true"
 OWNER_EMAIL = "hello@marianapita.pt"
 SITE_URL = "https://marianapita.pt"
-FROM_EMAIL = "no-reply@marianapita.pt"
+FROM_EMAIL = "hello@marianapita.pt"
 FROM_NAME = "Mariana Pita Makeup"

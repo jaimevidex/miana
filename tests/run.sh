@@ -10,6 +10,11 @@ BASE="${1:-http://localhost:8787}"
 PASS=0
 FAIL=0
 
+if command -v npx >/dev/null 2>&1; then
+  echo "email-match unit"
+  npx tsx tests/email-match.ts
+fi
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'

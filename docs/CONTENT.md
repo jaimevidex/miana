@@ -5,7 +5,7 @@
 ## 1. HOME
 
 ### Hero Section
-- **Headline:** *Science-led skincare & effortless beauty.*
+- **Headline:** *Skincare Routines & Sunkissed Bridal Makeup.*
 - **Subheadline:** Descomplicamos a cosmética e elevamos a tua beleza natural. Rituais de skincare personalizados e maquilhagem para quem procura um glow autêntico e intemporal.
 - **CTAs:** `[ Agendar Consultoria ]` | `[ Ver Serviços ]`
 
@@ -55,12 +55,12 @@ Acredito na educação como a chave para uma pele saudável. Ajudo-te a descompl
 
 ### Serviços
 1. **The Bridal Experience:** O serviço de noiva desenhado à tua medida. Inclui a prova, a maquilhagem no dia do casamento e um touch-up kit.
-   - **Formatos:** Makeup ou Makeup + Hair (feito pela nossa equipa de hairstylists especializados).
+   - **Formatos:** Makeup ou Pack Makeup & Hair (feito pela nossa equipa de hairstylists especializados).
    - **Add-on Skin Call:** Possibilidade de adicionar consultorias de skincare 1:1 nos meses anteriores para preparar a pele até ao grande dia. Inclui oferta especial.
 2. **Bridal Party & Guests:** Serviço de maquilhagem e glam completo para madrinhas, mães, noivos e convidadas.
-   - **Formatos:** Makeup ou Makeup + Hair.
+   - **Formatos:** Makeup ou Pack Makeup & Hair.
 3. **Event & Special Occasions:** Glam on demand para eventos, sessões fotográficas ou dias em que precisas simplesmente daquele glow extra.
-   - **Formatos:** Makeup ou Makeup + Hair.
+   - **Formatos:** Makeup ou Pack Makeup & Hair.
 
 ### CTA Final
 - **Frase & Botão:** `Let's book your glow` --> `[ Pedir Orçamento / Agendar ]`

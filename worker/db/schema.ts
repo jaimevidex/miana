@@ -137,7 +137,7 @@ export const diagnostics = sqliteTable('diagnostics', {
   updatedAt: integer('updated_at', { mode: 'number' }).notNull(),
 });
 
-// ─── Quote Emails (histórico de orçamentos enviados) ────────────────────────
+// ─── Quote Emails (histórico legado; novos envios vão para email_messages) ─
 export const quoteEmails = sqliteTable('quote_emails', {
   id: text('id').primaryKey(),
   leadId: text('lead_id').notNull().references(() => leads.id),
@@ -145,6 +145,44 @@ export const quoteEmails = sqliteTable('quote_emails', {
   subject: text('subject'),
   sentAt: integer('sent_at').notNull(),
   sentBy: text('sent_by'),
+});
+
+// ─── Conversations (um thread por lead / cliente) ──────────────────────────
+export const conversations = sqliteTable('conversations', {
+  id: text('id').primaryKey(),
+  leadId: text('lead_id').unique().references(() => leads.id),
+  clientId: text('client_id').unique().references(() => clients.id),
+  lastMessageAt: integer('last_message_at', { mode: 'number' }).notNull(),
+  unreadInboundCount: integer('unread_inbound_count').notNull().default(0),
+  createdAt: integer('created_at', { mode: 'number' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'number' }).notNull(),
+});
+
+export const emailMessages = sqliteTable('email_messages', {
+  id: text('id').primaryKey(),
+  conversationId: text('conversation_id').notNull().references(() => conversations.id),
+  direction: text('direction').notNull(), // outbound | inbound
+  subject: text('subject'),
+  html: text('html'),
+  text: text('text'),
+  fromAddress: text('from_address').notNull(),
+  toAddress: text('to_address').notNull(),
+  rfcMessageId: text('rfc_message_id'),
+  inReplyTo: text('in_reply_to'),
+  referencesHeader: text('references_header'),
+  resendId: text('resend_id'),
+  templateKind: text('template_kind'), // free | quote | terms | schedule | schedule_form | diagnostic_invite
+  sentBy: text('sent_by'),
+  sentAt: integer('sent_at', { mode: 'number' }).notNull(),
+});
+
+export const emailAttachments = sqliteTable('email_attachments', {
+  id: text('id').primaryKey(),
+  messageId: text('message_id').notNull().references(() => emailMessages.id),
+  filename: text('filename').notNull(),
+  contentType: text('content_type').notNull(),
+  size: integer('size').notNull(),
+  r2Key: text('r2_key').notNull(),
 });
 
 // ─── Sessions (auth) ────────────────────────────────────────────────────────

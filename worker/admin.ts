@@ -9,6 +9,15 @@ import { TYPE_LABELS } from './lib';
 import { calculateDuration, formatDuration, suggestTimeRange, suggestBridalDualSchedule } from './scheduling';
 import { getTiming } from './pricing';
 import { photoAdminUrl } from './photos';
+import { CHAT_CSS, renderChatPanel, chatScript } from './admin/chat';
+import {
+  getOrCreateConversationForLead,
+  getOrCreateConversationForClient,
+  listMessages,
+  unreadByLeadIds,
+  unreadByClientIds,
+} from './conversation';
+import { getGoogleStatus } from './google-calendar';
 
 // ─── CSS partilhado ─────────────────────────────────────────────────────────
 const CSS = `
@@ -91,6 +100,7 @@ tr.lead-row-eliminado:hover td{background:rgba(183,28,28,.14)}
 .rte-editor ul,.rte-editor ol{padding-left:1.4em;margin:8px 0}
 .rte-editor li{margin:2px 0}
 .rte-editor blockquote{margin:8px 0;padding-left:12px;border-left:3px solid #e5ded7;color:#5c4a4a}
+${CHAT_CSS}
 `;
 
 // ─── Status labels ──────────────────────────────────────────────────────────
@@ -368,6 +378,8 @@ export async function renderLeadsList(env: Env, filters: { status?: string; sear
     return qs ? `/admin/leads?${qs}` : '/admin/leads';
   };
 
+  const unreadMap = await unreadByLeadIds(env).catch(() => new Map<string, number>());
+
   const tableRows = rows.map((lead) => {
     const typeLabel = TYPE_LABELS[lead.type as LeadType] || lead.type;
     const rowClass = lead.status === 'aceite'
@@ -375,9 +387,11 @@ export async function renderLeadsList(env: Env, filters: { status?: string; sear
       : lead.status === 'eliminado'
         ? 'lead-row-eliminado'
         : '';
+    const unread = unreadMap.get(lead.id) || 0;
+    const unreadBadge = unread > 0 ? `<span class="unread-dot" title="${unread} não lida(s)"></span>` : '';
     return `
     <tr class="${rowClass}" onclick="window.location.href='/admin/lead/${lead.id}'" style="cursor:pointer">
-      <td><span class="badge badge-${lead.type}">${typeLabel}</span></td>
+      <td><span class="badge badge-${lead.type}">${typeLabel}</span>${unreadBadge}</td>
       <td>${lead.nome}</td>
       <td>${lead.email}</td>
       <td><span class="badge badge-${lead.status}">${STATUS_LABELS[lead.status] || lead.status}</span></td>
@@ -531,7 +545,7 @@ export async function renderLeadDetail(env: Env, id: string, csrfToken: string =
     ? `
     <div class="actions" style="flex-direction:column;align-items:flex-start;gap:12px">
       <p style="color:#8a7a74;margin:0">
-        Esta lead está <strong>${STATUS_LABELS[lead.status] || lead.status}</strong> - não é possível editar, enviar orçamento, aceitar ou eliminar.
+        Esta lead está <strong>${STATUS_LABELS[lead.status] || lead.status}</strong> - não é possível editar, aceitar ou eliminar.
       </p>
       ${linkedClientId
         ? `<a class="btn btn-outline btn-sm" href="/admin/client/${linkedClientId}">Ver cliente</a>`
@@ -541,61 +555,32 @@ export async function renderLeadDetail(env: Env, id: string, csrfToken: string =
     : `
     <div class="actions">
       <button class="btn btn-outline btn-sm" onclick="openModal('edit-modal')">Editar</button>
-      <button class="btn btn-outline btn-sm" onclick="openQuoteModal()">Enviar Orçamento</button>
       <button class="btn btn-success btn-sm" onclick="openModal('accept-modal')">Aceitar</button>
       <button class="btn btn-danger btn-sm" onclick="updateStatus('eliminado')">Eliminar</button>
     </div>
   `;
 
-  const quoteModalHtml = locked ? '' : `
-    <div id="quote-modal" class="modal-overlay">
-      <div class="modal" style="max-width:720px">
-        <button class="close" onclick="closeModal('quote-modal')">&times;</button>
-        <h2>Enviar Orçamento</h2>
-        <p style="color:#8a7a74;font-size:14px;margin-bottom:16px">Email para <strong>${lead.email}</strong></p>
-        <div id="quote-preview-loading" style="text-align:center;padding:32px;color:#8a7a74">A gerar preview...</div>
-        <div id="quote-preview-content" style="display:none">
-          <div style="margin-bottom:16px">
-            <label class="lbl" for="quote-subject">Assunto</label>
-            <input id="quote-subject" class="in" required />
-          </div>
-          <div style="margin-bottom:16px">
-            <label class="lbl" id="quote-body-label">Corpo do email</label>
-            <div class="rte">
-              <div class="rte-toolbar" role="toolbar" aria-label="Formatação do texto">
-                <button type="button" class="rte-btn" data-cmd="bold" title="Negrito" aria-label="Negrito"><b>B</b></button>
-                <button type="button" class="rte-btn" data-cmd="italic" title="Itálico" aria-label="Itálico"><i>I</i></button>
-                <span class="rte-sep" aria-hidden="true"></span>
-                <button type="button" class="rte-btn" data-cmd="insertUnorderedList" title="Lista com marcadores" aria-label="Lista com marcadores">• Lista</button>
-                <button type="button" class="rte-btn" data-cmd="insertOrderedList" title="Lista numerada" aria-label="Lista numerada">1. Lista</button>
-                <span class="rte-sep" aria-hidden="true"></span>
-                <button type="button" class="rte-btn" data-cmd="indent" title="Alínea (avançar)" aria-label="Alínea (avançar)">Alínea</button>
-                <button type="button" class="rte-btn" data-cmd="outdent" title="Recuar alínea" aria-label="Recuar alínea">Recuar</button>
-                <span class="rte-sep" aria-hidden="true"></span>
-                <label class="rte-select-wrap" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#8a7a74">
-                  <span>Tamanho</span>
-                  <select id="quote-fontsize" class="rte-select" title="Tamanho da letra" aria-label="Tamanho da letra">
-                    <option value="">Normal</option>
-                    <option value="2">Pequeno</option>
-                    <option value="3">Normal</option>
-                    <option value="4">Grande</option>
-                    <option value="5">Muito grande</option>
-                  </select>
-                </label>
-              </div>
-              <div id="quote-body-editor" class="rte-editor" contenteditable="true" role="textbox" aria-multiline="true" aria-labelledby="quote-body-label" data-placeholder="Escreve o corpo do email…"></div>
-            </div>
-            <textarea id="quote-body" hidden></textarea>
-          </div>
-          <div style="display:flex;gap:8px">
-            <button type="button" class="btn" onclick="sendQuote()">Enviar</button>
-            <button type="button" class="btn btn-outline" onclick="closeModal('quote-modal')">Cancelar</button>
-          </div>
-          <p id="quote-status" class="status" role="status" aria-live="polite"></p>
-        </div>
-      </div>
-    </div>
-  `;
+  let chatHtml = '';
+  try {
+    const conv = await getOrCreateConversationForLead(env, lead.id);
+    const messages = await listMessages(env, conv.id);
+    const google = await getGoogleStatus(env).catch(() => ({ connected: false, configured: false, email: '' }));
+    chatHtml = renderChatPanel({
+      conversationId: conv.id,
+      messages,
+      canCompose: !locked,
+      recipientEmail: lead.email,
+      leadId: lead.id,
+      clientId: linkedClientId,
+      leadType: lead.type,
+      continueOnClientId: locked ? linkedClientId : null,
+      googleConnected: google.connected,
+      showBookingTemplates: false,
+    });
+  } catch (e) {
+    console.error('[admin] chat lead', e);
+    chatHtml = `<h2>Conversa</h2><div class="card"><p style="color:#8a7a74">A conversa ainda não está disponível (aplica a migration 0010).</p></div>`;
+  }
 
   const acceptModalHtml = locked ? '' : `
     <div id="accept-modal" class="modal-overlay">
@@ -674,7 +659,8 @@ export async function renderLeadDetail(env: Env, id: string, csrfToken: string =
       <p id="action-msg" class="status" role="status" aria-live="polite"></p>
     </div>
 
-    ${quoteModalHtml}
+    ${chatHtml}
+
     ${acceptModalHtml}
     ${editModalHtml}
   `;
@@ -705,106 +691,6 @@ export async function renderLeadDetail(env: Env, id: string, csrfToken: string =
         }
       } catch {
         msg.textContent = 'Erro ao atualizar.';
-        msg.className = 'status err';
-      }
-    }
-
-    async function openQuoteModal() {
-      openModal('quote-modal');
-      const loading = document.getElementById('quote-preview-loading');
-      const content = document.getElementById('quote-preview-content');
-      loading.style.display = 'block';
-      content.style.display = 'none';
-      try {
-        const res = await fetch('/api/admin/lead/${lead.id}/preview', { method: 'POST', credentials: 'same-origin' });
-        const data = await res.json();
-        if (data.success) {
-          document.getElementById('quote-subject').value = data.subject;
-          setQuoteBodyHtml(data.html);
-          loading.style.display = 'none';
-          content.style.display = 'block';
-        } else {
-          loading.textContent = data.error || 'Erro ao gerar preview.';
-        }
-      } catch {
-        loading.textContent = 'Erro ao gerar preview.';
-      }
-    }
-
-    function setQuoteBodyHtml(html) {
-      const editor = document.getElementById('quote-body-editor');
-      const hidden = document.getElementById('quote-body');
-      editor.innerHTML = html;
-      hidden.value = html;
-    }
-
-    function syncQuoteBody() {
-      const editor = document.getElementById('quote-body-editor');
-      const hidden = document.getElementById('quote-body');
-      hidden.value = editor.innerHTML;
-      return hidden.value;
-    }
-
-    function initQuoteEditor() {
-      const editor = document.getElementById('quote-body-editor');
-      const toolbar = document.querySelector('#quote-modal .rte-toolbar');
-      const fontSize = document.getElementById('quote-fontsize');
-      if (!editor || !toolbar || editor.dataset.rteReady) return;
-      editor.dataset.rteReady = '1';
-
-      toolbar.querySelectorAll('[data-cmd]').forEach((btn) => {
-        btn.addEventListener('mousedown', (e) => e.preventDefault());
-        btn.addEventListener('click', () => {
-          editor.focus();
-          document.execCommand(btn.getAttribute('data-cmd'), false, null);
-          syncQuoteBody();
-        });
-      });
-
-      fontSize.addEventListener('change', () => {
-        const size = fontSize.value;
-        if (!size) return;
-        editor.focus();
-        document.execCommand('fontSize', false, size);
-        syncQuoteBody();
-        fontSize.value = '';
-      });
-
-      editor.addEventListener('input', syncQuoteBody);
-      editor.addEventListener('blur', syncQuoteBody);
-    }
-
-    initQuoteEditor();
-
-    async function sendQuote() {
-      const msg = document.getElementById('quote-status');
-      const html = syncQuoteBody().trim();
-      const subject = document.getElementById('quote-subject').value.trim();
-      if (!subject || !html) {
-        msg.textContent = 'Assunto e corpo do email são obrigatórios.';
-        msg.className = 'status err';
-        return;
-      }
-      msg.textContent = 'A enviar...';
-      msg.className = 'status';
-      try {
-        const res = await fetch('/api/admin/lead/${lead.id}/quote', {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ subject, html }),
-        });
-        const data = await res.json();
-        if (data.success) {
-          msg.textContent = 'Orçamento enviado!';
-          msg.className = 'status';
-          setTimeout(() => location.reload(), 1000);
-        } else {
-          msg.textContent = data.error || 'Erro ao enviar.';
-          msg.className = 'status err';
-        }
-      } catch {
-        msg.textContent = 'Erro ao enviar.';
         msg.className = 'status err';
       }
     }
@@ -872,7 +758,8 @@ export async function renderLeadDetail(env: Env, id: string, csrfToken: string =
         msg.textContent = 'Erro ao guardar.';
         msg.className = 'status err';
       }
-    });`;
+    });
+    ${chatScript()}`;
 
   return htmlShell(`${lead.nome} - Admin`, content, script, 'leads', csrfToken);
 }
@@ -907,11 +794,15 @@ export async function renderClientsList(env: Env, filters: { search?: string; pa
     return qs ? `/admin/clients?${qs}` : '/admin/clients';
   };
 
+  const unreadMap = await unreadByClientIds(env).catch(() => new Map<string, number>());
+
   const tableRows = rows.map((client) => {
     const typeLabel = TYPE_LABELS[client.type as LeadType] || client.type;
+    const unread = unreadMap.get(client.id) || 0;
+    const unreadBadge = unread > 0 ? `<span class="unread-dot" title="${unread} não lida(s)"></span>` : '';
     return `
     <tr onclick="window.location.href='/admin/client/${client.id}'" style="cursor:pointer">
-      <td><span class="badge badge-${client.type}">${typeLabel}</span></td>
+      <td><span class="badge badge-${client.type}">${typeLabel}</span>${unreadBadge}</td>
       <td>${client.nome}</td>
       <td>${client.email}</td>
       <td>${client.telefone}</td>
@@ -1280,6 +1171,27 @@ export async function renderClientDetail(env: Env, id: string, csrfToken: string
     }
   }
 
+  let chatHtml = '';
+  try {
+    const conv = await getOrCreateConversationForClient(env, client.id);
+    const messages = await listMessages(env, conv.id);
+    const google = await getGoogleStatus(env).catch(() => ({ connected: false, configured: false, email: '' }));
+    chatHtml = renderChatPanel({
+      conversationId: conv.id,
+      messages,
+      canCompose: true,
+      recipientEmail: client.email,
+      leadId: client.leadId,
+      clientId: client.id,
+      leadType: client.type,
+      googleConnected: google.connected,
+      showBookingTemplates: client.type === 'skin-call',
+    });
+  } catch (e) {
+    console.error('[admin] chat client', e);
+    chatHtml = `<h2>Conversa</h2><div class="card"><p style="color:#8a7a74">A conversa ainda não está disponível (aplica a migration 0010).</p></div>`;
+  }
+
   const content = `
     <a href="/admin/clients" class="back-link">← Voltar à lista</a>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
@@ -1299,6 +1211,8 @@ export async function renderClientDetail(env: Env, id: string, csrfToken: string
     ` : ''}
 
     ${schedulingHtml}
+
+    ${chatHtml}
 
     <div style="margin:16px 0">
       <button class="btn btn-outline btn-sm" onclick="openModal('edit-client-modal')">Editar</button>
@@ -1443,7 +1357,8 @@ export async function renderClientDetail(env: Env, id: string, csrfToken: string
         msg.textContent = 'Erro ao guardar.';
         msg.className = 'status err';
       }
-    });`;
+    });
+    ${chatScript()}`;
 
   return htmlShell(`${client.nome} - Admin`, content, script, 'clients', csrfToken);
 }
@@ -1568,6 +1483,35 @@ export async function renderSettingsPage(env: Env, csrfToken: string = ''): Prom
         </div>
       </div>
 
+      <h2>Pagamento</h2>
+      <div class="card">
+        <p style="color:#8a7a74;font-size:13px;margin-bottom:16px">Usados no email de termos e condições (placeholders até teres os dados reais).</p>
+        <div style="display:flex;gap:16px;flex-wrap:wrap">
+          <div style="flex:1;min-width:200px">
+            <label class="lbl" for="payment_account_name">Titular</label>
+            <input id="payment_account_name" class="in" value="${get('payment_account_name', '[Titular da conta - substituir]')}" />
+          </div>
+          <div style="flex:1;min-width:200px">
+            <label class="lbl" for="payment_iban">IBAN</label>
+            <input id="payment_iban" class="in" value="${get('payment_iban', '[IBAN - substituir]')}" />
+          </div>
+        </div>
+        <div style="margin-top:16px">
+          <label class="lbl" for="payment_mbway">MB Way</label>
+          <input id="payment_mbway" class="in" value="${get('payment_mbway', '[MB Way - substituir]')}" />
+        </div>
+      </div>
+
+      <h2>Google Calendar</h2>
+      <div class="card" id="google-card">
+        <p style="color:#8a7a74;font-size:13px;margin-bottom:16px">Necessário para o botão «Marcar e formulário» (cria o Meet na data escolhida).</p>
+        <p id="google-status-line">A verificar...</p>
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+          <a class="btn btn-sm" href="/api/admin/google/connect">Ligar Google Calendar</a>
+          <button type="button" class="btn btn-outline btn-sm" id="google-disconnect">Desligar</button>
+        </div>
+      </div>
+
       <div style="margin-top:24px;display:flex;gap:8px">
         <button type="submit" class="btn">Guardar</button>
       </div>
@@ -1589,6 +1533,7 @@ export async function renderSettingsPage(env: Env, csrfToken: string = ''): Prom
         'price_education_workshop',
         'time_setup', 'time_bridal', 'time_guest',
         'contact_email', 'contact_phone', 'contact_address',
+        'payment_iban', 'payment_account_name', 'payment_mbway',
       ];
 
       const data: Record<string, string> = {};
@@ -1616,6 +1561,32 @@ export async function renderSettingsPage(env: Env, csrfToken: string = ''): Prom
         msg.textContent = 'Erro ao guardar.';
         msg.className = 'status err';
       }
+    });
+
+    (async function googleStatus() {
+      const line = document.getElementById('google-status-line');
+      if (!line) return;
+      try {
+        const res = await fetch('/api/admin/google/status', { credentials: 'same-origin' });
+        const g = await res.json();
+        if (!g.configured) {
+          line.textContent = 'Falta configurar GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET no Worker.';
+          return;
+        }
+        if (g.connected) {
+          line.textContent = 'Ligado' + (g.email ? ' (' + g.email + ')' : '') + '.';
+        } else {
+          line.textContent = 'Ainda não está ligado.';
+        }
+      } catch {
+        line.textContent = 'Não foi possível verificar o estado do Google.';
+      }
+    })();
+
+    document.getElementById('google-disconnect').addEventListener('click', async () => {
+      if (!confirm('Desligar o Google Calendar?')) return;
+      await fetch('/api/admin/google/disconnect', { method: 'POST', credentials: 'same-origin' });
+      location.reload();
     });
   `;
 
