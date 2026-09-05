@@ -4,8 +4,7 @@
 import { eq, desc, like, and, or, gte, lte, sql } from 'drizzle-orm';
 import { createDb } from './db';
 import { leads as leadsTable, diagnostics as diagnosticsTable, clients as clientsTable, settings as settingsTable } from './db/schema';
-import type { Env, LeadType } from './lib';
-import { TYPE_LABELS } from './lib';
+import { htmlEscape, TYPE_LABELS, type Env, type LeadType } from './lib';
 import { calculateDuration, formatDuration, suggestTimeRange, suggestBridalDualSchedule } from './scheduling';
 import { getTiming } from './pricing';
 import { photoAdminUrl } from './photos';
@@ -1377,6 +1376,12 @@ export async function renderSettingsPage(env: Env, csrfToken: string = ''): Prom
   }
 
   const get = (key: string, fallback: string = '') => settingsMap[key] || fallback;
+  const google = await getGoogleStatus(env).catch(() => ({ configured: false, connected: false, email: '' }));
+  const googleLine = !google.configured
+    ? 'Falta configurar GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET no Worker.'
+    : google.connected
+      ? `Ligado${google.email ? ` (${htmlEscape(google.email)})` : ''}.`
+      : 'Por ligar.';
 
   const content = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
@@ -1505,7 +1510,7 @@ export async function renderSettingsPage(env: Env, csrfToken: string = ''): Prom
       <h2>Google Calendar</h2>
       <div class="card" id="google-card">
         <p style="color:#8a7a74;font-size:13px;margin-bottom:16px">Necessário para o botão «Marcar e formulário» (cria o Meet na data escolhida).</p>
-        <p id="google-status-line">A verificar...</p>
+        <p id="google-status-line">${googleLine}</p>
         <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
           <a class="btn btn-sm" href="/api/admin/google/connect">Ligar Google Calendar</a>
           <button type="button" class="btn btn-outline btn-sm" id="google-disconnect">Desligar</button>
@@ -1536,9 +1541,9 @@ export async function renderSettingsPage(env: Env, csrfToken: string = ''): Prom
         'payment_iban', 'payment_account_name', 'payment_mbway',
       ];
 
-      const data: Record<string, string> = {};
+      const data = {};
       for (const key of keys) {
-        const el = document.getElementById(key) as HTMLInputElement;
+        const el = document.getElementById(key);
         if (el) data[key] = el.value;
       }
 
@@ -1576,7 +1581,7 @@ export async function renderSettingsPage(env: Env, csrfToken: string = ''): Prom
         if (g.connected) {
           line.textContent = 'Ligado' + (g.email ? ' (' + g.email + ')' : '') + '.';
         } else {
-          line.textContent = 'Ainda não está ligado.';
+          line.textContent = 'Por ligar.';
         }
       } catch {
         line.textContent = 'Não foi possível verificar o estado do Google.';

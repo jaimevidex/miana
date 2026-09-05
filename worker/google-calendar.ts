@@ -4,14 +4,14 @@ import { eq } from 'drizzle-orm';
 import { createDb } from './db';
 import { settings } from './db/schema';
 import type { Env } from './lib';
-import { adminUrl } from './config';
+import { siteUrl } from './config';
 
 const TOKEN_KEY = 'google_calendar_refresh_token';
 const EMAIL_KEY = 'google_calendar_email';
 const SCOPES = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/userinfo.email';
 
 function callbackUrl(env: Env): string {
-  return `${adminUrl(env)}/api/admin/google/callback`;
+  return `${siteUrl(env)}/api/admin/google/callback`;
 }
 
 export function googleOAuthConfigured(env: Env): boolean {
