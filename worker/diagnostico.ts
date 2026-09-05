@@ -1,8 +1,10 @@
 // Página privada `/diagnostico` - formulário multi-página server-rendered a partir do token.
-import type { Env } from './lib';
 import type { DiagnosticLead } from './lib';
 import { htmlEscape } from './lib';
-import { siteUrl } from './config';
+import { DEFAULT_LOCALE, type Locale } from './locale';
+import { diagCopy, diagFieldLabel, diagOptionLabel } from './i18n/diagnostico';
+
+let currentLocale: Locale = DEFAULT_LOCALE;
 
 // ─── CSS partilhado ──────────────────────────────────────────────────────────
 const CSS = `
@@ -49,32 +51,33 @@ fieldset .lbl{margin-bottom:8px}
 `;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-function checkboxOpts(name: string, opts: string[], selected: string[] = []): string {
+function checkboxOpts(name: string, opts: string[], selected: string[] = [], locale: Locale = currentLocale): string {
   return opts.map((o) => {
     const checked = selected.includes(o) ? 'checked' : '';
-    return `<label class="opt"><input type="checkbox" name="${name}" value="${htmlEscape(o)}" ${checked} class="accent-burgundy" /> <span>${htmlEscape(o)}</span></label>`;
+    return `<label class="opt"><input type="checkbox" name="${name}" value="${htmlEscape(o)}" ${checked} class="accent-burgundy" /> <span>${htmlEscape(diagOptionLabel(o, locale))}</span></label>`;
   }).join('\n');
 }
 
-function radioOpts(name: string, opts: string[], selected: string = ''): string {
+function radioOpts(name: string, opts: string[], selected: string = '', locale: Locale = currentLocale): string {
   return opts.map((o) => {
     const checked = selected === o ? 'checked' : '';
-    return `<label class="opt"><input type="radio" name="${name}" value="${htmlEscape(o)}" ${checked} required class="accent-burgundy" /> <span>${htmlEscape(o)}</span></label>`;
+    return `<label class="opt"><input type="radio" name="${name}" value="${htmlEscape(o)}" ${checked} required class="accent-burgundy" /> <span>${htmlEscape(diagOptionLabel(o, locale))}</span></label>`;
   }).join('\n');
 }
 
-function textareaField(id: string, name: string, label: string, value: string, placeholder: string = ''): string {
+function textareaField(id: string, name: string, label: string, value: string, placeholder: string = '', locale: Locale = currentLocale): string {
   return `<div>
-    <label class="lbl" for="${id}">${htmlEscape(label)} <span class="req">*</span></label>
-    <textarea id="${id}" name="${name}" required class="in" placeholder="${htmlEscape(placeholder)}" autocomplete="off">${htmlEscape(value)}</textarea>
+    <label class="lbl" for="${id}">${htmlEscape(diagFieldLabel(label, locale))} <span class="req">*</span></label>
+    <textarea id="${id}" name="${name}" required class="in" placeholder="${htmlEscape(diagFieldLabel(placeholder, locale))}" autocomplete="off">${htmlEscape(value)}</textarea>
   </div>`;
 }
 
 /** Texto revelado quando a opção "Outro" está selecionada - obrigatório só nesse caso. */
-function outroTextField(id: string, name: string, value: string = '', visible: boolean = false): string {
+function outroTextField(id: string, name: string, value: string = '', visible: boolean = false, locale: Locale = currentLocale): string {
+  const c = diagCopy(locale);
   return `<div id="${id}-wrap" class="${visible ? '' : 'hidden'}" style="margin-top:8px">
-    <label class="lbl" for="${id}">Descreve <span class="req" ${visible ? '' : 'hidden'}>*</span></label>
-    <textarea id="${id}" name="${name}" class="in" placeholder="Especifica se aplicável..." ${visible ? 'required' : ''} autocomplete="off">${htmlEscape(value)}</textarea>
+    <label class="lbl" for="${id}">${htmlEscape(c.describeOther)} <span class="req" ${visible ? '' : 'hidden'}>*</span></label>
+    <textarea id="${id}" name="${name}" class="in" placeholder="${htmlEscape(c.specify)}" ${visible ? 'required' : ''} autocomplete="off">${htmlEscape(value)}</textarea>
   </div>`;
 }
 
@@ -133,10 +136,10 @@ function clearDiagnosticBrowserState(token) {
 }
 `;
 
-function inputField(id: string, name: string, label: string, value: string, type: string = 'text', placeholder: string = ''): string {
+function inputField(id: string, name: string, label: string, value: string, type: string = 'text', placeholder: string = '', locale: Locale = currentLocale): string {
   return `<div>
-    <label class="lbl" for="${id}">${htmlEscape(label)} <span class="req">*</span></label>
-    <input id="${id}" name="${name}" type="${type}" required value="${htmlEscape(value)}" class="in" placeholder="${htmlEscape(placeholder)}" autocomplete="off" />
+    <label class="lbl" for="${id}">${htmlEscape(diagFieldLabel(label, locale))} <span class="req">*</span></label>
+    <input id="${id}" name="${name}" type="${type}" required value="${htmlEscape(value)}" class="in" placeholder="${htmlEscape(diagFieldLabel(placeholder, locale))}" autocomplete="off" />
   </div>`;
 }
 
@@ -147,9 +150,33 @@ function progressDots(current: number, total: number): string {
 }
 
 // ─── HTML Shell ──────────────────────────────────────────────────────────────
-function htmlShell(title: string, content: string, script: string = ''): string {
+function requiredLegend(label: string): string {
+  return `<legend class="lbl">${htmlEscape(diagFieldLabel(label, currentLocale))} <span class="req">*</span></legend>`;
+}
+
+function hintP(label: string): string {
+  return `<p class="hint">${htmlEscape(diagFieldLabel(label, currentLocale))}</p>`;
+}
+
+function h2Label(label: string): string {
+  return `<h2>${htmlEscape(diagFieldLabel(label, currentLocale))}</h2>`;
+}
+
+function diagJsMessages(): string {
+  const c = diagCopy(currentLocale);
+  return `const DIAG_MSG = ${JSON.stringify({
+    required: c.required,
+    requiredPhotos: c.requiredPhotos,
+    saving: c.saving,
+    sending: c.sending,
+    saveError: c.saveError,
+    sendError: c.sendError,
+  })};`;
+}
+
+function htmlShell(title: string, content: string, script: string = '', locale: Locale = currentLocale): string {
   return `<!doctype html>
-<html lang="pt">
+<html lang="${locale === 'en' ? 'en' : 'pt'}">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -166,29 +193,27 @@ function htmlShell(title: string, content: string, script: string = ''): string 
 
 // ─── Página 1: Identificação + Histórico + Histórico Dermatológico ───────────
 function renderPage1(lead: DiagnosticLead): string {
-  const nome = htmlEscape(lead.nome);
-  const email = htmlEscape(lead.email);
-  const telefone = htmlEscape(lead.telefone);
+  const c = diagCopy(currentLocale);
 
   const content = `
     ${progressDots(1, 3)}
-    <h1>Análise da tua Pele</h1>
-    <p class="sub">Para que a nossa chamada seja o mais proveitosa possível, precisas de preencher este formulário detalhado. Todas as informações serão usadas exclusivamente para analisar a tua pele e rotina, sendo confidenciais.</p>
-    <p class="sub">O formulário tem 3 páginas, e a cada página é necessário preencher os campos obrigatórios. Quando a questão não se aplica, colocar "Não se aplica". Se não tiveres tempo para preencher todos os campos, podes guardar o formulário e continuar mais tarde.</p>
+    <h1>${htmlEscape(c.title)}</h1>
+    <p class="sub">${htmlEscape(c.intro1)}</p>
+    <p class="sub">${htmlEscape(c.intro2)}</p>
 
     <form id="form-diag" class="grid" novalidate autocomplete="off">
       <input type="hidden" name="token" value="${lead.token}" />
       <input type="hidden" name="_page" value="1" />
 
-      <h2>Identificação</h2>
+      ${h2Label('Identificação')}
       ${inputField('diag-nome', 'nome', 'Nome Completo', lead.nome)}
       ${inputField('diag-idade', 'idade', 'Idade', '', 'number', 'Ex: 28')}
       ${inputField('diag-telefone', 'telefone', 'Contacto Telefónico', lead.telefone, 'tel')}
       ${inputField('diag-email', 'email', 'Email', lead.email, 'email')}
 
-      <h2>Histórico</h2>
+      ${h2Label('Histórico')}
       <fieldset>
-        <legend class="lbl">Encontras-te nalguma destas situações? <span class="req">*</span></legend>
+        ${requiredLegend('Encontras-te nalguma destas situações?')}
         <div class="grid" style="margin-top:8px">
           ${checkboxOpts('situacao', [
             'Grávida',
@@ -205,9 +230,9 @@ function renderPage1(lead: DiagnosticLead): string {
       ${textareaField('diag-alergias-cosm', 'alergias_cosmeticos', 'Tens Alergias conhecidas a ingredientes cosméticos, medicamentos ou substâncias?', '', 'Descreve se aplicável...')}
       ${textareaField('diag-medicacao', 'medicacao_continua', 'Tomas alguma medicação contínua?', '', 'Descreve se aplicável...')}
 
-      <h2>Histórico Dermatológico</h2>
+      ${h2Label('Histórico Dermatológico')}
       <fieldset>
-        <legend class="lbl">Tens algum DIAGNÓSTICO MÉDICO para alguma destas condições? <span class="req">*</span></legend>
+        ${requiredLegend('Tens algum DIAGNÓSTICO MÉDICO para alguma destas condições?')}
         <div class="grid" style="margin-top:8px">
           ${checkboxOpts('diagnostico_medico', [
             'Acne',
@@ -229,16 +254,16 @@ function renderPage1(lead: DiagnosticLead): string {
       ${textareaField('diag-burnout', 'burnout_cutaneo', 'Já tiveste episódios de "burnout" cutâneo ou reações graves após usar algum produto? Se sim, qual foi o produto?', '', 'Sensação de queimadura, vermelhidão extrema ou escamação...')}
 
       <fieldset>
-        <legend class="lbl">Tens pequenos vasos sanguíneos visíveis no rosto? <span class="req">*</span></legend>
-        <p class="hint">Ex: nas abas do nariz, maçãs do rosto ou queixo</p>
+        ${requiredLegend('Tens pequenos vasos sanguíneos visíveis no rosto?')}
+        ${hintP('Ex: nas abas do nariz, maçãs do rosto ou queixo')}
         <div class="grid" style="margin-top:8px">
           ${radioOpts('vasos_visiveis', ['Sim', 'Não'])}
         </div>
       </fieldset>
 
       <fieldset>
-        <legend class="lbl">Sentes que a tua pele "ruboriza" (fica vermelha e quente) subitamente? <span class="req">*</span></legend>
-        <p class="hint">Ex: Com comidas picantes, bebidas alcoólicas, banhos quentes, mudanças de temperatura ou emoções</p>
+        ${requiredLegend('Sentes que a tua pele "ruboriza" (fica vermelha e quente) subitamente?')}
+        ${hintP('Ex: Com comidas picantes, bebidas alcoólicas, banhos quentes, mudanças de temperatura ou emoções')}
         <div class="grid" style="margin-top:8px">
           ${radioOpts('rubor', ['Sim', 'Não'])}
         </div>
@@ -247,13 +272,14 @@ function renderPage1(lead: DiagnosticLead): string {
       ${textareaField('diag-reacao-estacoes', 'reacao_estacoes', 'Como reage a tua pele às mudanças de estação?', '', 'Ex: No inverno escama/seca, no verão fica incontrolavelmente oleosa...')}
 
       <div class="btn-row">
-        <button type="submit" class="btn">Próxima →</button>
+        <button type="submit" class="btn">${htmlEscape(c.next)}</button>
       </div>
       <p id="diag-status" class="status" role="status" aria-live="polite"></p>
     </form>`;
 
   const script = `
     ${WIRE_OUTRO_JS}
+    ${diagJsMessages()}
     const form = document.getElementById('form-diag');
     const status = document.getElementById('diag-status');
     wireOutro(form, 'diagnostico_medico', 'diag-diag-outro-wrap');
@@ -270,8 +296,8 @@ function renderPage1(lead: DiagnosticLead): string {
           el.style.borderColor = '#b3261e';
         }
       });
-      if (!valid) { status.textContent = 'Faltam alguns campos obrigatórios.'; status.className = 'status err'; return; }
-      status.textContent = 'A guardar...';
+      if (!valid) { status.textContent = DIAG_MSG.required; status.className = 'status err'; return; }
+      status.textContent = DIAG_MSG.saving;
       const fd = new FormData(form);
       const data = {};
       fd.forEach((v, k) => {
@@ -290,17 +316,17 @@ function renderPage1(lead: DiagnosticLead): string {
         if (r.success) {
           window.location.href = '/diagnostico?token=' + encodeURIComponent(token) + '&page=2';
         } else {
-          status.textContent = r.error || 'Erro ao guardar.';
+          status.textContent = r.error || DIAG_MSG.saveError;
           status.className = 'status err';
         }
       } catch (err) {
-        status.textContent = 'Erro ao guardar. Tenta de novo.';
+        status.textContent = DIAG_MSG.saveError;
         status.className = 'status err';
       }
     });
   `;
 
-  return htmlShell('Análise da Pele - Página 1', content, script);
+  return htmlShell(c.pageTitle(1), content, script);
 }
 
 // ─── Página 2: Estilo & Hábitos de Vida + A Tua Pele ────────────────────────
@@ -311,6 +337,7 @@ function withOutroOption(selected: string[] | undefined, outroValue: string | un
 }
 
 function renderPage2(lead: DiagnosticLead, data: Record<string, string[]>): string {
+  const c = diagCopy(currentLocale);
   const alimentacaoOutro = data.alimentacao_outro?.[0] || '';
   const ambienteOutro = data.ambiente_fatores_outro?.[0] || '';
   const peleAcordarOutro = data.pele_acordar_outro?.[0] || '';
@@ -325,23 +352,23 @@ function renderPage2(lead: DiagnosticLead, data: Record<string, string[]>): stri
 
   const content = `
     ${progressDots(2, 3)}
-    <h1>Análise da tua Pele</h1>
+    <h1>${htmlEscape(c.title)}</h1>
 
     <form id="form-diag" class="grid" novalidate autocomplete="off">
       <input type="hidden" name="token" value="${lead.token}" />
       <input type="hidden" name="_page" value="2" />
 
-      <h2>Estilo & Hábitos de Vida</h2>
+      ${h2Label('Estilo & Hábitos de Vida')}
 
       <fieldset>
-        <legend class="lbl">Qual o teu nível de stress diário? <span class="req">*</span></legend>
+        ${requiredLegend('Qual o teu nível de stress diário?')}
         <div class="grid" style="margin-top:8px">
           ${radioOpts('stress_nivel', ['1 - Muito Baixo', '2', '3', '4', '5 - Muito Elevado'], data.stress_nivel?.[0])}
         </div>
       </fieldset>
 
       <fieldset>
-        <legend class="lbl">Como descreves o teu sono? <span class="req">*</span></legend>
+        ${requiredLegend('Como descreves o teu sono?')}
         <div class="grid" style="margin-top:8px">
           ${checkboxOpts('sono_tipo', [
             'Sono Reparador (Dormes entre 7 a 9 horas seguidas e acordas descansada)',
@@ -356,14 +383,14 @@ function renderPage2(lead: DiagnosticLead, data: Record<string, string[]>): stri
       ${textareaField('diag-sono-fronha', 'sono_fronha', 'Com que frequência trocas a fronha da almofada?', data.sono_fronha?.[0])}
 
       <fieldset>
-        <legend class="lbl">Como é a tua ingestão diária de água? <span class="req">*</span></legend>
+        ${requiredLegend('Como é a tua ingestão diária de água?')}
         <div class="grid" style="margin-top:8px">
           ${radioOpts('agua_ingestao', ['Baixa (<1L)', 'Média (aproximadamente 1,5L)', 'Alta (2L ou mais)'], data.agua_ingestao?.[0])}
         </div>
       </fieldset>
 
       <fieldset>
-        <legend class="lbl">Como classificas a tua alimentação habitual? <span class="req">*</span></legend>
+        ${requiredLegend('Como classificas a tua alimentação habitual?')}
         <div class="grid" style="margin-top:8px">
           ${checkboxOpts('alimentacao', [
             'Equilibrada',
@@ -381,14 +408,14 @@ function renderPage2(lead: DiagnosticLead, data: Record<string, string[]>): stri
       </fieldset>
 
       <fieldset>
-        <legend class="lbl">Qual o teu nível de exposição solar diário? <span class="req">*</span></legend>
+        ${requiredLegend('Qual o teu nível de exposição solar diário?')}
         <div class="grid" style="margin-top:8px">
           ${radioOpts('exposicao_solar', ['Baixa (Trabalho no interior)', 'Moderada (Deslocações diárias)', 'Alta (Trabalho/desporto no exterior)'], data.exposicao_solar?.[0])}
         </div>
       </fieldset>
 
       <fieldset>
-        <legend class="lbl">Alguma destas situações faz parte da tua rotina? <span class="req">*</span></legend>
+        ${requiredLegend('Alguma destas situações faz parte da tua rotina?')}
         <div class="grid" style="margin-top:8px">
           ${checkboxOpts('ambiente_fatores', [
             'Estou frequentemente exposta a ar Condicionado/Aquecimento',
@@ -405,10 +432,10 @@ function renderPage2(lead: DiagnosticLead, data: Record<string, string[]>): stri
         ${outroTextField('diag-ambiente-outro', 'ambiente_fatores_outro', ambienteOutro, !!ambienteOutro)}
       </fieldset>
 
-      <h2>A Tua Pele</h2>
+      ${h2Label('A Tua Pele')}
 
       <fieldset>
-        <legend class="lbl">Ao acordar, qual é a primeira sensação na pele do rosto? <span class="req">*</span></legend>
+        ${requiredLegend('Ao acordar, qual é a primeira sensação na pele do rosto?')}
         <div class="grid" style="margin-top:8px">
           ${checkboxOpts('pele_acordar', [
             'Oleosa no rosto todo (brilho visível e sensação de filme escorregadio)',
@@ -423,7 +450,7 @@ function renderPage2(lead: DiagnosticLead, data: Record<string, string[]>): stri
       </fieldset>
 
       <fieldset>
-        <legend class="lbl">Duas horas após lavares o rosto (sem aplicar qualquer creme), como está a tua pele? <span class="req">*</span></legend>
+        ${requiredLegend('Duas horas após lavares o rosto (sem aplicar qualquer creme), como está a tua pele?')}
         <div class="grid" style="margin-top:8px">
           ${checkboxOpts('pele_2h', [
             'Começa a produzir óleo rapidamente',
@@ -437,7 +464,7 @@ function renderPage2(lead: DiagnosticLead, data: Record<string, string[]>): stri
       </fieldset>
 
       <fieldset>
-        <legend class="lbl">À tarde, algum destes cenários é comum? <span class="req">*</span></legend>
+        ${requiredLegend('À tarde, algum destes cenários é comum?')}
         <div class="grid" style="margin-top:8px">
           ${checkboxOpts('pele_tarde', [
             'Brilho excessivo que parece "gordura" (onde a maquilhagem derrete ou desaparece)',
@@ -452,7 +479,7 @@ function renderPage2(lead: DiagnosticLead, data: Record<string, string[]>): stri
       </fieldset>
 
       <fieldset>
-        <legend class="lbl">Tens preocupações com a textura da tua pele? <span class="req">*</span></legend>
+        ${requiredLegend('Tens preocupações com a textura da tua pele?')}
         <div class="grid" style="margin-top:8px">
           ${checkboxOpts('pele_textura', [
             'Grãozinhos pretos no nariz/queixo (filamentos sebáceos)',
@@ -467,7 +494,7 @@ function renderPage2(lead: DiagnosticLead, data: Record<string, string[]>): stri
       </fieldset>
 
       <fieldset>
-        <legend class="lbl">Tens preocupações com cor na tua pele? <span class="req">*</span></legend>
+        ${requiredLegend('Tens preocupações com cor na tua pele?')}
         <div class="grid" style="margin-top:8px">
           ${checkboxOpts('pele_cor', [
             'Tenho o tom irregular, manchas escuras ou acastanhadas',
@@ -482,7 +509,7 @@ function renderPage2(lead: DiagnosticLead, data: Record<string, string[]>): stri
       </fieldset>
 
       <fieldset>
-        <legend class="lbl">Como reage a tua pele ao toque e aos produtos básicos? <span class="req">*</span></legend>
+        ${requiredLegend('Como reage a tua pele ao toque e aos produtos básicos?')}
         <div class="grid" style="margin-top:8px">
           ${checkboxOpts('pele_toque', [
             'Sinto sensação de picada, ardor ou queimadura ao aplicar produtos simples',
@@ -496,7 +523,7 @@ function renderPage2(lead: DiagnosticLead, data: Record<string, string[]>): stri
       </fieldset>
 
       <fieldset>
-        <legend class="lbl">Como reage a tua pele ao ambiente e em zonas específicas do rosto? <span class="req">*</span></legend>
+        ${requiredLegend('Como reage a tua pele ao ambiente e em zonas específicas do rosto?')}
         <div class="grid" style="margin-top:8px">
           ${checkboxOpts('pele_ambiente', [
             'Sinto a pele a ficar vermelha, quente ou reativa perante fatores externos',
@@ -510,7 +537,7 @@ function renderPage2(lead: DiagnosticLead, data: Record<string, string[]>): stri
       </fieldset>
 
       <fieldset>
-        <legend class="lbl">Como se comportam as tuas borbulhas ou imperfeições? <span class="req">*</span></legend>
+        ${requiredLegend('Como se comportam as tuas borbulhas ou imperfeições?')}
         <div class="grid" style="margin-top:8px">
           ${checkboxOpts('pele_borbulhas', [
             'Noto lesões/borbulhas profundas, dolorosas e internas',
@@ -529,7 +556,7 @@ function renderPage2(lead: DiagnosticLead, data: Record<string, string[]>): stri
       </fieldset>
 
       <fieldset>
-        <legend class="lbl">Como notas as tuas linhas e a firmeza do rosto? <span class="req">*</span></legend>
+        ${requiredLegend('Como notas as tuas linhas e a firmeza do rosto?')}
         <div class="grid" style="margin-top:8px">
           ${checkboxOpts('pele_firmeza', [
             'Noto que as linhas de expressão só aparecem quando sorrio ou gesticulo',
@@ -542,7 +569,7 @@ function renderPage2(lead: DiagnosticLead, data: Record<string, string[]>): stri
       </fieldset>
 
       <fieldset>
-        <legend class="lbl">Como caracterizas a zona do teu contorno de olhos? <span class="req">*</span></legend>
+        ${requiredLegend('Como caracterizas a zona do teu contorno de olhos?')}
         <div class="grid" style="margin-top:8px">
           ${checkboxOpts('pele_contorno_olhos', [
             'Olheiras arroxeadas/azuladas',
@@ -556,14 +583,15 @@ function renderPage2(lead: DiagnosticLead, data: Record<string, string[]>): stri
       </fieldset>
 
       <div class="btn-row">
-        <button type="button" class="btn btn-outline" onclick="history.back()">← Anterior</button>
-        <button type="submit" class="btn">Próxima →</button>
+        <button type="button" class="btn btn-outline" onclick="history.back()">${htmlEscape(c.prev)}</button>
+        <button type="submit" class="btn">${htmlEscape(c.next)}</button>
       </div>
       <p id="diag-status" class="status" role="status" aria-live="polite"></p>
     </form>`;
 
   const script = `
     ${WIRE_OUTRO_JS}
+    ${diagJsMessages()}
     const form = document.getElementById('form-diag');
     const status = document.getElementById('diag-status');
     wireOutro(form, 'alimentacao', 'diag-alimentacao-outro-wrap');
@@ -593,8 +621,8 @@ function renderPage2(lead: DiagnosticLead, data: Record<string, string[]>): stri
       ['alimentacao', 'ambiente_fatores', 'pele_acordar', 'pele_2h', 'pele_tarde', 'pele_textura', 'pele_cor', 'pele_toque', 'pele_ambiente', 'pele_borbulhas', 'pele_firmeza', 'pele_contorno_olhos', 'sono_tipo'].forEach((name) => {
         if (form.querySelectorAll('input[name="' + name + '"]:checked').length === 0) valid = false;
       });
-      if (!valid) { status.textContent = 'Faltam alguns campos obrigatórios.'; status.className = 'status err'; return; }
-      status.textContent = 'A guardar...';
+      if (!valid) { status.textContent = DIAG_MSG.required; status.className = 'status err'; return; }
+      status.textContent = DIAG_MSG.saving;
       const fd = new FormData(form);
       const data = {};
       fd.forEach((v, k) => {
@@ -613,21 +641,22 @@ function renderPage2(lead: DiagnosticLead, data: Record<string, string[]>): stri
         if (r.success) {
           window.location.href = '/diagnostico?token=' + encodeURIComponent(token) + '&page=3';
         } else {
-          status.textContent = r.error || 'Erro ao guardar.';
+          status.textContent = r.error || DIAG_MSG.saveError;
           status.className = 'status err';
         }
       } catch (err) {
-        status.textContent = 'Erro ao guardar. Tenta de novo.';
+        status.textContent = DIAG_MSG.saveError;
         status.className = 'status err';
       }
     });
   `;
 
-  return htmlShell('Análise da Pele - Página 2', content, script);
+  return htmlShell(c.pageTitle(2), content, script);
 }
 
 // ─── Página 3: Rotina Atual + Preferências + Fotos ──────────────────────────
 function renderPage3(lead: DiagnosticLead, data: Record<string, string[]>): string {
+  const c = diagCopy(currentLocale);
   const texturasOutro = data.preferencias_texturas_outro?.[0] || '';
   const dificuldadesOutro = data.preferencias_dificuldades_outro?.[0] || '';
   const lavarRostoOutro = data.rotina_lavar_rosto_outro?.[0] || '';
@@ -645,19 +674,19 @@ function renderPage3(lead: DiagnosticLead, data: Record<string, string[]>): stri
 
   const content = `
     ${progressDots(3, 3)}
-    <h1>Análise da tua Pele</h1>
+    <h1>${htmlEscape(c.title)}</h1>
 
     <form id="form-diag" class="grid" novalidate autocomplete="off">
       <input type="hidden" name="token" value="${lead.token}" />
       <input type="hidden" name="_page" value="3" />
 
-      <h2>A Tua Rotina Atual</h2>
+      ${h2Label('A Tua Rotina Atual')}
 
       ${textareaField('diag-rotina-manha', 'rotina_manha', 'Descreve, o mais detalhadamente possível, a tua rotina da manhã. Especifica os produtos que usas, a ordem com que os aplicas e com que frequência os usas:', data.rotina_manha?.[0], 'Produtos, ordem de aplicação, frequência...')}
       ${textareaField('diag-rotina-noite', 'rotina_noite', 'Descreve, o mais detalhadamente possível, a tua rotina da noite. Especifica os produtos que usas, a ordem com que os aplicas e com que frequência os usas:', data.rotina_noite?.[0], 'Produtos, ordem de aplicação, frequência...')}
 
       <fieldset>
-        <legend class="lbl">Quantos dias por semana cumpres a tua rotina completa de manhã e à noite sem falhar? <span class="req">*</span></legend>
+        ${requiredLegend('Quantos dias por semana cumpres a tua rotina completa de manhã e à noite sem falhar?')}
         <div class="grid" style="margin-top:8px">
           ${radioOpts('rotina_consistencia', [
             '7 dias por semana',
@@ -675,7 +704,7 @@ function renderPage3(lead: DiagnosticLead, data: Record<string, string[]>): stri
       ${textareaField('diag-odeia', 'rotina_odeia', 'Existe algum produto que compraste e não gostaste? Por que motivo deixaste de o usar?', data.rotina_odeia?.[0])}
 
       <fieldset>
-        <legend class="lbl">Com que frequência usas maquilhagem? <span class="req">*</span></legend>
+        ${requiredLegend('Com que frequência usas maquilhagem?')}
         <div class="grid" style="margin-top:8px">
           ${radioOpts('rotina_maquilhagem_freq', [
             'Diariamente (Alta cobertura/longa duração)',
@@ -688,7 +717,7 @@ function renderPage3(lead: DiagnosticLead, data: Record<string, string[]>): stri
       </fieldset>
 
       <fieldset>
-        <legend class="lbl">Habitualmente, como retiras a maquilhagem no final do dia? <span class="req">*</span></legend>
+        ${requiredLegend('Habitualmente, como retiras a maquilhagem no final do dia?')}
         <div class="grid" style="margin-top:8px">
           ${radioOpts('rotina_maquilhagem_retirar', [
             'Óleo ou bálsamo desmaquilhante',
@@ -701,7 +730,7 @@ function renderPage3(lead: DiagnosticLead, data: Record<string, string[]>): stri
       </fieldset>
 
       <fieldset>
-        <legend class="lbl">Como lavas e secas o rosto? <span class="req">*</span></legend>
+        ${requiredLegend('Como lavas e secas o rosto?')}
         <div class="grid" style="margin-top:8px">
           ${checkboxOpts('rotina_lavar_rosto', [
             'Lavo com água quente',
@@ -720,10 +749,10 @@ function renderPage3(lead: DiagnosticLead, data: Record<string, string[]>): stri
       ${textareaField('diag-espremer', 'rotina_espremer', 'Tens o hábito de espremer borbulhas?', data.rotina_espremer?.[0])}
       ${textareaField('diag-depilacao', 'rotina_depilacao', 'Fazes depilação no rosto? Com que frequência? Qual o método? Como reage a pele?', data.rotina_depilacao?.[0])}
 
-      <h2>As tuas preferências e expectativas</h2>
+      ${h2Label('As tuas preferências e expectativas')}
 
       <fieldset>
-        <legend class="lbl">Quanto tempo pretendes dedicar à tua rotina diária? <span class="req">*</span></legend>
+        ${requiredLegend('Quanto tempo pretendes dedicar à tua rotina diária?')}
         <div class="grid" style="margin-top:8px">
           ${radioOpts('preferencias_tempo', [
             'Minimalista / Express (2 min)',
@@ -734,7 +763,7 @@ function renderPage3(lead: DiagnosticLead, data: Record<string, string[]>): stri
       </fieldset>
 
       <fieldset>
-        <legend class="lbl">Que tipo de texturas DETESTAS sentir na pele? <span class="req">*</span></legend>
+        ${requiredLegend('Que tipo de texturas DETESTAS sentir na pele?')}
         <div class="grid" style="margin-top:8px">
           ${checkboxOpts('preferencias_texturas', [
             'Oleosas / Densas',
@@ -749,7 +778,7 @@ function renderPage3(lead: DiagnosticLead, data: Record<string, string[]>): stri
       </fieldset>
 
       <fieldset>
-        <legend class="lbl">Qual é a tua maior dificuldade em manter uma rotina? <span class="req">*</span></legend>
+        ${requiredLegend('Qual é a tua maior dificuldade em manter uma rotina?')}
         <div class="grid" style="margin-top:8px">
           ${checkboxOpts('preferencias_dificuldades', [
             'Falta de tempo',
@@ -765,7 +794,7 @@ function renderPage3(lead: DiagnosticLead, data: Record<string, string[]>): stri
       </fieldset>
 
       <fieldset>
-        <legend class="lbl">Orçamento médio pretendido para a nova rotina: <span class="req">*</span></legend>
+        ${requiredLegend('Orçamento médio pretendido para a nova rotina:')}
         <div class="grid" style="margin-top:8px">
           ${radioOpts('preferencias_orcamento', [
             'Acessível',
@@ -780,42 +809,43 @@ function renderPage3(lead: DiagnosticLead, data: Record<string, string[]>): stri
       ${textareaField('diag-pergunta', 'pergunta_nao_pode_ficar', 'Qual é a pergunta ou dúvida que NÃO PODE FICAR POR RESPONDER na nossa chamada?', data.pergunta_nao_pode_ficar?.[0])}
       ${textareaField('diag-mais', 'mais_alguma_coisa', 'Há mais alguma coisa importante que me queiras dizer?', data.mais_alguma_coisa?.[0])}
 
-      <h2>Avaliação Visual</h2>
+      ${h2Label('Avaliação Visual')}
       <div>
-        <label class="lbl">Upload de Fotos da Pele <span class="req">*</span></label>
-        <p class="hint">Por favor, anexa 3 fotos da tua pele sem qualquer maquilhagem, creme ou filtro, tiradas com luz natural de janela (sem luz direta):<br/>1. Frente | 2. Perfil Esquerdo | 3. Perfil Direito<br/>Formatos: JPG, PNG ou HEIC (iPhone) - HEIC é convertido automaticamente.</p>
+        <label class="lbl">${htmlEscape(c.photosLabel)} <span class="req">*</span></label>
+        <p class="hint">${c.photosHint}</p>
         <div class="file-group">
-          <label>Foto 1 - Frente</label>
+          <label>${htmlEscape(c.photoFront)}</label>
           <input type="file" name="foto1" accept="image/*,.heic,.heif,image/heic,image/heif" required />
         </div>
         <div class="file-group">
-          <label>Foto 2 - Perfil Esquerdo</label>
+          <label>${htmlEscape(c.photoLeft)}</label>
           <input type="file" name="foto2" accept="image/*,.heic,.heif,image/heic,image/heif" required />
         </div>
         <div class="file-group">
-          <label>Foto 3 - Perfil Direito</label>
+          <label>${htmlEscape(c.photoRight)}</label>
           <input type="file" name="foto3" accept="image/*,.heic,.heif,image/heic,image/heif" required />
         </div>
       </div>
 
       <div style="margin-top:16px">
-        <label class="lbl"><input type="checkbox" name="consent" required class="accent-burgundy" /> Li e aceito que os meus dados sejam usados para o meu acompanhamento de pele, e que seja contactado/a pela Mariana. <span class="req">*</span></label>
+        <label class="lbl"><input type="checkbox" name="consent" required class="accent-burgundy" /> ${htmlEscape(c.consent)} <span class="req">*</span></label>
       </div>
 
       <div class="btn-row">
-        <button type="button" class="btn btn-outline" onclick="history.back()">← Anterior</button>
-        <button type="submit" class="btn">Submeter Diagnóstico</button>
+        <button type="button" class="btn btn-outline" onclick="history.back()">${htmlEscape(c.prev)}</button>
+        <button type="submit" class="btn">${htmlEscape(c.submit)}</button>
       </div>
       <p id="diag-status" class="status" role="status" aria-live="polite"></p>
     </form>
 
     <div id="diag-done" class="done" role="status">
-      <h2>✓ Diagnóstico enviado</h2>
-      <p>Obrigada! Recebi o teu diagnóstico. Entrarei em contacto dentro de 48h.</p>
+      <h2>✓ ${htmlEscape(c.successTitle)}</h2>
+      <p>${htmlEscape(c.successBody)}</p>
     </div>`;
 
   const script = `
     ${WIRE_OUTRO_JS}
+    ${diagJsMessages()}
     ${CLEAR_DIAG_BROWSER_STATE_JS}
     const form = document.getElementById('form-diag');
     const status = document.getElementById('diag-status');
@@ -864,13 +894,13 @@ function renderPage3(lead: DiagnosticLead, data: Record<string, string[]>): stri
           el.style.borderColor = '#b3261e';
         }
       });
-      if (!valid) { status.textContent = 'Faltam alguns campos obrigatórios (incluindo fotos).'; status.className = 'status err'; return; }
+      if (!valid) { status.textContent = DIAG_MSG.requiredPhotos; status.className = 'status err'; return; }
       if (form.querySelectorAll('input[name="rotina_lavar_rosto"]:checked').length === 0) {
-        status.textContent = 'Faltam alguns campos obrigatórios (incluindo fotos).';
+        status.textContent = DIAG_MSG.requiredPhotos;
         status.className = 'status err';
         return;
       }
-      status.textContent = 'A enviar diagnóstico...';
+      status.textContent = DIAG_MSG.sending;
       const fd = new FormData(form);
       try {
         for (const key of ['foto1', 'foto2', 'foto3']) {
@@ -896,27 +926,28 @@ function renderPage3(lead: DiagnosticLead, data: Record<string, string[]>): stri
             history.replaceState(null, '', next);
           } catch (e) {}
         } else {
-          status.textContent = data.error || 'Algo correu mal. Tenta de novo.';
+          status.textContent = data.error || DIAG_MSG.sendError;
           status.className = 'status err';
         }
       } catch (err) {
-        status.textContent = 'Algo correu mal. Tenta de novo.';
+        status.textContent = DIAG_MSG.sendError;
         status.className = 'status err';
       }
     });
   `;
 
-  return htmlShell('Análise da Pele - Página 3', content, script);
+  return htmlShell(c.pageTitle(3), content, script);
 }
 
 // ─── Página de sucesso ───────────────────────────────────────────────────────
 function renderSuccess(): string {
+  const c = diagCopy(currentLocale);
   const content = `
     <div id="diag-done" style="text-align:center;padding:40px 24px">
-      <h2 style="font-size:22px;color:#0a7a4a;margin:0 0 8px">✓ Diagnóstico enviado</h2>
-      <p style="color:#7a6a64;font-size:14px;margin:0">Obrigada! Recebi o teu diagnóstico. Entrarei em contacto dentro de 48h.</p>
+      <h2 style="font-size:22px;color:#0a7a4a;margin:0 0 8px">✓ ${htmlEscape(c.successTitle)}</h2>
+      <p style="color:#7a6a64;font-size:14px;margin:0">${htmlEscape(c.successBody)}</p>
     </div>`;
-  return htmlShell('Diagnóstico Enviado', content);
+  return htmlShell(c.successTitle, content);
 }
 
 // ─── Erro ────────────────────────────────────────────────────────────────────
@@ -944,7 +975,8 @@ a{display:inline-block;margin-top:20px;background:#8a2831;color:#fbf5ef;text-dec
 }
 
 // ─── Renderizador principal ──────────────────────────────────────────────────
-export function renderDiagnosticPage(lead: DiagnosticLead, page: number = 1, data: Record<string, string[]> = {}): Response {
+export function renderDiagnosticPage(lead: DiagnosticLead, page: number = 1, data: Record<string, string[]> = {}, locale: Locale = DEFAULT_LOCALE): Response {
+  currentLocale = locale;
   let html: string;
   switch (page) {
     case 2:

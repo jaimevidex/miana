@@ -1,13 +1,22 @@
 ---
+import { copy, localeFromPath, localizePath, type Locale } from '../i18n';
+
+interface Props {
+  locale?: Locale;
+}
+
+const locale = Astro.props.locale ?? localeFromPath(Astro.url.pathname);
+const t = copy(locale);
 const year = new Date().getFullYear();
 const ownerEmail = import.meta.env.PUBLIC_OWNER_EMAIL || 'hello@marianapita.pt';
 const navItems = [
-  { label: 'Home', href: '/' },
-  { label: 'Meet Mariana', href: '/sobre' },
-  { label: 'Bridal & Beauty', href: '/servicos/bridal' },
-  { label: 'The Skin Call', href: '/servicos/skin-call' },
-  { label: 'Beauty Education', href: '/servicos/education' },
+  { label: t.nav.home, href: localizePath('/', locale) },
+  ...t.nav.items.map((item) => ({
+    ...item,
+    href: localizePath(item.href, locale),
+  })),
 ];
+const privacyHref = localizePath('/politica-privacidade', locale);
 ---
 
 <footer class="bg-burgundy text-offwhite">
@@ -18,38 +27,38 @@ const navItems = [
         <span class="font-display text-3xl font-bold uppercase tracking-wide">Mariana Pita</span>
       </div>
       <p class="text-sm text-offwhite/70 max-w-xs">
-        Skincare Routines & Sunkissed Bridal Makeup
+        {t.footer.tagline}
       </p>
     </div>
 
     <div class="grid grid-cols-2 gap-8">
       <nav class="flex flex-col gap-3">
-        <span class="eyebrow !text-white mb-1">Navegação</span>
+        <span class="eyebrow !text-white mb-1">{t.footer.navigation}</span>
         {navItems.map((item) => (
           <a href={item.href} class="text-sm text-offwhite/80 hover:text-powder">{item.label}</a>
         ))}
       </nav>
 
       <div class="flex flex-col gap-3">
-        <span class="eyebrow !text-white mb-1">Contacto</span>
+        <span class="eyebrow !text-white mb-1">{t.footer.contact}</span>
         <a href={`mailto:${ownerEmail}`} class="text-sm text-offwhite/80 hover:text-powder">
           {ownerEmail}
         </a>
         <a href="https://instagram.com/bymarianapita" target="_blank" rel="noopener" class="text-sm text-offwhite/80 hover:text-powder">
           @bymarianapita
         </a>
-        <p class="text-sm text-offwhite/60">Lisboa &amp; Santarém</p>
+        <p class="text-sm text-offwhite/60">{t.footer.location}</p>
       </div>
     </div>
   </div>
 
   <div class="border-t border-offwhite/10 py-6 text-center text-xs text-offwhite/50">
-    <p>© {year} MARIANA. Todos os direitos reservados.</p>
+    <p>© {year} MARIANA. {t.footer.rights}</p>
     <p class="mt-2">
-      <a href="/politica-privacidade" class="underline hover:text-powder">Política de Privacidade &amp; Cookies (RGPD)</a>
+      <a href={privacyHref} class="underline hover:text-powder">{t.footer.privacy}</a>
     </p>
     <p class="mt-2">
-      <button type="button" data-cookie-prefs class="underline hover:text-powder">Gerir preferências de cookies</button>
+      <button type="button" data-cookie-prefs class="underline hover:text-powder">{t.footer.manageCookies}</button>
     </p>
   </div>
 </footer>

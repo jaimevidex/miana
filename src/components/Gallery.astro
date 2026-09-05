@@ -3,6 +3,7 @@
 // atualmente placeholders de cor por categoria, prontos a substituir por <Image> de astro:assets.
 import type { ImageMetadata } from 'astro';
 import GalleryMedia from './GalleryMedia.astro';
+import { copy, localeFromPath, type Locale } from '../i18n';
 
 interface Item {
   category: string;
@@ -17,6 +18,7 @@ interface Props {
   items?: Item[];
   showFilters?: boolean;
   brick?: boolean;
+  locale?: Locale;
 }
 
 const defaultItems: Item[] = [
@@ -32,7 +34,10 @@ const defaultItems: Item[] = [
   { category: 'Beauty', alt: 'Pormenor de maquilhagem editorial com brilho' },
 ];
 
+const locale = Astro.props.locale ?? localeFromPath(Astro.url.pathname);
+const galleryCopy = copy(locale).gallery;
 const { items = defaultItems, showFilters = true, brick = false } = Astro.props;
+const viewLarger = (alt: string) => galleryCopy.viewLarger.replace('{alt}', alt);
 
 function getLightboxSrc(image?: string | ImageMetadata): string {
   if (!image) return '';
@@ -40,7 +45,7 @@ function getLightboxSrc(image?: string | ImageMetadata): string {
   return image.src;
 }
 
-const categories = ['Todos', ...new Set(items.map((i) => i.category))];
+const categories = [galleryCopy.all, ...new Set(items.map((i) => i.category))];
 const RATIOS = ['aspect-square', 'aspect-[2/3]', 'aspect-[4/5]'];
 const ratioWeight: Record<string, number> = {
   'aspect-square': 1,
@@ -63,13 +68,14 @@ const brickColumns = Array.from({ length: COLS }, (_, c) =>
 
 const toneByCategory: Record<string, string> = {
   Noivas: 'linear-gradient(160deg, #FFF1EC 0%, #F3D9C8 60%, #C89B7A 100%)',
+  Brides: 'linear-gradient(160deg, #FFF1EC 0%, #F3D9C8 60%, #C89B7A 100%)',
   Beauty: 'linear-gradient(160deg, #FBEDF0 0%, #E5C1C8 55%, #A97B86 100%)',
   Workshops: 'linear-gradient(160deg, #F4EFFB 0%, #D6C9EC 55%, #9B86C4 100%)',
   Skincare: 'linear-gradient(160deg, #EAF4FA 0%, #C6E0F0 55%, #8FB8D8 100%)',
 };
 ---
 
-<div>
+<div data-gallery-all={galleryCopy.all}>
   {showFilters && (
     <div class="flex flex-wrap gap-3 justify-center mb-10" id="gallery-filters">
       {categories.map((cat, i) => (
@@ -95,7 +101,7 @@ const toneByCategory: Record<string, string> = {
             data-category={item.category}
             data-lightbox={getLightboxSrc(item.image)}
             data-lightbox-video={item.video}
-            aria-label={`Ver ${item.alt} em tamanho maior`}
+            aria-label={viewLarger(item.alt)}
           >
             <GalleryMedia category={item.category} alt={item.alt} image={item.image} video={item.video} ratioClass={item.tall ? 'aspect-[4/5]' : 'aspect-square'} imgStyle={item.imgStyle} />
           </button>
@@ -110,7 +116,7 @@ const toneByCategory: Record<string, string> = {
                 data-category={t.item.category}
                 data-lightbox={getLightboxSrc(t.item.image)}
                 data-lightbox-video={t.item.video}
-                aria-label={`Ver ${t.item.alt} em tamanho maior`}
+                aria-label={viewLarger(t.item.alt)}
               >
                 <GalleryMedia category={t.item.category} alt={t.item.alt} image={t.item.image} video={t.item.video} ratioClass={t.ratio} imgStyle={t.item.imgStyle} />
               </button>
@@ -127,7 +133,7 @@ const toneByCategory: Record<string, string> = {
           data-category={item.category}
           data-lightbox={getLightboxSrc(item.image)}
           data-lightbox-video={item.video}
-          aria-label={`Ver ${item.alt} em tamanho maior`}
+          aria-label={viewLarger(item.alt)}
         >
           <GalleryMedia category={item.category} alt={item.alt} image={item.image} video={item.video} ratioClass={item.tall ? 'aspect-[4/5]' : 'aspect-square'} />
         </button>
@@ -149,8 +155,9 @@ const toneByCategory: Record<string, string> = {
       btn.classList.add('bg-burgundy', 'text-offwhite', 'border-burgundy');
 
       const filter = btn.getAttribute('data-filter');
+      const allLabel = btn.closest('[data-gallery-all]')?.getAttribute('data-gallery-all') || 'Todos';
       items.forEach((item) => {
-        const show = filter === 'Todos' || item.getAttribute('data-category') === filter;
+        const show = filter === allLabel || item.getAttribute('data-category') === filter;
         (item as HTMLElement).style.display = show ? '' : 'none';
       });
     });

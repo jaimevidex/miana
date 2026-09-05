@@ -21,6 +21,7 @@ export const leads = sqliteTable('leads', {
   email: text('email').notNull(),
   status: text('status').default('novo').notNull(),
   formData: text('form_data'), // JSON blob com dados específicos do formulário
+  locale: text('locale').notNull().default('pt'), // pt | en
   createdAt: integer('created_at', { mode: 'number' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'number' }).notNull(),
 });
@@ -35,6 +36,7 @@ export const clients = sqliteTable('clients', {
   telefone: text('telefone').notNull(),
   email: text('email').notNull(),
   data: text('data'), // JSON com dados do cliente (copiados da lead + extras)
+  locale: text('locale').notNull().default('pt'), // pt | en
   createdAt: integer('created_at', { mode: 'number' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'number' }).notNull(),
 });
@@ -171,7 +173,7 @@ export const emailMessages = sqliteTable('email_messages', {
   inReplyTo: text('in_reply_to'),
   referencesHeader: text('references_header'),
   resendId: text('resend_id'),
-  templateKind: text('template_kind'), // free | quote | terms | schedule | schedule_form | diagnostic_invite
+  templateKind: text('template_kind'), // free | quote | bridal_intro | terms | schedule | schedule_form | diagnostic_invite
   sentBy: text('sent_by'),
   sentAt: integer('sent_at', { mode: 'number' }).notNull(),
 });

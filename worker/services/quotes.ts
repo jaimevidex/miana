@@ -1,39 +1,38 @@
 // Quote HTML/subject generation from lead type templates.
 
-import type { LeadType } from '../lib';
+import type { Env, LeadType } from '../lib';
 import type { Pricing } from '../pricing';
-import { bridalEmail, bridalSubject } from '../templates/bridal';
-import { beautyEmail, beautySubject } from '../templates/beauty';
-import { skinCallEmail, skinCallSubject } from '../templates/skin_call';
-import { educationEmail, educationSubject } from '../templates/education';
+import { getEmailCopy, quoteCopyForType } from '../email-copy';
+import { bridalEmail } from '../templates/bridal';
+import { beautyEmail } from '../templates/beauty';
+import { skinCallEmail } from '../templates/skin_call';
+import { educationEmail } from '../templates/education';
+import { DEFAULT_LOCALE, type Locale } from '../locale';
 
-export function generateQuoteHtml(
+export async function generateQuoteHtml(
+  env: Env,
   type: LeadType,
   formData: Record<string, string>,
   pricing: Pricing,
-  notes?: string
-): string {
+  notes?: string,
+  locale: Locale = DEFAULT_LOCALE,
+): Promise<string> {
+  const copy = await getEmailCopy(env, locale);
+  const tpl = quoteCopyForType(copy, type);
+  const footer = copy.wrapFooter;
   switch (type) {
     case 'bridal':
-      return bridalEmail(formData, pricing, notes);
+      return bridalEmail(formData, pricing, notes, tpl, footer, locale);
     case 'beauty':
-      return beautyEmail(formData, pricing, notes);
+      return beautyEmail(formData, pricing, notes, tpl, footer, locale);
     case 'skin-call':
-      return skinCallEmail(formData, pricing, notes);
+      return skinCallEmail(formData, pricing, notes, tpl, footer, locale);
     case 'education':
-      return educationEmail(formData, pricing, notes);
+      return educationEmail(formData, pricing, notes, tpl, footer, locale);
   }
 }
 
-export function generateQuoteSubject(type: LeadType): string {
-  switch (type) {
-    case 'bridal':
-      return bridalSubject();
-    case 'beauty':
-      return beautySubject();
-    case 'skin-call':
-      return skinCallSubject();
-    case 'education':
-      return educationSubject();
-  }
+export async function generateQuoteSubject(env: Env, type: LeadType, locale: Locale = DEFAULT_LOCALE): Promise<string> {
+  const copy = await getEmailCopy(env, locale);
+  return quoteCopyForType(copy, type).subject;
 }

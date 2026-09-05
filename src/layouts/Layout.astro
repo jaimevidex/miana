@@ -2,6 +2,14 @@
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import CookieBanner from '../components/CookieBanner.astro';
+import {
+  localeFromPath,
+  localeHtmlLang,
+  localeOg,
+  localizePath,
+  stripLocalePrefix,
+  type Locale,
+} from '../i18n';
 import '../styles/global.css';
 
 interface Props {
@@ -10,11 +18,16 @@ interface Props {
   ogImage?: string;
   /** Marca a página com hero full-bleed escuro (header transparente por cima). */
   hasHero?: boolean;
+  locale?: Locale;
 }
 
+const locale = Astro.props.locale ?? localeFromPath(Astro.url.pathname);
 const { title, description, ogImage = '/images/og-default.jpg', hasHero = false } = Astro.props;
 const siteURL = new URL(Astro.site ?? 'https://marianapita.pt');
 const canonicalURL = new URL(Astro.url.pathname, siteURL);
+const barePath = stripLocalePrefix(Astro.url.pathname);
+const ptUrl = new URL(localizePath(barePath, 'pt'), siteURL);
+const enUrl = new URL(localizePath(barePath, 'en'), siteURL);
 
 // Analytics / verificação - ativos apenas quando o respetivo PUBLIC_* tem valor.
 const gaId = import.meta.env.PUBLIC_GA_ID?.trim() || '';
@@ -48,12 +61,15 @@ const analyticsGate = `(function(){
 ---
 
 <!doctype html>
-<html lang="pt">
+<html lang={localeHtmlLang(locale)}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="canonical" href={canonicalURL} />
+    <link rel="alternate" hreflang="pt-PT" href={ptUrl} />
+    <link rel="alternate" hreflang="en-GB" href={enUrl} />
+    <link rel="alternate" hreflang="x-default" href={ptUrl} />
 
     <title>{title}</title>
     <meta name="description" content={description} />
@@ -64,6 +80,7 @@ const analyticsGate = `(function(){
     <meta property="og:description" content={description} />
     <meta property="og:image" content={new URL(ogImage, siteURL)} />
     <meta property="og:url" content={canonicalURL} />
+    <meta property="og:locale" content={localeOg(locale)} />
     <meta name="twitter:card" content="summary_large_image" />
 
     <!-- Google Analytics 4 + Meta Pixel - carregados só após consentimento de cookies (ver CookieBanner) -->
@@ -95,12 +112,12 @@ const analyticsGate = `(function(){
     </script>
   </head>
   <body data-hero={hasHero ? 'true' : 'false'}>
-    <Header />
+    <Header locale={locale} />
     <main>
       <slot />
     </main>
-    <Footer />
-    <CookieBanner />
+    <Footer locale={locale} />
+    <CookieBanner locale={locale} />
 
     <script>
       // Evita que o browser restaure a posição de scroll entre páginas (salta para baixo).

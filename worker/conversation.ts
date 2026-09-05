@@ -23,10 +23,16 @@ import {
 } from './email-match';
 import { EMAIL_ATTACHMENTS_FOLDER, MAX_EMAIL_ATTACHMENT_BYTES } from './constants';
 import { termosPlaceholderPdf, TERMOS_PLACEHOLDER_FILENAME, TERMOS_PLACEHOLDER_TYPE } from './assets/termos-placeholder';
+import {
+  bridalServicesPlaceholderPdf,
+  BRIDAL_SERVICES_PLACEHOLDER_FILENAME,
+  BRIDAL_SERVICES_PLACEHOLDER_TYPE,
+} from './assets/bridal-services-placeholder';
 
 export type TemplateKind =
   | 'free'
   | 'quote'
+  | 'bridal_intro'
   | 'terms'
   | 'schedule'
   | 'schedule_form'
@@ -251,6 +257,13 @@ export async function sendConversationMessage(
       content: termosPlaceholderPdf(),
     });
   }
+  if (opts.templateKind === 'bridal_intro') {
+    attachments.push({
+      filename: BRIDAL_SERVICES_PLACEHOLDER_FILENAME,
+      contentType: BRIDAL_SERVICES_PLACEHOLDER_TYPE,
+      content: bridalServicesPlaceholderPdf(),
+    });
+  }
 
   const result = await sendEmail(env, {
     to: opts.to,
@@ -437,7 +450,7 @@ async function matchByParticipantEmail(env: Env, fromAddr: string): Promise<Conv
 export async function getConversationRecipient(
   env: Env,
   conv: ConversationRow,
-): Promise<{ email: string; nome: string; type: string; token: string | null } | null> {
+): Promise<{ email: string; nome: string; type: string; token: string | null; locale: string } | null> {
   const db = createDb(env);
   if (conv.clientId) {
     const rows = await db.select().from(clients).where(eq(clients.id, conv.clientId)).limit(1);
@@ -448,13 +461,13 @@ export async function getConversationRecipient(
         const l = await db.select({ token: leads.token }).from(leads).where(eq(leads.id, c.leadId)).limit(1);
         token = l[0]?.token ?? null;
       }
-      return { email: c.email, nome: c.nome, type: c.type, token };
+      return { email: c.email, nome: c.nome, type: c.type, token, locale: c.locale };
     }
   }
   if (conv.leadId) {
     const rows = await db.select().from(leads).where(eq(leads.id, conv.leadId)).limit(1);
     const l = rows[0];
-    if (l) return { email: l.email, nome: l.nome, type: l.type, token: l.token };
+    if (l) return { email: l.email, nome: l.nome, type: l.type, token: l.token, locale: l.locale };
   }
   return null;
 }

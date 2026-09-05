@@ -29,6 +29,7 @@ import {
   handleMarkConversationRead,
   handleSendConversationMessage,
   handleQuoteTemplate,
+  handleBridalIntroTemplate,
   handleTermsTemplate,
   handleScheduleTemplate,
   handleScheduleFormTemplate,
@@ -154,6 +155,7 @@ export default {
         return handleGetConversation(request, env, path.slice('/api/admin/conversation/'.length));
       }
       if (path === '/api/admin/templates/quote' && method === 'GET') return handleQuoteTemplate(env, request);
+      if (path === '/api/admin/templates/bridal-intro' && method === 'GET') return handleBridalIntroTemplate(env, request);
       if (path === '/api/admin/templates/terms' && method === 'GET') return handleTermsTemplate(env, request);
       if (path === '/api/admin/templates/schedule' && method === 'GET') return handleScheduleTemplate(env, request);
       if ((path === '/api/admin/email-attachment' || path.startsWith('/api/admin/email-attachment/')) && method === 'GET') {

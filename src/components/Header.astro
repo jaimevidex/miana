@@ -1,27 +1,35 @@
 ---
-const navItems = [
-  { label: 'Meet Mariana', href: '/sobre' },
-  { label: 'Bridal & Beauty', href: '/servicos/bridal' },
-  { label: 'The Skin Call', href: '/servicos/skin-call' },
-  { label: 'Beauty Education', href: '/servicos/education' },
-];
+import { copy, localeFromPath, localizePath, type Locale } from '../i18n';
+
+interface Props {
+  locale?: Locale;
+}
+
+const locale = Astro.props.locale ?? localeFromPath(Astro.url.pathname);
+const t = copy(locale);
+const homeHref = localizePath('/', locale);
 const currentPath = Astro.url.pathname.replace(/\/+$/, '') || '/';
-const isHome = currentPath === '/';
+const navItems = t.nav.items.map((item) => ({
+  ...item,
+  href: localizePath(item.href, locale),
+}));
+const ptHref = localizePath(currentPath, 'pt');
+const enHref = localizePath(currentPath, 'en');
 ---
 
 <header class="fixed top-0 left-0 right-0 z-50 header-scroll" id="site-header">
-  <div class="max-w-container mx-auto px-6 md:px-16 flex items-center justify-between h-20">
-    <a href="/" class="flex items-baseline gap-2 header-text">
+  <div class="w-full px-6 lg:px-10 flex items-center h-20">
+    <a href={homeHref} class="flex items-baseline gap-2 header-text shrink-0">
       <span class="font-script text-4xl">by</span>
       <span class="font-display text-3xl font-bold uppercase tracking-wide">Mariana Pita</span>
     </a>
 
-    <nav class="hidden lg:flex items-center gap-7">
+    <nav class="hidden lg:flex items-center gap-7 ml-auto mr-28">
       {navItems.map((item) => (
-<a
+        <a
           href={item.href}
           class:list={[
-            'text-xs font-semibold uppercase tracking-wide header-text hover:text-powder transition-colors pb-1 border-b-2 border-transparent hover:border-powder',
+            'text-xs font-semibold uppercase tracking-wide leading-none header-text hover:text-powder transition-colors pb-1 border-b-2 border-transparent hover:border-powder',
             currentPath === item.href && '!border-powder !text-powder',
           ]}
         >
@@ -30,12 +38,33 @@ const isHome = currentPath === '/';
       ))}
     </nav>
 
-    <div class="flex items-center gap-4 lg:hidden">
+    <div class="hidden lg:flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide leading-none header-text pb-1 border-b-2 border-transparent shrink-0">
+      <a href={ptHref} class:list={['hover:text-powder transition-colors', locale === 'pt' && 'underline underline-offset-4']} aria-current={locale === 'pt' ? 'true' : undefined}>
+        {t.nav.langPt}
+      </a>
+      <span aria-hidden="true">|</span>
+      <a href={enHref} class:list={['hover:text-powder transition-colors', locale === 'en' && 'underline underline-offset-4']} aria-current={locale === 'en' ? 'true' : undefined}>
+        {t.nav.langEn}
+      </a>
+    </div>
+
+    <div class="flex items-center gap-4 ml-auto lg:hidden">
+      <div class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide header-text">
+        <a href={ptHref} class:list={['hover:text-powder transition-colors', locale === 'pt' && 'underline underline-offset-4']}>
+          {t.nav.langPt}
+        </a>
+        <span aria-hidden="true">|</span>
+        <a href={enHref} class:list={['hover:text-powder transition-colors', locale === 'en' && 'underline underline-offset-4']}>
+          {t.nav.langEn}
+        </a>
+      </div>
       <button
         id="menu-toggle"
         class="header-text relative z-50"
-        aria-label="Abrir menu"
+        aria-label={t.nav.openMenu}
         aria-expanded="false"
+        data-open-label={t.nav.openMenu}
+        data-close-label={t.nav.closeMenu}
       >
         <svg id="icon-burger" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
           <path d="M4 7h16M4 12h16M4 17h16" stroke-linecap="round" />
@@ -52,7 +81,7 @@ const isHome = currentPath === '/';
     id="mobile-menu"
     class="hidden lg:hidden fixed inset-0 bg-offwhite z-40 flex flex-col items-center justify-center gap-9"
   >
-    <a href="/" class="flex items-baseline gap-3 text-burgundy mb-6 hover:text-burgundy/70">
+    <a href={homeHref} class="flex items-baseline gap-3 text-burgundy mb-6 hover:text-burgundy/70">
       <span class="font-script text-6xl">by</span>
       <span class="font-display text-5xl font-bold uppercase tracking-wide">Mariana Pita</span>
     </a>
@@ -61,6 +90,15 @@ const isHome = currentPath === '/';
         {item.label}
       </a>
     ))}
+    <div class="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-darkbrown mt-4">
+      <a href={ptHref} class:list={['hover:text-burgundy', locale === 'pt' && 'underline underline-offset-4']}>
+        {t.nav.langPt}
+      </a>
+      <span aria-hidden="true">|</span>
+      <a href={enHref} class:list={['hover:text-burgundy', locale === 'en' && 'underline underline-offset-4']}>
+        {t.nav.langEn}
+      </a>
+    </div>
   </div>
 </header>
 
@@ -90,6 +128,8 @@ const isHome = currentPath === '/';
   const mobileMenu = document.getElementById('mobile-menu');
   const iconBurger = document.getElementById('icon-burger');
   const iconClose = document.getElementById('icon-close');
+  const openLabel = toggle?.getAttribute('data-open-label') || 'Abrir menu';
+  const closeLabel = toggle?.getAttribute('data-close-label') || 'Fechar menu';
 
   // Nas páginas que não começam com hero full-bleed escuro, o header fica sempre sólido.
   const bodyHasHero = document.body.dataset.hero === 'true';
@@ -108,12 +148,12 @@ const isHome = currentPath === '/';
   });
 
   let open = false;
-  function setMenu(state) {
+  function setMenu(state: boolean) {
     open = state;
     mobileMenu?.classList.toggle('hidden', !open);
     mobileMenu?.classList.toggle('flex', open);
     toggle?.setAttribute('aria-expanded', String(open));
-    toggle?.setAttribute('aria-label', open ? 'Fechar menu' : 'Abrir menu');
+    toggle?.setAttribute('aria-label', open ? closeLabel : openLabel);
     iconBurger?.classList.toggle('hidden', open);
     iconClose?.classList.toggle('hidden', !open);
   }

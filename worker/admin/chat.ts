@@ -20,6 +20,9 @@ export const CHAT_CSS = `
 .unread-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#8a2831;margin-left:6px;vertical-align:middle}
 .chat-composer .rte-editor{min-height:160px;max-height:36vh}
 .rte-tpl{font-size:12px;font-weight:600}
+.lang-toggle{display:inline-flex;align-items:center;gap:2px;margin-right:6px}
+.lang-toggle button{font-size:11px;font-weight:700;letter-spacing:.04em;padding:4px 8px;border:1px solid #e5ded7;background:#fff;color:#8a7a74;border-radius:8px;cursor:pointer}
+.lang-toggle button.active{background:#8a2831;color:#fbf5ef;border-color:#8a2831}
 `;
 
 function formatChatDate(ts: number): string {
@@ -59,16 +62,22 @@ export function renderChatPanel(opts: {
   continueOnClientId?: string | null;
   googleConnected: boolean;
   showBookingTemplates?: boolean;
+  locale?: string;
 }): string {
+  const emptyHint = opts.leadType === 'bridal'
+    ? 'Ainda não há emails nesta conversa. Envia o introdutório para começar.'
+    : 'Ainda não há emails nesta conversa. Envia o orçamento para começar.';
   const bubbles = opts.messages.length
     ? opts.messages.map(renderBubble).join('')
-    : `<p class="chat-empty">Ainda não há emails nesta conversa. Envia o orçamento para começar.</p>`;
+    : `<p class="chat-empty">${emptyHint}</p>`;
 
   const continueNote = opts.continueOnClientId
     ? `<p style="color:#8a7a74;font-size:13px;margin-bottom:12px">Lead aceite - continua o chat na <a href="/admin/client/${opts.continueOnClientId}">página do cliente</a>.</p>`
     : '';
 
   const isSkin = opts.leadType === 'skin-call' && !!opts.showBookingTemplates;
+  const isBridal = opts.leadType === 'bridal';
+  const locale = opts.locale === 'en' ? 'en' : 'pt';
   const composer = opts.canCompose ? `
     <div class="chat-composer" style="margin-top:16px">
       <label class="lbl" for="chat-subject">Assunto</label>
@@ -81,6 +90,11 @@ export function renderChatPanel(opts: {
           <button type="button" class="rte-btn" data-cmd="insertUnorderedList" title="Lista">• Lista</button>
           <button type="button" class="rte-btn" data-cmd="insertOrderedList" title="Lista numerada">1. Lista</button>
           <span class="rte-sep"></span>
+          <span class="lang-toggle" role="group" aria-label="Idioma do template">
+            <button type="button" id="tpl-lang-pt" class="${locale === 'pt' ? 'active' : ''}" data-tpl-lang="pt">PT</button>
+            <button type="button" id="tpl-lang-en" class="${locale === 'en' ? 'active' : ''}" data-tpl-lang="en">EN</button>
+          </span>
+          ${isBridal ? '<button type="button" class="rte-btn rte-tpl" id="tpl-bridal-intro" title="Inserir introdutório">Introdutório</button>' : ''}
           <button type="button" class="rte-btn rte-tpl" id="tpl-quote" title="Inserir orçamento">Orçamento</button>
           <button type="button" class="rte-btn rte-tpl" id="tpl-terms" title="Inserir termos e pagamento">Termos e condições</button>
           ${isSkin ? `<button type="button" class="rte-btn rte-tpl" id="tpl-schedule" title="Pedir datas">Marcar sessões</button>
@@ -113,7 +127,7 @@ export function renderChatPanel(opts: {
 
   return `
     <h2>Conversa</h2>
-    <div class="card chat-panel" data-conversation-id="${escapeHtml(opts.conversationId)}" data-lead-id="${escapeHtml(opts.leadId || '')}" data-client-id="${escapeHtml(opts.clientId || '')}">
+    <div class="card chat-panel" data-conversation-id="${escapeHtml(opts.conversationId)}" data-lead-id="${escapeHtml(opts.leadId || '')}" data-client-id="${escapeHtml(opts.clientId || '')}" data-locale="${locale}">
       ${continueNote}
       <div id="chat-thread" class="chat-thread">${bubbles}</div>
       ${composer}
@@ -134,6 +148,7 @@ export function chatScript(): string {
       const subjectEl = document.getElementById('chat-subject');
       let pendingKind = 'free';
       let attachTerms = false;
+      let tplLocale = panel.getAttribute('data-locale') || 'pt';
 
       fetch('/api/admin/conversation/' + convId + '/read', { method: 'POST', credentials: 'same-origin' }).catch(function(){});
 
@@ -146,9 +161,20 @@ export function chatScript(): string {
         const p = new URLSearchParams();
         if (leadId) p.set('leadId', leadId);
         if (clientId) p.set('clientId', clientId);
+        p.set('locale', tplLocale);
         const s = p.toString();
         return s ? '?' + s : '';
       }
+
+      function setTplLocale(next) {
+        tplLocale = next === 'en' ? 'en' : 'pt';
+        panel.querySelectorAll('[data-tpl-lang]').forEach(function(btn){
+          btn.classList.toggle('active', btn.getAttribute('data-tpl-lang') === tplLocale);
+        });
+      }
+      panel.querySelectorAll('[data-tpl-lang]').forEach(function(btn){
+        btn.addEventListener('click', function(){ setTplLocale(btn.getAttribute('data-tpl-lang')); });
+      });
 
       function setBody(html) {
         if (!editor) return;
@@ -186,6 +212,8 @@ export function chatScript(): string {
         }
       }
 
+      const introBtn = document.getElementById('tpl-bridal-intro');
+      if (introBtn) introBtn.addEventListener('click', function(){ loadTpl('/api/admin/templates/bridal-intro' + qs(), 'bridal_intro'); });
       const qBtn = document.getElementById('tpl-quote');
       if (qBtn) qBtn.addEventListener('click', function(){ loadTpl('/api/admin/templates/quote' + qs(), 'quote'); });
       const tBtn = document.getElementById('tpl-terms');
@@ -213,7 +241,7 @@ export function chatScript(): string {
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ startsAt: new Date(dt.value).toISOString() }),
+            body: JSON.stringify({ startsAt: new Date(dt.value).toISOString(), locale: tplLocale }),
           });
           const data = await res.json();
           if (!data.success) {

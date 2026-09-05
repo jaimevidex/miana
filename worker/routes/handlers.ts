@@ -12,6 +12,7 @@ import { verifyPassword } from '../auth/password';
 import { getPricing } from '../pricing';
 import { getCookieValue } from '../http';
 import { generateQuoteHtml, generateQuoteSubject } from '../services/quotes';
+import { DEFAULT_LOCALE, parseLocale } from '../locale';
 import { isSafePhotoKey, isUploadedPhoto, MAX_PHOTOS, MAX_PHOTO_BYTES, prepareStoredPhoto, sniffImageType } from '../photos';
 import {
   getOrCreateConversationForLead,
@@ -104,7 +105,8 @@ export async function handleLead(request: Request, env: Env): Promise<Response> 
     const token = generateToken();
 
     // Recolher todos os campos do formulário (exclui os básicos e honeypot)
-    const skip = new Set(['botcheck', 'form_type', 'nome', 'telefone', 'email']);
+    const locale = parseLocale(String(form.get('locale') || ''));
+    const skip = new Set(['botcheck', 'form_type', 'nome', 'telefone', 'email', 'locale']);
     const formData: Record<string, string> = {};
     form.forEach((value, key) => {
       if (skip.has(key)) return;
@@ -130,6 +132,7 @@ export async function handleLead(request: Request, env: Env): Promise<Response> 
       email,
       status: 'novo',
       formData: JSON.stringify(formData),
+      locale,
       createdAt: now,
       updatedAt: now,
     }]);
@@ -429,7 +432,7 @@ export async function handleDiagnosticPage(request: Request, env: Env): Promise<
       plano: '',
       createdAt: Date.now(),
     };
-    return renderDiagnosticPage(mockLead, page, {});
+    return renderDiagnosticPage(mockLead, page, {}, DEFAULT_LOCALE);
   }
 
   try {
@@ -449,12 +452,14 @@ export async function handleDiagnosticPage(request: Request, env: Env): Promise<
       .from(diagnostics)
       .where(eq(diagnostics.leadId, stored.id))
       .limit(1);
+    const clientForLead = await db.select({ locale: clients.locale }).from(clients).where(eq(clients.leadId, stored.id)).limit(1);
+    const locale = parseLocale(clientForLead[0]?.locale || stored.locale);
     if (diagResult[0]?.completed === 1 || page === 4) {
-      return renderDiagnosticPage(lead, 4, {});
+      return renderDiagnosticPage(lead, 4, {}, locale);
     }
 
     const savedData = await loadSavedData(env, stored.id);
-    return renderDiagnosticPage(lead, page, savedData);
+    return renderDiagnosticPage(lead, page, savedData, locale);
   } catch (e) {
     console.error('[diagnostico] page error:', e);
     return renderDiagnosticError('invalid');
@@ -527,9 +532,11 @@ export async function handlePreviewQuote(request: Request, env: Env, id: string 
     if (isLeadLocked(lead.status)) return json({ error: LEAD_LOCKED_MSG }, 409);
 
     const formData = lead.formData ? JSON.parse(lead.formData) : {};
+    if (!formData.nome) formData.nome = lead.nome;
     const pricing = await getPricing(env);
-    const html = generateQuoteHtml(lead.type as LeadType, formData, pricing);
-    const subject = generateQuoteSubject(lead.type as LeadType);
+    const locale = parseLocale(lead.locale);
+    const html = await generateQuoteHtml(env, lead.type as LeadType, formData, pricing, undefined, locale);
+    const subject = await generateQuoteSubject(env, lead.type as LeadType, locale);
 
     return json({ success: true, subject, html });
   } catch (e) {
@@ -548,6 +555,7 @@ export async function handleEditLead(request: Request, env: Env, id: string | un
       telefone?: string;
       status?: string;
       type?: string;
+      locale?: string;
       formData?: Record<string, string>;
     };
 
@@ -571,6 +579,7 @@ export async function handleEditLead(request: Request, env: Env, id: string | un
     if (body.telefone !== undefined) updates.telefone = body.telefone.trim();
     if (body.status !== undefined) updates.status = body.status;
     if (body.type !== undefined) updates.type = body.type;
+    if (body.locale !== undefined) updates.locale = parseLocale(body.locale);
     if (body.formData !== undefined) updates.formData = JSON.stringify(body.formData);
 
     await db.update(leads).set(updates).where(eq(leads.id, id));
@@ -591,6 +600,7 @@ export async function handleEditClient(request: Request, env: Env, id: string | 
       email?: string;
       telefone?: string;
       type?: string;
+      locale?: string;
       data?: Record<string, string>;
     };
 
@@ -606,6 +616,7 @@ export async function handleEditClient(request: Request, env: Env, id: string | 
     if (body.email !== undefined) updates.email = body.email.trim().toLowerCase();
     if (body.telefone !== undefined) updates.telefone = body.telefone.trim();
     if (body.type !== undefined) updates.type = body.type;
+    if (body.locale !== undefined) updates.locale = parseLocale(body.locale);
     if (body.data !== undefined) updates.data = JSON.stringify(body.data);
 
     await db.update(clients).set(updates).where(eq(clients.id, id));
@@ -686,7 +697,7 @@ export async function handleDiagnosticInvite(request: Request, env: Env, id: str
     if (isLeadLocked(lead.status)) return json({ error: LEAD_LOCKED_MSG }, 409);
     if (!lead.token) return json({ error: 'Esta lead não tem token de diagnóstico.' }, 400);
 
-    const content = diagnosticInviteContent(env, { nome: lead.nome, token: lead.token });
+    const content = await diagnosticInviteContent(env, { nome: lead.nome, token: lead.token, locale: lead.locale });
     const conv = await getOrCreateConversationForLead(env, lead.id);
     const result = await sendConversationMessage(env, {
       conversationId: conv.id,
@@ -732,6 +743,7 @@ export async function handleAcceptLead(request: Request, env: Env, id: string | 
       telefone: lead.telefone,
       email: lead.email,
       data: lead.formData,
+      locale: parseLocale(lead.locale),
       createdAt: now,
       updatedAt: now,
     }]);
@@ -763,7 +775,7 @@ export async function handleClientDiagnosticInvite(request: Request, env: Env, i
 
     if (!lead || !lead.token) return json({ error: 'Lead original sem token de diagnóstico.' }, 400);
 
-    const content = diagnosticInviteContent(env, { nome: client.nome, token: lead.token });
+    const content = await diagnosticInviteContent(env, { nome: client.nome, token: lead.token, locale: client.locale });
     const conv = await getOrCreateConversationForClient(env, client.id);
     const result = await sendConversationMessage(env, {
       conversationId: conv.id,
@@ -784,7 +796,7 @@ export async function handleClientDiagnosticInvite(request: Request, env: Env, i
 
 export async function handleCreateClient(request: Request, env: Env): Promise<Response> {
   try {
-    const body = await request.json() as { nome: string; email: string; telefone: string; type: string; notes?: string };
+    const body = await request.json() as { nome: string; email: string; telefone: string; type: string; notes?: string; locale?: string };
 
     if (!body.nome || body.nome.trim().length < 2) return json({ error: 'Nome deve ter pelo menos 2 caracteres.' }, 400);
     if (!body.email || !isValidEmail(body.email.trim())) return json({ error: 'Email não é válido.' }, 400);
@@ -805,6 +817,7 @@ export async function handleCreateClient(request: Request, env: Env): Promise<Re
       telefone: body.telefone.trim(),
       email: body.email.trim().toLowerCase(),
       data: body.notes ? JSON.stringify({ notes: body.notes }) : null,
+      locale: parseLocale(body.locale),
       createdAt: now,
       updatedAt: now,
     }]);

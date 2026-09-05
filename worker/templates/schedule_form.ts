@@ -1,9 +1,12 @@
 // Template placeholder - marcação confirmada + Meet + formulário (Skin Call).
 
+import { EMAIL_COPY_FALLBACKS, fillTemplateBody, type EmailTemplateCopy, type EmailWrapFooter } from '../email-copy';
 import { wrapEmail } from './base';
+import { scheduleFormBlock } from './blocks';
+import { DEFAULT_LOCALE, type Locale } from '../locale';
 
-export function scheduleFormSubject(): string {
-  return 'Marcação confirmada - Skin Call';
+export function scheduleFormSubject(copy: EmailTemplateCopy = EMAIL_COPY_FALLBACKS.schedule_form): string {
+  return copy.subject;
 }
 
 export function scheduleFormEmail(opts: {
@@ -11,23 +14,12 @@ export function scheduleFormEmail(opts: {
   whenLabel: string;
   meetUrl: string;
   formUrl: string;
+  copy?: EmailTemplateCopy;
+  footer?: EmailWrapFooter;
+  locale?: Locale;
 }): string {
-  const body = `
-    <h2 style="font-size:20px;color:#8a2831;margin:0 0 16px">Marcação confirmada</h2>
-    <p>Olá ${opts.nome},</p>
-    <p>A sessão ficou marcada para <strong>${opts.whenLabel}</strong>.</p>
-    <p style="text-align:center;margin:28px 0;">
-      <a href="${opts.meetUrl}" style="display:inline-block;background:#8a2831;color:#fbf5ef;text-decoration:none;padding:14px 28px;border-radius:999px;font-weight:600;">
-        Entrar no Google Meet
-      </a>
-    </p>
-    <p>Antes da chamada, preenche por favor o formulário de diagnóstico:</p>
-    <p style="text-align:center;margin:28px 0;">
-      <a href="${opts.formUrl}" style="display:inline-block;background:transparent;color:#8a2831;text-decoration:none;padding:14px 28px;border-radius:999px;font-weight:600;border:1.5px solid #8a2831;">
-        Abrir formulário
-      </a>
-    </p>
-    <p style="font-size:13px;color:#8a7a74">Este texto é provisório e será substituído pela copy final.</p>
-  `;
-  return wrapEmail(body);
+  const copy = opts.copy ?? EMAIL_COPY_FALLBACKS.schedule_form;
+  const block = scheduleFormBlock({ meetUrl: opts.meetUrl, formUrl: opts.formUrl }, opts.locale ?? DEFAULT_LOCALE);
+  const body = fillTemplateBody(copy.body, block, { nome: opts.nome, quando: opts.whenLabel });
+  return wrapEmail(body, opts.footer);
 }

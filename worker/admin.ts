@@ -3,12 +3,18 @@
 
 import { eq, desc, like, and, or, gte, lte, sql } from 'drizzle-orm';
 import { createDb } from './db';
-import { leads as leadsTable, diagnostics as diagnosticsTable, clients as clientsTable, settings as settingsTable } from './db/schema';
+import { leads as leadsTable, diagnostics as diagnosticsTable, clients as clientsTable } from './db/schema';
 import { htmlEscape, TYPE_LABELS, type Env, type LeadType } from './lib';
 import { calculateDuration, formatDuration, suggestTimeRange, suggestBridalDualSchedule } from './scheduling';
 import { getTiming } from './pricing';
 import { photoAdminUrl } from './photos';
 import { CHAT_CSS, renderChatPanel, chatScript } from './admin/chat';
+import {
+  INLINE_EDIT_CSS,
+  renderEditableCard,
+  visibleFormEntries,
+  inlineEditScript,
+} from './admin/inline-edit';
 import {
   getOrCreateConversationForLead,
   getOrCreateConversationForClient,
@@ -17,6 +23,7 @@ import {
   unreadByClientIds,
 } from './conversation';
 import { getGoogleStatus } from './google-calendar';
+import { buildSettingsPage } from './admin/settings';
 
 // ─── CSS partilhado ─────────────────────────────────────────────────────────
 const CSS = `
@@ -70,6 +77,24 @@ tr.lead-row-eliminado:hover td{background:rgba(183,28,28,.14)}
 .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
 .filter-btn{padding:6px 14px;border-radius:999px;font-size:13px;border:1.5px solid #e5ded7;background:#fff;color:#3b2a2a;cursor:pointer;text-decoration:none}
 .filter-btn:hover,.filter-btn.active{background:#8a2831;color:#fbf5ef;border-color:#8a2831}
+.settings-nav{margin-bottom:8px}
+.settings-panel{display:none}
+.settings-panel.active{display:block}
+.settings-panel>h2{margin-top:8px}
+.settings-email-panel{display:none}
+.settings-email-panel.active{display:block}
+.settings-email-flows{margin-bottom:8px}
+.settings-email-steps{display:none;margin-bottom:16px}
+.settings-email-steps.active{display:flex}
+.settings-hint{color:#8a7a74;font-size:13px;margin-bottom:16px}
+textarea.in.email-area{min-height:110px}
+.rte-editor.email-rte{min-height:280px;max-height:56vh}
+.rte-editor.email-rte h2{font-size:20px;color:#8a2831;margin:0 0 16px}
+.rte-editor.email-rte h3{font-size:16px;color:#8a2831;margin:24px 0 8px;border-bottom:1px solid #e5ded7;padding-bottom:6px}
+.rte-editor.email-rte [data-miana-block]{user-select:none}
+.sig-preview{padding:8px 0;margin:0 0 8px}
+.sig-preview table{width:200px;border-collapse:collapse}
+.sig-preview td{padding:0;border:none}
 .actions{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}
 .modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:100;justify-content:center;align-items:center}
 .modal-overlay.active{display:flex}
@@ -100,6 +125,7 @@ tr.lead-row-eliminado:hover td{background:rgba(183,28,28,.14)}
 .rte-editor li{margin:2px 0}
 .rte-editor blockquote{margin:8px 0;padding-left:12px;border-left:3px solid #e5ded7;color:#5c4a4a}
 ${CHAT_CSS}
+${INLINE_EDIT_CSS}
 `;
 
 // ─── Status labels ──────────────────────────────────────────────────────────
@@ -109,6 +135,10 @@ const STATUS_LABELS: Record<string, string> = {
   aceite: 'Aceite',
   eliminado: 'Eliminado',
 };
+
+function badgeTypeClass(type: string): string {
+  return type in TYPE_LABELS ? type : 'unknown';
+}
 
 function formatDate(d: Date | number): string {
   const date = new Date(d);
@@ -496,39 +526,6 @@ export async function renderLeadDetail(env: Env, id: string, csrfToken: string =
   const formData = lead.formData ? JSON.parse(lead.formData) : {};
   const typeLabel = TYPE_LABELS[lead.type as LeadType] || lead.type;
 
-  const personalFields = [
-    ['Nome', lead.nome],
-    ['Email', lead.email],
-    ['Telefone', lead.telefone],
-    ['Tipo', `<span class="badge badge-${lead.type}">${typeLabel}</span>`],
-  ];
-
-  const personalHtml = personalFields.map(([k, v]) => `
-    <div class="field-group">
-      <div class="field-label">${k}</div>
-      <div class="field-value">${v}</div>
-    </div>
-  `).join('');
-
-  const formDataHtml = Object.entries(formData).filter(([key]) => {
-    const bridalOnly = [
-      'data_casamento', 'hora_pronta', 'local_preparacao', 'local_prova',
-      'servicos_procurados', 'guests_makeup', 'guests_hair', 'guests_pack', 'numero_guests',
-    ];
-    const beautyOnly = ['data_evento', 'hora_pronta_evento', 'local_evento', 'numero_pessoas'];
-    if (lead.type === 'bridal') return !beautyOnly.includes(key);
-    if (lead.type === 'beauty') return !bridalOnly.includes(key);
-    return true;
-  }).map(([key, value]) => {
-    const label = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-    return `
-      <div class="field-group">
-        <div class="field-label">${label}</div>
-        <div class="field-value">${value || '-'}</div>
-      </div>
-    `;
-  }).join('');
-
   const locked = lead.status === 'aceite' || lead.status === 'eliminado';
   let linkedClientId: string | null = null;
   if (lead.status === 'aceite') {
@@ -553,7 +550,6 @@ export async function renderLeadDetail(env: Env, id: string, csrfToken: string =
   `
     : `
     <div class="actions">
-      <button class="btn btn-outline btn-sm" onclick="openModal('edit-modal')">Editar</button>
       <button class="btn btn-success btn-sm" onclick="openModal('accept-modal')">Aceitar</button>
       <button class="btn btn-danger btn-sm" onclick="updateStatus('eliminado')">Eliminar</button>
     </div>
@@ -575,6 +571,7 @@ export async function renderLeadDetail(env: Env, id: string, csrfToken: string =
       continueOnClientId: locked ? linkedClientId : null,
       googleConnected: google.connected,
       showBookingTemplates: false,
+      locale: lead.locale,
     });
   } catch (e) {
     console.error('[admin] chat lead', e);
@@ -595,49 +592,32 @@ export async function renderLeadDetail(env: Env, id: string, csrfToken: string =
     </div>
   `;
 
-  const editModalHtml = locked ? '' : `
-    <div id="edit-modal" class="modal-overlay">
-      <div class="modal">
-        <button class="close" onclick="closeModal('edit-modal')">&times;</button>
-        <h2>Editar Lead</h2>
-        <form id="edit-form" style="display:grid;gap:16px;margin-top:16px">
-          <div style="display:flex;gap:16px;flex-wrap:wrap">
-            <div style="flex:1;min-width:200px">
-              <label class="lbl" for="ed-nome">Nome</label>
-              <input id="ed-nome" class="in" value="${lead.nome}" required />
-            </div>
-            <div style="flex:1;min-width:200px">
-              <label class="lbl" for="ed-email">Email</label>
-              <input id="ed-email" type="email" class="in" value="${lead.email}" required />
-            </div>
-          </div>
-          <div style="display:flex;gap:16px;flex-wrap:wrap">
-            <div style="flex:1;min-width:200px">
-              <label class="lbl" for="ed-telefone">Telefone</label>
-              <input id="ed-telefone" class="in" value="${lead.telefone}" required />
-            </div>
-            <div style="flex:1;min-width:200px">
-              <label class="lbl" for="ed-status">Estado</label>
-              <select id="ed-status" class="in">
-                <option value="novo" ${lead.status === 'novo' ? 'selected' : ''}>Novo</option>
-                <option value="pendente" ${lead.status === 'pendente' ? 'selected' : ''}>Pendente</option>
-                <option value="eliminado" ${lead.status === 'eliminado' ? 'selected' : ''}>Eliminado</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label class="lbl" for="ed-formdata">Dados do formulário (JSON)</label>
-            <textarea id="ed-formdata" class="in" style="min-height:120px;font-family:monospace;font-size:13px">${JSON.stringify(formData, null, 2)}</textarea>
-          </div>
-          <div style="display:flex;gap:8px">
-            <button type="submit" class="btn">Guardar</button>
-            <button type="button" class="btn btn-outline" onclick="closeModal('edit-modal')">Cancelar</button>
-          </div>
-          <p id="edit-status" class="status" role="status" aria-live="polite"></p>
-        </form>
-      </div>
-    </div>
-  `;
+  const personalCard = renderEditableCard({
+    id: 'card-lead-personal',
+    title: 'Dados Pessoais',
+    fields: [
+      { key: 'nome', value: lead.nome, required: true },
+      { key: 'email', value: lead.email, kind: 'email', required: true },
+      { key: 'telefone', value: lead.telefone, kind: 'tel', required: true },
+      { key: 'locale', value: lead.locale || 'pt', kind: 'select', required: true },
+      { key: 'tipo', value: typeLabel, label: 'Tipo', readOnlyHtml: `<span class="badge badge-${badgeTypeClass(lead.type)}">${htmlEscape(typeLabel)}</span>` },
+    ],
+    editable: !locked,
+    saveUrl: `/api/admin/lead/${lead.id}`,
+    saveKind: 'personal',
+  });
+
+  const formEntries = visibleFormEntries(lead.type, formData);
+  const formCard = renderEditableCard({
+    id: 'card-lead-form',
+    title: 'Dados do Formulário',
+    fields: formEntries.map(([key, value]) => ({ key, value })),
+    editable: !locked,
+    saveUrl: `/api/admin/lead/${lead.id}`,
+    saveKind: 'form-lead',
+    originalJson: formData,
+    emptyText: 'Sem dados.',
+  });
 
   const content = `
     <a href="/admin/leads" class="back-link">← Voltar à lista</a>
@@ -646,11 +626,8 @@ export async function renderLeadDetail(env: Env, id: string, csrfToken: string =
       <span class="badge badge-${lead.status}">${STATUS_LABELS[lead.status] || lead.status}</span>
     </div>
 
-    <h2>Dados Pessoais</h2>
-    <div class="card">${personalHtml}</div>
-
-    <h2>Dados do Formulário</h2>
-    <div class="card">${formDataHtml || '<p style="color:#8a7a74">Sem dados.</p>'}</div>
+    ${personalCard}
+    ${formCard}
 
     <h2>Ações</h2>
     <div class="card">
@@ -661,7 +638,6 @@ export async function renderLeadDetail(env: Env, id: string, csrfToken: string =
     ${chatHtml}
 
     ${acceptModalHtml}
-    ${editModalHtml}
   `;
 
   const script = `
@@ -718,46 +694,7 @@ export async function renderLeadDetail(env: Env, id: string, csrfToken: string =
       }
     }
 
-    document.getElementById('edit-form')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const msg = document.getElementById('edit-status');
-      msg.textContent = 'A guardar...';
-      msg.className = 'status';
-      try {
-        let formData;
-        try {
-          formData = JSON.parse(document.getElementById('ed-formdata').value);
-        } catch {
-          msg.textContent = 'JSON inválido nos dados do formulário.';
-          msg.className = 'status err';
-          return;
-        }
-        const res = await fetch('/api/admin/lead/${lead.id}', {
-          method: 'PUT',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            nome: document.getElementById('ed-nome').value,
-            email: document.getElementById('ed-email').value,
-            telefone: document.getElementById('ed-telefone').value,
-            status: document.getElementById('ed-status').value,
-            formData,
-          }),
-        });
-        const data = await res.json();
-        if (data.success) {
-          msg.textContent = 'Guardado!';
-          msg.className = 'status';
-          setTimeout(() => location.reload(), 500);
-        } else {
-          msg.textContent = data.error || 'Erro ao guardar.';
-          msg.className = 'status err';
-        }
-      } catch {
-        msg.textContent = 'Erro ao guardar.';
-        msg.className = 'status err';
-      }
-    });
+    ${inlineEditScript()}
     ${chatScript()}`;
 
   return htmlShell(`${lead.nome} - Admin`, content, script, 'leads', csrfToken);
@@ -882,6 +819,13 @@ export async function renderClientsList(env: Env, filters: { search?: string; pa
             </select>
           </div>
           <div>
+            <label class="lbl" for="nc-locale">Idioma</label>
+            <select id="nc-locale" name="locale" class="in">
+              <option value="pt" selected>Português</option>
+              <option value="en">English</option>
+            </select>
+          </div>
+          <div>
             <label class="lbl" for="nc-notes">Notas (opcional)</label>
             <textarea id="nc-notes" name="notes" rows="3" class="in"></textarea>
           </div>
@@ -914,6 +858,7 @@ export async function renderClientsList(env: Env, filters: { search?: string; pa
             email: document.getElementById('nc-email').value,
             telefone: document.getElementById('nc-telefone').value,
             type: document.getElementById('nc-type').value,
+            locale: document.getElementById('nc-locale').value,
             notes: document.getElementById('nc-notes').value || undefined,
           }),
         });
@@ -952,29 +897,32 @@ export async function renderClientDetail(env: Env, id: string, csrfToken: string
   const data = client.data ? JSON.parse(client.data) : {};
   const typeLabel = TYPE_LABELS[client.type as LeadType] || client.type;
 
-  const personalFields = [
-    ['Nome', client.nome],
-    ['Email', client.email],
-    ['Telefone', client.telefone],
-    ['Tipo', `<span class="badge badge-${client.type}">${typeLabel}</span>`],
-  ];
+  const personalCard = renderEditableCard({
+    id: 'card-client-personal',
+    title: 'Dados Pessoais',
+    fields: [
+      { key: 'nome', value: client.nome, required: true },
+      { key: 'email', value: client.email, kind: 'email', required: true },
+      { key: 'telefone', value: client.telefone, kind: 'tel', required: true },
+      { key: 'locale', value: client.locale || 'pt', kind: 'select', required: true },
+      { key: 'tipo', value: typeLabel, label: 'Tipo', readOnlyHtml: `<span class="badge badge-${badgeTypeClass(client.type)}">${htmlEscape(typeLabel)}</span>` },
+    ],
+    editable: true,
+    saveUrl: `/api/admin/client/${client.id}`,
+    saveKind: 'personal',
+  });
 
-  const personalHtml = personalFields.map(([k, v]) => `
-    <div class="field-group">
-      <div class="field-label">${k}</div>
-      <div class="field-value">${v}</div>
-    </div>
-  `).join('');
-
-  const dataHtml = Object.entries(data).map(([key, value]) => {
-    const label = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-    return `
-      <div class="field-group">
-        <div class="field-label">${label}</div>
-        <div class="field-value">${value || '-'}</div>
-      </div>
-    `;
-  }).join('');
+  const formEntries = visibleFormEntries(client.type, data);
+  const formCard = renderEditableCard({
+    id: 'card-client-form',
+    title: 'Dados do Formulário',
+    fields: formEntries.map(([key, value]) => ({ key, value })),
+    editable: true,
+    saveUrl: `/api/admin/client/${client.id}`,
+    saveKind: 'form-client',
+    originalJson: data,
+    emptyText: 'Sem dados.',
+  });
 
   // Diagnóstico para Skin Call clients
   let diagHtml = '';
@@ -1185,6 +1133,7 @@ export async function renderClientDetail(env: Env, id: string, csrfToken: string
       leadType: client.type,
       googleConnected: google.connected,
       showBookingTemplates: client.type === 'skin-call',
+      locale: client.locale,
     });
   } catch (e) {
     console.error('[admin] chat client', e);
@@ -1198,11 +1147,8 @@ export async function renderClientDetail(env: Env, id: string, csrfToken: string
       <span class="badge badge-${client.type}">${typeLabel}</span>
     </div>
 
-    <h2>Dados Pessoais</h2>
-    <div class="card">${personalHtml}</div>
-
-    <h2>Dados do Formulário</h2>
-    <div class="card">${dataHtml || '<p style="color:#8a7a74">Sem dados.</p>'}</div>
+    ${personalCard}
+    ${formCard}
 
     ${diagHtml ? `
       <h2>Diagnóstico de Pele</h2>
@@ -1213,54 +1159,7 @@ export async function renderClientDetail(env: Env, id: string, csrfToken: string
 
     ${chatHtml}
 
-    <div style="margin:16px 0">
-      <button class="btn btn-outline btn-sm" onclick="openModal('edit-client-modal')">Editar</button>
-    </div>
-
     <p id="action-msg" class="status" role="status" aria-live="polite"></p>
-
-    <div id="edit-client-modal" class="modal-overlay">
-      <div class="modal">
-        <button class="close" onclick="closeModal('edit-client-modal')">&times;</button>
-        <h2>Editar Cliente</h2>
-        <form id="edit-client-form" style="display:grid;gap:16px;margin-top:16px">
-          <div style="display:flex;gap:16px;flex-wrap:wrap">
-            <div style="flex:1;min-width:200px">
-              <label class="lbl" for="ec-nome">Nome</label>
-              <input id="ec-nome" class="in" value="${client.nome}" required />
-            </div>
-            <div style="flex:1;min-width:200px">
-              <label class="lbl" for="ec-email">Email</label>
-              <input id="ec-email" type="email" class="in" value="${client.email}" required />
-            </div>
-          </div>
-          <div style="display:flex;gap:16px;flex-wrap:wrap">
-            <div style="flex:1;min-width:200px">
-              <label class="lbl" for="ec-telefone">Telefone</label>
-              <input id="ec-telefone" class="in" value="${client.telefone}" required />
-            </div>
-            <div style="flex:1;min-width:200px">
-              <label class="lbl" for="ec-type">Tipo</label>
-              <select id="ec-type" class="in">
-                <option value="skin-call" ${client.type === 'skin-call' ? 'selected' : ''}>Skin Call</option>
-                <option value="bridal" ${client.type === 'bridal' ? 'selected' : ''}>Bridal</option>
-                <option value="beauty" ${client.type === 'beauty' ? 'selected' : ''}>Beauty</option>
-                <option value="education" ${client.type === 'education' ? 'selected' : ''}>Education</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label class="lbl" for="ec-data">Dados (JSON)</label>
-            <textarea id="ec-data" class="in" style="min-height:120px;font-family:monospace;font-size:13px">${JSON.stringify(data, null, 2)}</textarea>
-          </div>
-          <div style="display:flex;gap:8px">
-            <button type="submit" class="btn">Guardar</button>
-            <button type="button" class="btn btn-outline" onclick="closeModal('edit-client-modal')">Cancelar</button>
-          </div>
-          <p id="ec-status" class="status" role="status" aria-live="polite"></p>
-        </form>
-      </div>
-    </div>
   `;
 
   const script = `
@@ -1294,9 +1193,6 @@ export async function renderClientDetail(env: Env, id: string, csrfToken: string
       }
     })();
 
-    function openModal(id) { document.getElementById(id).classList.add('active'); }
-    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
-
     async function sendDiagnosticInvite() {
       const msg = document.getElementById('action-msg');
       msg.textContent = 'A enviar link...';
@@ -1317,46 +1213,7 @@ export async function renderClientDetail(env: Env, id: string, csrfToken: string
       }
     }
 
-    document.getElementById('edit-client-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const msg = document.getElementById('ec-status');
-      msg.textContent = 'A guardar...';
-      msg.className = 'status';
-      try {
-        let formData;
-        try {
-          formData = JSON.parse(document.getElementById('ec-data').value);
-        } catch {
-          msg.textContent = 'JSON inválido nos dados.';
-          msg.className = 'status err';
-          return;
-        }
-        const res = await fetch('/api/admin/client/${client.id}', {
-          method: 'PUT',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            nome: document.getElementById('ec-nome').value,
-            email: document.getElementById('ec-email').value,
-            telefone: document.getElementById('ec-telefone').value,
-            type: document.getElementById('ec-type').value,
-            data: formData,
-          }),
-        });
-        const data = await res.json();
-        if (data.success) {
-          msg.textContent = 'Guardado!';
-          msg.className = 'status';
-          setTimeout(() => location.reload(), 500);
-        } else {
-          msg.textContent = data.error || 'Erro ao guardar.';
-          msg.className = 'status err';
-        }
-      } catch {
-        msg.textContent = 'Erro ao guardar.';
-        msg.className = 'status err';
-      }
-    });
+    ${inlineEditScript()}
     ${chatScript()}`;
 
   return htmlShell(`${client.nome} - Admin`, content, script, 'clients', csrfToken);
@@ -1364,236 +1221,6 @@ export async function renderClientDetail(env: Env, id: string, csrfToken: string
 
 // ─── Settings ──────────────────────────────────────────────────────────────
 export async function renderSettingsPage(env: Env, csrfToken: string = ''): Promise<Response> {
-  const db = createDb(env);
-  let settingsMap: Record<string, string> = {};
-  try {
-    const allSettings = await db.select().from(settingsTable);
-    for (const s of allSettings) {
-      settingsMap[s.key] = s.value;
-    }
-  } catch {
-    // settings table may not exist yet
-  }
-
-  const get = (key: string, fallback: string = '') => settingsMap[key] || fallback;
-  const google = await getGoogleStatus(env).catch(() => ({ configured: false, connected: false, email: '' }));
-  const googleLine = !google.configured
-    ? 'Falta configurar GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET no Worker.'
-    : google.connected
-      ? `Ligado${google.email ? ` (${htmlEscape(google.email)})` : ''}.`
-      : 'Por ligar.';
-
-  const content = `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
-      <h1>Settings</h1>
-    </div>
-
-    <form id="settings-form">
-      <h2>Preços</h2>
-      <div class="card">
-        <h3>Bridal</h3>
-        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px">
-          <div style="flex:1;min-width:140px">
-            <label class="lbl" for="price_bridal_hair">Hair</label>
-            <div style="display:flex;align-items:center;gap:4px"><input id="price_bridal_hair" class="in" type="number" value="${get('price_bridal_hair', '250')}" style="flex:1" /><span style="color:#8a7a74">€</span></div>
-          </div>
-          <div style="flex:1;min-width:140px">
-            <label class="lbl" for="price_bridal_makeup">Makeup</label>
-            <div style="display:flex;align-items:center;gap:4px"><input id="price_bridal_makeup" class="in" type="number" value="${get('price_bridal_makeup', '250')}" style="flex:1" /><span style="color:#8a7a74">€</span></div>
-          </div>
-          <div style="flex:1;min-width:140px">
-            <label class="lbl" for="price_bridal_pack">Pack</label>
-            <div style="display:flex;align-items:center;gap:4px"><input id="price_bridal_pack" class="in" type="number" value="${get('price_bridal_pack', '475')}" style="flex:1" /><span style="color:#8a7a74">€</span></div>
-          </div>
-        </div>
-
-        <h3>Beauty</h3>
-        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px">
-          <div style="flex:1;min-width:140px">
-            <label class="lbl" for="price_beauty_hair">Hair</label>
-            <div style="display:flex;align-items:center;gap:4px"><input id="price_beauty_hair" class="in" type="number" value="${get('price_beauty_hair', '60')}" style="flex:1" /><span style="color:#8a7a74">€</span></div>
-          </div>
-          <div style="flex:1;min-width:140px">
-            <label class="lbl" for="price_beauty_makeup">Makeup</label>
-            <div style="display:flex;align-items:center;gap:4px"><input id="price_beauty_makeup" class="in" type="number" value="${get('price_beauty_makeup', '60')}" style="flex:1" /><span style="color:#8a7a74">€</span></div>
-          </div>
-          <div style="flex:1;min-width:140px">
-            <label class="lbl" for="price_beauty_pack">Pack</label>
-            <div style="display:flex;align-items:center;gap:4px"><input id="price_beauty_pack" class="in" type="number" value="${get('price_beauty_pack', '110')}" style="flex:1" /><span style="color:#8a7a74">€</span></div>
-          </div>
-        </div>
-
-        <h3>Skin Call</h3>
-        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px">
-          <div style="flex:1;min-width:120px">
-            <label class="lbl" for="price_skin_session1">1 sessão</label>
-            <div style="display:flex;align-items:center;gap:4px"><input id="price_skin_session1" class="in" type="number" value="${get('price_skin_session1', '80')}" style="flex:1" /><span style="color:#8a7a74">€</span></div>
-          </div>
-          <div style="flex:1;min-width:120px">
-            <label class="lbl" for="price_skin_session2">2 sessões</label>
-            <div style="display:flex;align-items:center;gap:4px"><input id="price_skin_session2" class="in" type="number" value="${get('price_skin_session2', '150')}" style="flex:1" /><span style="color:#8a7a74">€</span></div>
-          </div>
-          <div style="flex:1;min-width:120px">
-            <label class="lbl" for="price_skin_session3">3 sessões</label>
-            <div style="display:flex;align-items:center;gap:4px"><input id="price_skin_session3" class="in" type="number" value="${get('price_skin_session3', '210')}" style="flex:1" /><span style="color:#8a7a74">€</span></div>
-          </div>
-          <div style="flex:1;min-width:120px">
-            <label class="lbl" for="price_skin_session4">4 sessões</label>
-            <div style="display:flex;align-items:center;gap:4px"><input id="price_skin_session4" class="in" type="number" value="${get('price_skin_session4', '260')}" style="flex:1" /><span style="color:#8a7a74">€</span></div>
-          </div>
-        </div>
-
-        <h3>Education</h3>
-        <div style="display:flex;gap:16px;flex-wrap:wrap">
-          <div style="flex:1;min-width:140px">
-            <label class="lbl" for="price_education_workshop">Workshop</label>
-            <div style="display:flex;align-items:center;gap:4px"><input id="price_education_workshop" class="in" type="number" value="${get('price_education_workshop', '150')}" style="flex:1" /><span style="color:#8a7a74">€</span></div>
-          </div>
-        </div>
-      </div>
-
-      <h2>Tempos</h2>
-      <div class="card">
-        <div style="display:flex;gap:16px;flex-wrap:wrap">
-          <div style="flex:1;min-width:140px">
-            <label class="lbl" for="time_setup">Setup (min)</label>
-            <input id="time_setup" class="in" type="number" value="${get('time_setup', '15')}" />
-          </div>
-          <div style="flex:1;min-width:140px">
-            <label class="lbl" for="time_bridal">Bridal (min)</label>
-            <input id="time_bridal" class="in" type="number" value="${get('time_bridal', '60')}" />
-          </div>
-          <div style="flex:1;min-width:140px">
-            <label class="lbl" for="time_guest">Guest (min)</label>
-            <input id="time_guest" class="in" type="number" value="${get('time_guest', '45')}" />
-          </div>
-        </div>
-      </div>
-
-      <h2>Contactos</h2>
-      <div class="card">
-        <div style="display:flex;gap:16px;flex-wrap:wrap">
-          <div style="flex:1;min-width:200px">
-            <label class="lbl" for="contact_email">Email</label>
-            <input id="contact_email" class="in" type="email" value="${get('contact_email', 'hello@marianapita.pt')}" />
-          </div>
-          <div style="flex:1;min-width:200px">
-            <label class="lbl" for="contact_phone">Telefone</label>
-            <input id="contact_phone" class="in" value="${get('contact_phone')}" />
-          </div>
-        </div>
-        <div style="margin-top:16px">
-          <label class="lbl" for="contact_address">Morada</label>
-          <input id="contact_address" class="in" value="${get('contact_address')}" />
-        </div>
-      </div>
-
-      <h2>Pagamento</h2>
-      <div class="card">
-        <p style="color:#8a7a74;font-size:13px;margin-bottom:16px">Usados no email de termos e condições (placeholders até teres os dados reais).</p>
-        <div style="display:flex;gap:16px;flex-wrap:wrap">
-          <div style="flex:1;min-width:200px">
-            <label class="lbl" for="payment_account_name">Titular</label>
-            <input id="payment_account_name" class="in" value="${get('payment_account_name', '[Titular da conta - substituir]')}" />
-          </div>
-          <div style="flex:1;min-width:200px">
-            <label class="lbl" for="payment_iban">IBAN</label>
-            <input id="payment_iban" class="in" value="${get('payment_iban', '[IBAN - substituir]')}" />
-          </div>
-        </div>
-        <div style="margin-top:16px">
-          <label class="lbl" for="payment_mbway">MB Way</label>
-          <input id="payment_mbway" class="in" value="${get('payment_mbway', '[MB Way - substituir]')}" />
-        </div>
-      </div>
-
-      <h2>Google Calendar</h2>
-      <div class="card" id="google-card">
-        <p style="color:#8a7a74;font-size:13px;margin-bottom:16px">Necessário para o botão «Marcar e formulário» (cria o Meet na data escolhida).</p>
-        <p id="google-status-line">${googleLine}</p>
-        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
-          <a class="btn btn-sm" href="/api/admin/google/connect">Ligar Google Calendar</a>
-          <button type="button" class="btn btn-outline btn-sm" id="google-disconnect">Desligar</button>
-        </div>
-      </div>
-
-      <div style="margin-top:24px;display:flex;gap:8px">
-        <button type="submit" class="btn">Guardar</button>
-      </div>
-      <p id="settings-status" class="status" role="status" aria-live="polite"></p>
-    </form>
-  `;
-
-  const script = `
-    document.getElementById('settings-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const msg = document.getElementById('settings-status');
-      msg.textContent = 'A guardar...';
-      msg.className = 'status';
-
-      const keys = [
-        'price_bridal_hair', 'price_bridal_makeup', 'price_bridal_pack',
-        'price_beauty_hair', 'price_beauty_makeup', 'price_beauty_pack',
-        'price_skin_session1', 'price_skin_session2', 'price_skin_session3', 'price_skin_session4',
-        'price_education_workshop',
-        'time_setup', 'time_bridal', 'time_guest',
-        'contact_email', 'contact_phone', 'contact_address',
-        'payment_iban', 'payment_account_name', 'payment_mbway',
-      ];
-
-      const data = {};
-      for (const key of keys) {
-        const el = document.getElementById(key);
-        if (el) data[key] = el.value;
-      }
-
-      try {
-        const res = await fetch('/api/admin/settings', {
-          method: 'PUT',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
-        });
-        const result = await res.json();
-        if (result.success) {
-          msg.textContent = 'Guardado!';
-          msg.className = 'status';
-        } else {
-          msg.textContent = result.error || 'Erro ao guardar.';
-          msg.className = 'status err';
-        }
-      } catch {
-        msg.textContent = 'Erro ao guardar.';
-        msg.className = 'status err';
-      }
-    });
-
-    (async function googleStatus() {
-      const line = document.getElementById('google-status-line');
-      if (!line) return;
-      try {
-        const res = await fetch('/api/admin/google/status', { credentials: 'same-origin' });
-        const g = await res.json();
-        if (!g.configured) {
-          line.textContent = 'Falta configurar GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET no Worker.';
-          return;
-        }
-        if (g.connected) {
-          line.textContent = 'Ligado' + (g.email ? ' (' + g.email + ')' : '') + '.';
-        } else {
-          line.textContent = 'Por ligar.';
-        }
-      } catch {
-        line.textContent = 'Não foi possível verificar o estado do Google.';
-      }
-    })();
-
-    document.getElementById('google-disconnect').addEventListener('click', async () => {
-      if (!confirm('Desligar o Google Calendar?')) return;
-      await fetch('/api/admin/google/disconnect', { method: 'POST', credentials: 'same-origin' });
-      location.reload();
-    });
-  `;
-
+  const { content, script } = await buildSettingsPage(env);
   return htmlShell('Settings', content, script, 'settings', csrfToken);
 }

@@ -1,6 +1,12 @@
 ---
-// Lightbox global. Qualquer elemento com data-lightbox (imagem) ou
-// data-lightbox-video abre aqui, centrado, com o fundo desfocado.
+import { copy, localeFromPath, type Locale } from '../i18n';
+
+interface Props {
+  locale?: Locale;
+}
+
+const locale = Astro.props.locale ?? localeFromPath(Astro.url.pathname);
+const t = copy(locale).gallery;
 ---
 
 <div
@@ -8,12 +14,13 @@
   class="hidden fixed inset-0 z-[60] items-center justify-center bg-offwhite/40 backdrop-blur-2xl p-6"
   role="dialog"
   aria-modal="true"
-  aria-label="Imagem ampliada"
+  aria-label={t.lightbox}
+  data-img-alt={t.lightbox}
 >
   <button
     id="lightbox-close"
     class="absolute top-6 right-6 text-darkbrown"
-    aria-label="Fechar imagem"
+    aria-label={t.closeImage}
   >
     <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
       <path d="M6 6l12 12M18 6L6 18" stroke-linecap="round" />
@@ -43,7 +50,7 @@
       video?.classList.add('hidden');
       img?.classList.remove('hidden');
       img.setAttribute('src', src);
-      img.setAttribute('alt', 'Imagem ampliada');
+      img.setAttribute('alt', lightbox.getAttribute('data-img-alt') || 'Imagem ampliada');
     }
     lightbox.classList.remove('hidden');
     lightbox.classList.add('flex');

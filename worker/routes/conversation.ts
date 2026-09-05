@@ -17,9 +17,11 @@ import {
 } from '../conversation';
 import { generateQuoteHtml, generateQuoteSubject } from '../services/quotes';
 import { getPricing, getPaymentDetails } from '../pricing';
+import { getEmailCopy } from '../email-copy';
 import { termsEmail, termsSubject } from '../templates/terms';
 import { scheduleEmail, scheduleSubject } from '../templates/schedule';
 import { scheduleFormEmail, scheduleFormSubject } from '../templates/schedule_form';
+import { bridalIntroEmail, bridalIntroSubject } from '../templates/bridal_intro';
 import { isLocal as emailIsLocal } from '../email';
 import { siteUrl } from '../config';
 import { sniffImageType } from '../photos';
@@ -31,6 +33,12 @@ import {
   createMeetEvent,
 } from '../google-calendar';
 import { sanitizeEmailHtml, escapeHtml } from '../email-sanitize';
+import { localeDateTag, parseLocale, type Locale } from '../locale';
+
+function templateLocale(request: Request, stored?: string | null): Locale {
+  const url = new URL(request.url);
+  return parseLocale(url.searchParams.get('locale') || stored);
+}
 
 function isLeadLocked(status: string): boolean {
   return status === 'aceite' || status === 'eliminado';
@@ -148,6 +156,7 @@ export async function handleQuoteTemplate(env: Env, request: Request): Promise<R
     let type: LeadType | null = null;
     let formData: Record<string, string> = {};
     let nome = '';
+    let storedLocale = 'pt';
 
     if (leadId) {
       const rows = await db.select().from(leads).where(eq(leads.id, leadId)).limit(1);
@@ -156,6 +165,8 @@ export async function handleQuoteTemplate(env: Env, request: Request): Promise<R
       type = lead.type as LeadType;
       formData = lead.formData ? JSON.parse(lead.formData) : {};
       nome = lead.nome;
+      storedLocale = lead.locale;
+      if (!formData.nome) formData.nome = nome;
     } else if (clientId) {
       const rows = await db.select().from(clients).where(eq(clients.id, clientId)).limit(1);
       const client = rows[0];
@@ -163,18 +174,64 @@ export async function handleQuoteTemplate(env: Env, request: Request): Promise<R
       type = client.type as LeadType;
       formData = client.data ? JSON.parse(client.data) : {};
       nome = client.nome;
+      storedLocale = client.locale;
+      if (!formData.nome) formData.nome = nome;
     } else {
       return json({ error: 'Indica leadId ou clientId.' }, 400);
     }
 
+    const locale = templateLocale(request, storedLocale);
     const pricing = await getPricing(env);
-    const html = generateQuoteHtml(type, formData, pricing);
-    const subject = generateQuoteSubject(type);
+    const html = await generateQuoteHtml(env, type, formData, pricing, undefined, locale);
+    const subject = await generateQuoteSubject(env, type, locale);
     return json({ success: true, subject, html, nome, templateKind: 'quote' });
   } catch (e) {
     console.error('[api/admin/templates/quote]', e);
     return json({ error: 'Erro ao gerar orçamento.' }, 500);
   }
+}
+
+export async function handleBridalIntroTemplate(env: Env, request: Request): Promise<Response> {
+  const url = new URL(request.url);
+  const leadId = url.searchParams.get('leadId');
+  const clientId = url.searchParams.get('clientId');
+  const db = createDb(env);
+  let type = '';
+  let formData: Record<string, string> = {};
+  let nome = 'olá';
+  let storedLocale = 'pt';
+
+  if (leadId) {
+    const rows = await db.select().from(leads).where(eq(leads.id, leadId)).limit(1);
+    if (!rows[0]) return json({ error: 'Lead não encontrada.' }, 404);
+    nome = rows[0].nome;
+    type = rows[0].type;
+    formData = rows[0].formData ? JSON.parse(rows[0].formData) : {};
+    storedLocale = rows[0].locale;
+  } else if (clientId) {
+    const rows = await db.select().from(clients).where(eq(clients.id, clientId)).limit(1);
+    if (!rows[0]) return json({ error: 'Cliente não encontrado.' }, 404);
+    nome = rows[0].nome;
+    type = rows[0].type;
+    formData = rows[0].data ? JSON.parse(rows[0].data) : {};
+    storedLocale = rows[0].locale;
+  } else {
+    return json({ error: 'Indica leadId ou clientId.' }, 400);
+  }
+
+  if (type && type !== 'bridal') {
+    return json({ error: 'O introdutório só está disponível para Bridal.' }, 400);
+  }
+  if (!formData.nome) formData.nome = nome;
+
+  const locale = templateLocale(request, storedLocale);
+  const copy = await getEmailCopy(env, locale);
+  return json({
+    success: true,
+    subject: bridalIntroSubject(copy.bridal_intro),
+    html: bridalIntroEmail(formData, copy.bridal_intro, copy.wrapFooter),
+    templateKind: 'bridal_intro',
+  });
 }
 
 export async function handleTermsTemplate(env: Env, request: Request): Promise<Response> {
@@ -183,18 +240,35 @@ export async function handleTermsTemplate(env: Env, request: Request): Promise<R
   const clientId = url.searchParams.get('clientId');
   const db = createDb(env);
   let nome = 'olá';
+  let storedLocale = 'pt';
   if (leadId) {
-    const rows = await db.select({ nome: leads.nome }).from(leads).where(eq(leads.id, leadId)).limit(1);
-    if (rows[0]) nome = rows[0].nome;
+    const rows = await db.select({ nome: leads.nome, locale: leads.locale }).from(leads).where(eq(leads.id, leadId)).limit(1);
+    if (rows[0]) {
+      nome = rows[0].nome;
+      storedLocale = rows[0].locale;
+    }
   } else if (clientId) {
-    const rows = await db.select({ nome: clients.nome }).from(clients).where(eq(clients.id, clientId)).limit(1);
-    if (rows[0]) nome = rows[0].nome;
+    const rows = await db.select({ nome: clients.nome, locale: clients.locale }).from(clients).where(eq(clients.id, clientId)).limit(1);
+    if (rows[0]) {
+      nome = rows[0].nome;
+      storedLocale = rows[0].locale;
+    }
   }
+  const locale = templateLocale(request, storedLocale);
   const pay = await getPaymentDetails(env);
+  const copy = await getEmailCopy(env, locale);
   return json({
     success: true,
-    subject: termsSubject(),
-    html: termsEmail({ nome, iban: escapeHtml(pay.iban), accountName: escapeHtml(pay.accountName), mbway: escapeHtml(pay.mbway) }),
+    subject: termsSubject(copy.terms),
+    html: termsEmail({
+      nome,
+      iban: escapeHtml(pay.iban),
+      accountName: escapeHtml(pay.accountName),
+      mbway: escapeHtml(pay.mbway),
+      copy: copy.terms,
+      footer: copy.wrapFooter,
+      locale,
+    }),
     templateKind: 'terms',
     attachTermsPdf: true,
   });
@@ -207,26 +281,31 @@ export async function handleScheduleTemplate(env: Env, request: Request): Promis
   const db = createDb(env);
   let nome = 'olá';
   let type = '';
+  let storedLocale = 'pt';
   if (leadId) {
     const rows = await db.select().from(leads).where(eq(leads.id, leadId)).limit(1);
     if (rows[0]) {
       nome = rows[0].nome;
       type = rows[0].type;
+      storedLocale = rows[0].locale;
     }
   } else if (clientId) {
     const rows = await db.select().from(clients).where(eq(clients.id, clientId)).limit(1);
     if (rows[0]) {
       nome = rows[0].nome;
       type = rows[0].type;
+      storedLocale = rows[0].locale;
     }
   }
   if (type && type !== 'skin-call') {
     return json({ error: 'Marcar sessões só está disponível para Skin Call.' }, 400);
   }
+  const locale = templateLocale(request, storedLocale);
+  const copy = await getEmailCopy(env, locale);
   return json({
     success: true,
-    subject: scheduleSubject(),
-    html: scheduleEmail(nome),
+    subject: scheduleSubject(copy.schedule),
+    html: scheduleEmail(nome, copy.schedule, copy.wrapFooter),
     templateKind: 'schedule',
   });
 }
@@ -238,7 +317,7 @@ export async function handleScheduleFormTemplate(
 ): Promise<Response> {
   if (!conversationId) return json({ error: 'ID inválido' }, 400);
   try {
-    const body = await request.json() as { startsAt?: string };
+    const body = await request.json() as { startsAt?: string; locale?: string };
     if (!body.startsAt) return json({ error: 'Escolhe a data e hora.' }, 400);
     const startsAt = new Date(body.startsAt);
     if (Number.isNaN(startsAt.getTime())) return json({ error: 'Data inválida.' }, 400);
@@ -261,7 +340,8 @@ export async function handleScheduleFormTemplate(
       startsAt,
       attendeeEmail: recipient.email,
     });
-    const whenLabel = startsAt.toLocaleString('pt-PT', {
+    const locale = parseLocale(body.locale || recipient.locale);
+    const whenLabel = startsAt.toLocaleString(localeDateTag(locale), {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
@@ -271,14 +351,18 @@ export async function handleScheduleFormTemplate(
       timeZone: 'Europe/Lisbon',
     });
     const formUrl = `${siteUrl(env)}/diagnostico?token=${encodeURIComponent(recipient.token)}`;
+    const copy = await getEmailCopy(env, locale);
     return json({
       success: true,
-      subject: scheduleFormSubject(),
+      subject: scheduleFormSubject(copy.schedule_form),
       html: scheduleFormEmail({
         nome: recipient.nome,
         whenLabel,
         meetUrl: meet.meetUrl,
         formUrl,
+        copy: copy.schedule_form,
+        footer: copy.wrapFooter,
+        locale,
       }),
       meetUrl: meet.meetUrl,
       templateKind: 'schedule_form',

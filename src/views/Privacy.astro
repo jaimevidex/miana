@@ -1,0 +1,39 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { copy, type Locale } from '../i18n';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = copy(locale);
+const ownerEmail = import.meta.env.PUBLIC_OWNER_EMAIL || 'hello@marianapita.pt';
+
+function withEmail(text: string): string {
+  return text.replaceAll('{email}', ownerEmail);
+}
+---
+
+<Layout title={t.meta.privacyTitle} description={t.meta.privacyDescription} locale={locale}>
+  <section id="politica" class="pt-32 md:pt-40 pb-32 max-w-container mx-auto px-6 md:px-16">
+    <p class="eyebrow mb-4">{t.privacy.eyebrow}</p>
+    <h1 class="text-display-l italic mb-8 reveal">{t.privacy.title}</h1>
+
+    <div class="space-y-8 text-darkbrown/80 text-sm leading-relaxed reveal">
+      {t.privacy.sections.map((section) => (
+        <div>
+          <h2 class="font-display text-lg text-darkbrown mb-2">{section.title}</h2>
+          <p set:html={withEmail(section.body).replace(ownerEmail, `<a href="mailto:${ownerEmail}" class="text-burgundy hover:underline">${ownerEmail}</a>`)} />
+          {section.items && (
+            <ul class:list={['pl-5 mt-2 space-y-1', section.title.startsWith('3') ? '' : 'list-disc']}>
+              {section.items.map((item) => (
+                <li>{item}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ))}
+    </div>
+  </section>
+</Layout>

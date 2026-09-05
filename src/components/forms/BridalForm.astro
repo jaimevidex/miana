@@ -1,4 +1,14 @@
 ---
+import { copy, localeFromPath, type Locale } from '../../i18n';
+
+interface Props {
+  locale?: Locale;
+}
+
+const locale = Astro.props.locale ?? localeFromPath(Astro.url.pathname);
+const t = copy(locale);
+const f = t.forms;
+const b = f.bridal;
 const inputCls =
   'mt-1 w-full border border-powder/40 rounded-sm px-4 py-3 bg-powder/40 focus:border-burgundy outline-none';
 const radioCls = 'accent-burgundy';
@@ -11,37 +21,41 @@ const labelCls = 'block text-sm font-medium text-darkbrown';
   method="POST"
   novalidate
   class="grid gap-5"
+  data-msg-sending={f.sending}
+  data-msg-success={f.success}
+  data-msg-error={f.error}
 >
   <input type="hidden" name="form_type" value="bridal-beauty" />
   <input type="hidden" name="subject" value="Pedido - Bridal &amp; Beauty" />
+  <input type="hidden" name="locale" value={locale} />
   <input type="checkbox" name="botcheck" class="hidden" style="display:none" />
 
   <div class="grid sm:grid-cols-2 gap-5">
     <div>
-      <label class={labelCls} for="b-name">Nome completo <span class="text-burgundy">*</span></label>
+      <label class={labelCls} for="b-name">{f.fullName} <span class="text-burgundy">*</span></label>
       <input id="b-name" name="nome" type="text" required class={inputCls} />
     </div>
     <div>
-      <label class={labelCls} for="b-phone">Contacto telefónico <span class="text-burgundy">*</span></label>
+      <label class={labelCls} for="b-phone">{f.phone} <span class="text-burgundy">*</span></label>
       <input id="b-phone" name="telefone" type="tel" required class={inputCls} />
     </div>
   </div>
 
   <div>
-    <label class={labelCls} for="b-email">E-mail <span class="text-burgundy">*</span></label>
+    <label class={labelCls} for="b-email">{f.email} <span class="text-burgundy">*</span></label>
     <input id="b-email" name="email" type="email" required class={inputCls} />
   </div>
 
   <fieldset>
-    <legend class={labelCls}>Opção de Serviço <span class="text-burgundy">*</span></legend>
+    <legend class={labelCls}>{b.serviceOption} <span class="text-burgundy">*</span></legend>
     <div class="flex flex-wrap gap-6 mt-2">
       <label class="inline-flex items-center gap-2 text-sm">
         <input type="radio" name="opcao_servico" value="Bride" required class={radioCls} data-service-opt="bride" />
-        Bride
+        {b.bride}
       </label>
       <label class="inline-flex items-center gap-2 text-sm">
         <input type="radio" name="opcao_servico" value="Guests & Events" required class={radioCls} data-service-opt="guests" />
-        Guests &amp; Events
+        {b.guests}
       </label>
     </div>
   </fieldset>
@@ -50,127 +64,77 @@ const labelCls = 'block text-sm font-medium text-darkbrown';
   <div id="bride-fields" class="grid gap-5">
     <div class="grid sm:grid-cols-2 gap-5">
       <div>
-        <label class={labelCls} for="b-wedding-date">Data do casamento <span class="text-burgundy">*</span></label>
+        <label class={labelCls} for="b-wedding-date">{b.weddingDate} <span class="text-burgundy">*</span></label>
         <input id="b-wedding-date" name="data_casamento" type="date" required class={inputCls} />
       </div>
       <div>
-        <label class={labelCls} for="b-ready-time">Hora a que tens de estar pronta <span class="text-burgundy">*</span></label>
+        <label class={labelCls} for="b-ready-time">{b.readyTime} <span class="text-burgundy">*</span></label>
         <input id="b-ready-time" name="hora_pronta" type="time" required class={inputCls} />
       </div>
     </div>
     <div class="grid sm:grid-cols-2 gap-5">
       <div>
-        <label class={labelCls} for="b-prep-location">Local da preparação <span class="text-burgundy">*</span></label>
+        <label class={labelCls} for="b-prep-location">{b.prepLocation} <span class="text-burgundy">*</span></label>
         <input id="b-prep-location" name="local_preparacao" type="text" required class={inputCls} />
       </div>
       <div>
-        <label class={labelCls} for="b-trial-location">Local da prova <span class="text-burgundy">*</span></label>
+        <label class={labelCls} for="b-trial-location">{b.trialLocation} <span class="text-burgundy">*</span></label>
         <input id="b-trial-location" name="local_prova" type="text" required class={inputCls} />
       </div>
     </div>
-
-    <fieldset>
-      <legend class={labelCls}>Serviço da noiva <span class="text-burgundy">*</span></legend>
-      <div class="flex flex-wrap gap-6 mt-2">
-        <label class="inline-flex items-center gap-2 text-sm">
-          <input type="radio" name="servicos_procurados" value="Makeup" required class={radioCls} />
-          Makeup
-        </label>
-        <label class="inline-flex items-center gap-2 text-sm">
-          <input type="radio" name="servicos_procurados" value="Hair" required class={radioCls} />
-          Hair
-        </label>
-        <label class="inline-flex items-center gap-2 text-sm">
-          <input type="radio" name="servicos_procurados" value="Pack" required class={radioCls} />
-          Pack Makeup & Hair
-        </label>
-      </div>
-    </fieldset>
-
-    <fieldset>
-      <legend class={labelCls}>Número de guests por serviço <span class="text-burgundy">*</span></legend>
-      <div class="grid sm:grid-cols-3 gap-5 mt-3">
-        <div>
-          <label class={labelCls} for="b-guests-makeup">Makeup</label>
-          <input id="b-guests-makeup" name="guests_makeup" type="number" min="0" value="0" required class={inputCls} />
-        </div>
-        <div>
-          <label class={labelCls} for="b-guests-hair">Hair</label>
-          <input id="b-guests-hair" name="guests_hair" type="number" min="0" value="0" required class={inputCls} />
-        </div>
-        <div>
-          <label class={labelCls} for="b-guests-pack">Pack Makeup & Hair</label>
-          <input id="b-guests-pack" name="guests_pack" type="number" min="0" value="0" required class={inputCls} />
-        </div>
-      </div>
-    </fieldset>
-
-    <fieldset>
-      <legend class={labelCls}>Queres adicionar o Add-on Skin Call? <span class="text-burgundy">*</span></legend>
-      <div class="flex flex-wrap gap-6 mt-2">
-        <label class="inline-flex items-center gap-2 text-sm">
-          <input type="radio" name="addon_skin_call" value="Sim" required class={radioCls} />
-          Sim
-        </label>
-        <label class="inline-flex items-center gap-2 text-sm">
-          <input type="radio" name="addon_skin_call" value="Não" required class={radioCls} />
-          Não
-        </label>
-      </div>
-    </fieldset>
   </div>
 
   <!-- Campos GUESTS & EVENTS -->
   <div id="guests-fields" class="grid gap-5 hidden">
     <div class="grid sm:grid-cols-2 gap-5">
       <div>
-        <label class={labelCls} for="b-event-date">Data do evento <span class="text-burgundy">*</span></label>
+        <label class={labelCls} for="b-event-date">{b.eventDate} <span class="text-burgundy">*</span></label>
         <input id="b-event-date" name="data_evento" type="date" required class={inputCls} />
       </div>
       <div>
-        <label class={labelCls} for="b-event-ready-time">Hora a que tens de estar pronta <span class="text-burgundy">*</span></label>
+        <label class={labelCls} for="b-event-ready-time">{b.eventReadyTime} <span class="text-burgundy">*</span></label>
         <input id="b-event-ready-time" name="hora_pronta_evento" type="time" required class={inputCls} />
       </div>
     </div>
     <div>
-      <label class={labelCls} for="b-event-location">Local do serviço / preparação <span class="text-burgundy">*</span></label>
+      <label class={labelCls} for="b-event-location">{b.eventLocation} <span class="text-burgundy">*</span></label>
       <input id="b-event-location" name="local_evento" type="text" required class={inputCls} />
     </div>
     <div class="grid sm:grid-cols-2 gap-5">
       <fieldset>
-        <legend class={labelCls}>Que serviços procuras? <span class="text-burgundy">*</span></legend>
+        <legend class={labelCls}>{b.servicesWanted} <span class="text-burgundy">*</span></legend>
         <div class="flex flex-wrap gap-6 mt-2">
           <label class="inline-flex items-center gap-2 text-sm">
             <input type="radio" name="servicos_procurados_guests" value="Makeup" required class={radioCls} />
-            Makeup
+            {b.makeup}
           </label>
           <label class="inline-flex items-center gap-2 text-sm">
             <input type="radio" name="servicos_procurados_guests" value="Pack Makeup & Hair" required class={radioCls} />
-            Pack Makeup & Hair
+            {b.pack}
           </label>
           <label class="inline-flex items-center gap-2 text-sm">
             <input type="radio" name="servicos_procurados_guests" value="Hair" required class={radioCls} />
-            Hair
+            {b.hair}
           </label>
         </div>
       </fieldset>
       <div>
-        <label class={labelCls} for="b-people">Número de pessoas <span class="text-burgundy">*</span></label>
+        <label class={labelCls} for="b-people">{b.people} <span class="text-burgundy">*</span></label>
         <input id="b-people" name="numero_pessoas" type="number" min="1" required class={inputCls} />
       </div>
     </div>
   </div>
 
   <div>
-    <label class={labelCls} for="b-message">Mensagem (opcional)</label>
+    <label class={labelCls} for="b-message">{f.message}</label>
     <textarea id="b-message" name="mensagem" rows="4" class={inputCls}></textarea>
   </div>
 
-  <p class="text-xs text-darkbrown/60"><span class="text-burgundy">*</span> Campos obrigatórios</p>
+  <p class="text-xs text-darkbrown/60"><span class="text-burgundy">*</span> {f.requiredNote}</p>
 
   <div class="flex flex-wrap items-center gap-4">
     <button type="submit" class="bg-burgundy text-offwhite px-8 py-3.5 text-sm font-semibold rounded-full hover:opacity-90 transition">
-      Pedir Orçamento
+      {f.submit}
     </button>
     <p id="form-bridal-status" class="mt-3 text-sm" role="status" aria-live="polite"></p>
   </div>

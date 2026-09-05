@@ -33,9 +33,23 @@ export function sanitizeEmailHtml(html: string | undefined | null): string {
     if (closing) return `</${name}>`;
     if (name === 'br' || name === 'hr') return `<${name}>`;
     let safe = '';
+    const style = pickAttr(attrs, 'style');
+    if (style && !/expression|javascript:/i.test(style)) {
+      safe += ` style="${escapeHtml(style)}"`;
+    }
+    const align = pickAttr(attrs, 'align');
+    if (align) safe += ` align="${escapeHtml(align)}"`;
+    const width = pickAttr(attrs, 'width');
+    if (width) safe += ` width="${escapeHtml(width)}"`;
+    const height = pickAttr(attrs, 'height');
+    if (height) safe += ` height="${escapeHtml(height)}"`;
+    const dataBlock = pickAttr(attrs, 'data-miana-block');
+    if (dataBlock) safe += ` data-miana-block="${escapeHtml(dataBlock)}"`;
+    const editable = pickAttr(attrs, 'contenteditable');
+    if (editable) safe += ` contenteditable="${escapeHtml(editable)}"`;
     if (name === 'a') {
       const href = pickAttr(attrs, 'href');
-      if (href && /^(https?:|mailto:)/i.test(href) && !/^javascript:/i.test(href)) {
+      if (href && /^(https?:|mailto:|#)/i.test(href) && !/^javascript:/i.test(href)) {
         safe += ` href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer"`;
       }
     }

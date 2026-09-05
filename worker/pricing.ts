@@ -42,7 +42,7 @@ export const CONTACT_FALLBACKS: Contacts = {
   address: '',
 };
 
-async function loadSettingsMap(env: Env): Promise<Record<string, string>> {
+export async function loadSettingsMap(env: Env): Promise<Record<string, string>> {
   try {
     const db = createDb(env);
     const rows = await db.select().from(settingsTable);

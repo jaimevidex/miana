@@ -13,6 +13,10 @@ FAIL=0
 if command -v npx >/dev/null 2>&1; then
   echo "email-match unit"
   npx tsx tests/email-match.ts
+  echo "email-copy unit"
+  npx tsx tests/email-copy.ts
+  echo "bridal-profile-fields unit"
+  npx tsx tests/bridal-profile-fields.ts
 fi
 
 RED='\033[0;31m'
@@ -68,7 +72,7 @@ assert_contains "Resposta contém success" '"success":true' "$BODY"
 echo -e "\n${YELLOW}═══ 2. Formulário Bridal & Beauty ═══${NC}"
 
 RESP=$(curl_req -X POST "$BASE/api/lead" \
-  -d "form_type=bridal-beauty&nome=Maria Santos&telefone=913456789&email=maria@teste.com&subject=Pedido+-+Bridal+%26+Beauty&opcao_servico=Bride&data_casamento=2026-10-15&hora_pronta=09:00&local_preparacao=Hotel&local_prova=Salao&servicos_procurados=Pack&guests_makeup=1&guests_hair=2&guests_pack=1&addon_skin_call=Sim")
+  -d "form_type=bridal-beauty&nome=Maria Santos&telefone=913456789&email=maria@teste.com&subject=Pedido+-+Bridal+%26+Beauty&opcao_servico=Bride&data_casamento=2026-10-15&hora_pronta=09:00&local_preparacao=Hotel&local_prova=Salao")
 STATUS=$(echo "$RESP" | head -1)
 BODY=$(echo "$RESP" | sed '1,/^---BODY---$/d')
 assert_status "Bridal lead criado" "200" "$STATUS" "$BODY"
@@ -158,6 +162,46 @@ BODY=$(echo "$RESP" | sed '1,/^---BODY---$/d')
 assert_status "Token inválido rejeitado" "200" "$STATUS" "$BODY"
 BODY_LOWER=$(echo "$BODY" | tr '[:upper:]' '[:lower:]')
 assert_contains "Mostra erro" 'erro' "$BODY_LOWER"
+
+# ─── 10. Locale EN na lead + templates ─────────────────────────────────────
+echo -e "\n${YELLOW}═══ 10. Locale EN - lead e templates ═══${NC}"
+
+EN_EMAIL="locale-en-${RANDOM}@teste.com"
+RESP=$(curl_req -X POST "$BASE/api/lead" \
+  -d "form_type=bridal-beauty&nome=Emma+Stone&telefone=915678901&email=${EN_EMAIL}&subject=Pedido+-+Bridal+%26+Beauty&opcao_servico=Bride&data_casamento=2026-11-20&hora_pronta=10:00&local_preparacao=Hotel&local_prova=Salao&locale=en")
+STATUS=$(echo "$RESP" | head -1)
+BODY=$(echo "$RESP" | sed '1,/^---BODY---$/d')
+assert_status "Lead EN criada" "200" "$STATUS" "$BODY"
+assert_contains "Lead EN success" '"success":true' "$BODY"
+
+if command -v npx >/dev/null 2>&1; then
+  D1_JSON=$(npx wrangler d1 execute miana-db --local --json --command "SELECT locale FROM leads WHERE email = '${EN_EMAIL}' LIMIT 1" 2>/dev/null || true)
+  assert_contains "D1 gravou locale=en" 'locale": "en"' "$D1_JSON"
+fi
+
+COOKIE_JAR=$(mktemp)
+LOGIN_RESP=$(curl -s -c "$COOKIE_JAR" -w "\n%{http_code}" -X POST "$BASE/api/admin/login" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"hello@marianapita.pt","password":"testpassword"}')
+LOGIN_STATUS=$(echo "$LOGIN_RESP" | tail -n 1)
+if [ "$LOGIN_STATUS" = "200" ]; then
+  LEADS_HTML=$(curl -s -b "$COOKIE_JAR" "$BASE/admin/leads?search=${EN_EMAIL}")
+  LEAD_ID=$(echo "$LEADS_HTML" | grep -oE "/admin/lead/[0-9a-f-]{36}" | head -1 | sed 's|/admin/lead/||')
+  if [ -n "$LEAD_ID" ]; then
+    DEFAULT_TPL=$(curl -s -b "$COOKIE_JAR" "$BASE/api/admin/templates/quote?leadId=${LEAD_ID}")
+    assert_contains "Template default usa locale da lead (EN)" 'Investment' "$DEFAULT_TPL"
+    assert_contains "Template default EN subject" 'Bridal quote' "$DEFAULT_TPL"
+    PT_OVERRIDE=$(curl -s -b "$COOKIE_JAR" "$BASE/api/admin/templates/quote?leadId=${LEAD_ID}&locale=pt")
+    assert_contains "Override ?locale=pt usa Investimento" 'Investimento' "$PT_OVERRIDE"
+    EN_OVERRIDE=$(curl -s -b "$COOKIE_JAR" "$BASE/api/admin/templates/quote?leadId=${LEAD_ID}&locale=en")
+    assert_contains "Override ?locale=en usa Investment" 'Investment' "$EN_OVERRIDE"
+  else
+    echo -e "  ${YELLOW}⊘${NC} Não encontrei lead ID no admin (skip templates)"
+  fi
+else
+  echo -e "  ${YELLOW}⊘${NC} Login admin falhou (HTTP $LOGIN_STATUS) - seed com testpassword para testar templates"
+fi
+rm -f "$COOKIE_JAR"
 
 # ─── Resumo ─────────────────────────────────────────────────────────────────
 echo -e "\n${YELLOW}═══════════════════════════════════════════════════════════${NC}"

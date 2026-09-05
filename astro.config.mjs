@@ -8,9 +8,24 @@ const SITE_URL = process.env.PUBLIC_SITE_URL ?? 'https://marianapita.pt';
 
 export default defineConfig({
   site: SITE_URL,
+  i18n: {
+    defaultLocale: 'pt',
+    locales: ['pt', 'en'],
+    routing: {
+      prefixDefaultLocale: false,
+    },
+  },
   integrations: [
     tailwind({ applyBaseStyles: false }),
-    sitemap(),
+    sitemap({
+      i18n: {
+        defaultLocale: 'pt',
+        locales: {
+          pt: 'pt-PT',
+          en: 'en-GB',
+        },
+      },
+    }),
   ],
   image: {
     service: {

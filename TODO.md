@@ -23,13 +23,14 @@ Active engineering backlog. Client-facing asks live in [docs/CLIENT-TODO.md](doc
 
 1. [x] Bridal form: bride makeup/hair/pack + guests qty por serviço + dual MUA/hair schedule
 2. Four statuses + three lead actions - verify UI parity
-3. Editable quote templates per type
+3. [x] Editable quote templates per type (Settings → Emails)
 4. Manual client create - nullable `lead_id` done; verify UI
 5. Diagnostic invite from client (Skin Call)
 6. Beauty (Guests & Events) form: alinhar qty por serviço como bridal (se pedido)
 7. Edit all lead/client fields
 8. Settings dashboard completeness
 9. General polish (blur-up LQIP, email copy, diagnostic UX)
+10. [x] Redesign Settings → Emails to follow the form-flow hierarchy in [docs/EMAIL-FLOWS.md](docs/EMAIL-FLOWS.md) (Partilhados / Bridal / Beauty / Skin Call / Education)
 
 ## Principles
 

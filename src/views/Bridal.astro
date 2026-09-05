@@ -1,0 +1,234 @@
+---
+import { Image } from 'astro:assets';
+import Layout from '../layouts/Layout.astro';
+import BridalForm from '../components/forms/BridalForm.astro';
+import Gallery from '../components/Gallery.astro';
+import GalleryMedia from '../components/GalleryMedia.astro';
+import Hero from '../components/Hero.astro';
+import Lightbox from '../components/Lightbox.astro';
+import { copy, type Locale } from '../i18n';
+
+import bridalExperience from '../assets/images/bridal-experience.jpg';
+import bridalCta from '../assets/images/bridal-cta.jpg';
+import guestsEvents from '../assets/images/guests-events.jpg';
+
+import bridalPortfolio1 from '../assets/images/bridal-portfolio-1.jpg';
+import bridalPortfolio2 from '../assets/images/bridal-portfolio-2.jpg';
+import bridalPortfolio3 from '../assets/images/bridal-portfolio-3.jpg';
+import bridalPortfolio4 from '../assets/images/bridal-portfolio-4.jpg';
+import bridalPortfolio5 from '../assets/images/bridal-portfolio-5.jpg';
+import bridalPortfolio6 from '../assets/images/bridal-portfolio-6.jpg';
+import bridalPortfolio7 from '../assets/images/bridal-portfolio-7.jpg';
+import bridalPortfolio8 from '../assets/images/bridal-portfolio-8.jpg';
+
+import guestsPortfolio1 from '../assets/images/guests-portfolio-1.jpg';
+import guestsPortfolio2 from '../assets/images/guests-portfolio-2.jpg';
+import guestsPortfolio3 from '../assets/images/guests-portfolio-3.jpg';
+import guestsPortfolio4 from '../assets/images/guests-portfolio-4.jpg';
+import guestsPortfolio5 from '../assets/images/guests-portfolio-5.jpg';
+import guestsPortfolio6 from '../assets/images/guests-portfolio-6.jpg';
+import guestsPortfolio7 from '../assets/images/guests-portfolio-7.jpg';
+import guestsPortfolio8 from '../assets/images/guests-portfolio-8.jpg';
+
+import bridalHero from '../assets/videos/bridal-hero.mp4';
+import bridalHeroPoster from '../assets/images/bridal-hero-poster.jpg';
+import bridalPortfolioVid from '../assets/videos/bridal-portfolio.mp4';
+import guestsPortfolioVid from '../assets/videos/guests-portfolio.mp4';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = copy(locale);
+const b = t.bridal;
+
+const imgStyleBridal = 'transform: scale(1.25) translateX(-18%); object-fit: cover; object-position: center; transform-origin: center left;';
+const imgStyleGuests1 = 'transform: scale(1.20) translateY(7%); object-position: center;';
+const imgStyleGuests2 = 'transform: scale(1.45) translateY(-7%); object-position: center;';
+const imgStyleGuests3 = 'transform: scale(1.55) translateX(-10%); object-position: center;';
+const imgStyleGuests4 = 'transform: scale(1.45); object-position: center;';
+
+const bridalImages = [
+  { image: bridalPortfolio8 },
+  { video: bridalPortfolioVid },
+  { image: bridalPortfolio3 },
+  { image: bridalPortfolio4, imgStyle: imgStyleBridal },
+  { image: bridalPortfolio6 },
+  { image: bridalPortfolio5 },
+  { image: bridalPortfolio2 },
+  { image: bridalPortfolio1, imgStyle: imgStyleBridal },
+  { image: bridalPortfolio7 },
+];
+
+const guestsImages = [
+  { image: guestsPortfolio1 },
+  { video: guestsPortfolioVid },
+  { image: guestsPortfolio7 },
+  { image: guestsPortfolio2, imgStyle: imgStyleGuests1 },
+  { image: guestsPortfolio5 },
+  { image: guestsPortfolio4, imgStyle: imgStyleGuests2 },
+  { image: guestsPortfolio6, imgStyle: imgStyleGuests3 },
+  { image: guestsPortfolio3 },
+  { image: guestsPortfolio8, imgStyle: imgStyleGuests4 },
+];
+
+const galeriaBridal = bridalImages.map((media, i) => ({
+  category: b.catBrides,
+  alt: b.galleryBridal[i],
+  ...media,
+}));
+
+const galeriaGuests = guestsImages.map((media, i) => ({
+  category: b.catBeauty,
+  alt: b.galleryGuests[i],
+  ...media,
+}));
+
+const galeriaBridalCombo = [
+  { category: b.catBrides, alt: b.experienceTitle, image: bridalExperience },
+  ...galeriaBridal,
+];
+
+const galeriaGuestsCombo = [
+  { category: b.catBeauty, alt: b.guestsTitle, image: guestsEvents },
+  ...galeriaGuests,
+];
+---
+
+<Layout title={t.meta.bridalTitle} description={t.meta.bridalDescription} hasHero locale={locale}>
+  <Hero
+    eyebrow={b.heroEyebrow}
+    title={b.heroTitle}
+    sub={b.heroSub}
+    video={[{ src: bridalHero, type: 'video/mp4' }]}
+    poster={bridalHeroPoster.src}
+    locale={locale}
+  />
+
+  <section id="artistry" class="max-w-container mx-auto px-6 md:px-16 py-32">
+    <div class="max-w-4xl mx-auto reveal">
+      <blockquote class="font-body text-lg md:text-xl leading-relaxed text-center">
+        {b.quote}
+      </blockquote>
+    </div>
+  </section>
+
+  <section id="experiencia-bridal" class="max-w-container mx-auto px-6 md:px-16 pt-8 pb-3 md:pb-4 space-y-8">
+    <div class="grid md:grid-cols-3 items-end gap-3 md:gap-4">
+      <div class="relative md:col-span-1 hidden lg:block">
+        <Image
+          src={bridalExperience}
+          alt={b.altExperience}
+          loading="lazy"
+          decoding="async"
+          data-lightbox={bridalExperience.src}
+          style="cursor: zoom-in;"
+          class="aspect-[2/3] w-full object-cover"
+        />
+      </div>
+      <div class="md:col-span-2 flex items-end">
+        <div class="pb-12 md:px-12 md:text-justify">
+          <h3 class="font-display font-bold text-2xl md:text-3xl leading-tight">{b.experienceTitle}</h3>
+          <p class="mt-3 text-xs uppercase tracking-widest text-burgundy">{b.experienceExtra}</p>
+          <p class="text-darkbrown/75 text-base leading-relaxed mt-4">{b.experienceDesc}</p>
+          <p class="text-burgundy text-sm mt-4">{b.experienceAddon}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="galeria-bridal" class="max-w-container mx-auto px-6 md:px-16 pb-32">
+    <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:hidden" id="gallery-grid-bridal-mobile">
+      {galeriaBridalCombo.map((item) => (
+        <div class="gallery-item block w-full relative overflow-hidden rounded-sm group"
+          data-lightbox={item.image?.src ?? ''}
+          data-lightbox-video={item.video}
+          data-category={item.category}>
+          <GalleryMedia category={item.category} alt={item.alt} image={item.image} video={item.video} ratioClass="aspect-[3/4]" imgStyle={item.imgStyle} />
+        </div>
+      ))}
+    </div>
+    <div class="hidden lg:block">
+      <Gallery items={galeriaBridal} showFilters={false} brick locale={locale} />
+    </div>
+  </section>
+
+  <section id="cta" class="relative w-full overflow-hidden py-16 lg:py-40 text-center">
+    <Image
+      src={bridalCta}
+      alt=""
+      aria-hidden="true"
+      loading="lazy"
+      decoding="async"
+      class="absolute inset-0 h-full w-full object-cover"
+    />
+    <div class="absolute inset-0 bg-darkbrown/50"></div>
+    <div class="relative z-10 max-w-3xl mx-auto px-6">
+      <h2 class="text-2xl md:text-display-l font-display font-bold text-offwhite md:whitespace-nowrap mb-8 reveal">{b.ctaTitle}</h2>
+      <div class="flex flex-wrap justify-center gap-4 reveal">
+        <a href="#orcamento" class="border border-offwhite bg-transparent text-offwhite px-6 py-3.5 text-sm font-bold uppercase rounded-full hover:bg-offwhite hover:text-burgundy transition">{b.ctaBook}</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="experiencia-guests" class="max-w-container mx-auto px-6 md:px-16 pt-32 pb-3 md:pb-4 space-y-8">
+    <div class="grid md:grid-cols-3 items-end gap-3 md:gap-4">
+      <div class="md:col-span-2 flex items-end justify-end">
+        <div class="pb-12 md:px-12 md:text-justify ml-auto">
+          <h3 class="font-display font-bold text-2xl md:text-3xl leading-tight">{b.guestsTitle}</h3>
+          <p class="mt-3 text-xs uppercase tracking-widest text-burgundy">{b.guestsExtra}</p>
+          <p class="text-darkbrown/75 text-base leading-relaxed mt-4">{b.guestsDesc}</p>
+        </div>
+      </div>
+      <div class="relative md:col-span-1 overflow-hidden hidden lg:block">
+        <Image
+          src={guestsEvents}
+          alt={b.altGuests}
+          loading="lazy"
+          decoding="async"
+          data-lightbox={guestsEvents.src}
+          style="cursor: zoom-in;"
+          class="aspect-[2/3] w-full h-full object-cover scale-125"
+        />
+      </div>
+    </div>
+  </section>
+
+  <section id="galeria-guests" class="max-w-container mx-auto px-6 md:px-16 pb-28">
+    <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:hidden" id="gallery-grid-guests-mobile">
+      {galeriaGuestsCombo.map((item) => (
+        <div class="gallery-item block w-full relative overflow-hidden rounded-sm group"
+          data-lightbox={item.image?.src ?? ''}
+          data-lightbox-video={item.video}
+          data-category={item.category}>
+          <GalleryMedia category={item.category} alt={item.alt} image={item.image} video={item.video} ratioClass="aspect-[3/4]" imgStyle={item.imgStyle} />
+        </div>
+      ))}
+    </div>
+    <div class="hidden lg:block">
+      <Gallery items={galeriaGuests} showFilters={false} brick locale={locale} />
+    </div>
+  </section>
+
+  <section id="orcamento" class="max-w-container mx-auto px-6 md:px-16 py-32">
+    <div class="grid md:grid-cols-2 gap-16">
+      <div>
+        <p class="eyebrow mb-4">{b.formEyebrow}</p>
+        <h2 class="text-display-m font-bold mb-4">{b.formTitle}</h2>
+      </div>
+      <BridalForm locale={locale} />
+    </div>
+  </section>
+
+  <Lightbox locale={locale} />
+</Layout>
+
+<style>
+  .service-ph {
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .group:hover .service-ph {
+    transform: scale(1.03);
+  }
+</style>

@@ -1,20 +1,26 @@
 ---
-// Banner RGPD - aparece até haver decisão; só carrega analytics após "Aceito".
+import { copy, localeFromPath, type Locale } from '../i18n';
+
+interface Props {
+  locale?: Locale;
+}
+
+const locale = Astro.props.locale ?? localeFromPath(Astro.url.pathname);
+const t = copy(locale);
 ---
 
-<div id="cookie-banner" class="cb" role="dialog" aria-modal="false" aria-label="Preferências de cookies">
+<div id="cookie-banner" class="cb" role="dialog" aria-modal="false" aria-label={t.cookies.aria}>
   <div class="cb-card">
     <p class="cb-cookie" aria-hidden="true">🍪</p>
-    <p class="cb-title">Temos cookies!</p>
+    <p class="cb-title">{t.cookies.title}</p>
     <p class="cb-text">
-      Usamos os cookies para perceber o que funciona bem por aqui
-      e tornar este site ainda mais glowy.
+      {t.cookies.text}
     </p>
     <div class="cb-actions">
-      <button type="button" id="cb-reject" class="cb-btn cb-secondary">Só o essencial</button>
-      <button type="button" id="cb-accept" class="cb-btn cb-primary">Aceito, vamos a isso</button>
+      <button type="button" id="cb-reject" class="cb-btn cb-secondary">{t.cookies.essential}</button>
+      <button type="button" id="cb-accept" class="cb-btn cb-primary">{t.cookies.accept}</button>
     </div>
-    <button type="button" id="cb-close" class="cb-close" aria-label="Fechar sem decidir">×</button>
+    <button type="button" id="cb-close" class="cb-close" aria-label={t.cookies.close}>×</button>
   </div>
 </div>
 

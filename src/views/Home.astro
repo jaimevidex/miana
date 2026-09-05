@@ -1,0 +1,197 @@
+---
+import { Image } from 'astro:assets';
+import Layout from '../layouts/Layout.astro';
+import Hero from '../components/Hero.astro';
+import { copy, localizePath, type Locale } from '../i18n';
+
+import heroHome from '../assets/images/hero-home.jpg';
+import homeBridal from '../assets/images/home-bridal.jpg';
+import homeSkinCall from '../assets/images/home-skin-call.jpg';
+import homeEducation from '../assets/images/home-education.jpg';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = copy(locale);
+const serviceImages = [homeBridal, homeSkinCall, homeEducation];
+const servicos = t.home.services.map((s, i) => ({
+  ...s,
+  href: localizePath(s.href, locale),
+  image: serviceImages[i],
+}));
+---
+
+<Layout title={t.meta.homeTitle} description={t.meta.homeDescription} hasHero locale={locale}>
+  <Hero image={heroHome} locale={locale} />
+
+  <section id="filosofia" class="max-w-container mx-auto px-6 md:px-16 py-32">
+    <div class="max-w-4xl mx-auto text-center reveal">
+      <p class="text-lg md:text-xl leading-relaxed text-darkbrown/85">
+        {t.home.philosophy}
+      </p>
+      <a href={localizePath('/sobre', locale)} class="inline-block mt-8 text-burgundy font-semibold text-sm underline-offset-4 hover:underline">
+        {t.home.meetCta}
+      </a>
+    </div>
+  </section>
+
+  <section id="servicos" class="max-w-container mx-auto px-6 md:px-16 pb-8 md:pb-12">
+    <h2 class="text-display-l font-bold text-center text-burgundy mb-12 reveal">{t.home.servicesTitle}</h2>
+    <div class="grid md:grid-cols-3 gap-6 md:gap-8 max-w-md md:max-w-none mx-auto">
+      {servicos.map((s) => (
+        <a href={s.href} class="group relative block rounded-sm overflow-hidden reveal border border-darkbrown/10 hover:border-burgundy/40 transition">
+          <div class="relative aspect-[1/1] md:aspect-[3/4] w-full overflow-hidden">
+            <Image src={s.image} alt={s.titulo} loading="lazy" decoding="async"
+              class="absolute inset-0 h-full w-full object-cover service-ph" />
+            <div class="absolute inset-0 flex items-center justify-center bg-gradient-to-t from-darkbrown/70 via-transparent to-darkbrown/15">
+              <div class="flex flex-col items-center text-center px-6">
+                <h3 class="font-display text-4xl md:text-3xl text-offwhite leading-tight">{s.titulo}</h3>
+                <span class="mt-2 text-xs uppercase tracking-widest text-powder border-b border-powder/60 pb-1">{t.home.discover}</span>
+              </div>
+            </div>
+          </div>
+          <p class="text-darkbrown/75 text-base md:text-lg text-center leading-relaxed py-5 md:py-6 px-6">{s.desc}</p>
+        </a>
+      ))}
+    </div>
+  </section>
+
+  <section id="testemunhos" class="max-w-container mx-auto px-6 md:px-16 py-16 md:py-32">
+    <h2 class="text-display-l font-bold text-center text-burgundy mb-4 reveal">{t.home.testimonialsTitle}</h2>
+    <br></br>
+    <div class="testimonials relative max-w-5xl mx-auto px-10 md:px-16">
+      <button type="button" aria-label={t.home.prevTestimonial} class="t-arrow left" data-t-prev>&lsaquo;</button>
+      <div class="overflow-hidden" data-t-holder>
+        <div class="flex" data-t-track>
+          {t.home.testimonials.map((item) => (
+            <div class="t-card shrink-0">
+              <figure class="flex h-full flex-col rounded-sm border border-powder/40 bg-powder/40 px-6 py-5">
+                <blockquote class="text-darkbrown/80 text-sm leading-relaxed">"{item.texto}"</blockquote>
+                <figcaption class="mt-4 text-burgundy font-semibold text-xs uppercase tracking-widest">- {item.autor}</figcaption>
+              </figure>
+            </div>
+          ))}
+        </div>
+      </div>
+      <button type="button" aria-label={t.home.nextTestimonial} class="t-arrow right" data-t-next>&rsaquo;</button>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  const track = document.querySelector('[data-t-track]') as HTMLElement;
+  const nextBtn = document.querySelector('[data-t-next]') as HTMLButtonElement;
+  const prevBtn = document.querySelector('[data-t-prev]') as HTMLButtonElement;
+
+  const originals = Array.from(track.children) as HTMLElement[];
+  const n = originals.length;
+
+  const clone = (els: HTMLElement[]) => els.map((c) => c.cloneNode(true) as HTMLElement);
+  clone(originals.slice(-1)).forEach((el) => track.prepend(el));
+  clone(originals.slice(0, n)).forEach((el) => track.appendChild(el));
+
+  const all = Array.from(track.children) as HTMLElement[];
+  const realStart = all.indexOf(originals[0]);
+  const perView = () => (window.matchMedia('(min-width: 768px)').matches ? 3 : 1);
+  const maxStart = all.length - perView();
+
+  let idx = realStart;
+
+  function pos(i: number): number {
+    let base = 0;
+    for (let k = 0; k < i; k++) {
+      const w = all[k].offsetWidth;
+      const next = all[k + 1];
+      const gap = next ? next.offsetLeft - all[k].offsetLeft - w : 0;
+      base += w + gap;
+    }
+    return base;
+  }
+
+  function render(animate: boolean) {
+    track.style.transition = animate ? 'transform 0.55s cubic-bezier(0.4, 0, 0.2, 1)' : 'none';
+    track.style.transform = `translateX(${-pos(idx)}px)`;
+  }
+
+  function jump(to: number, animate: boolean) {
+    idx = to;
+    if (!animate) {
+      track.style.transition = 'none';
+      track.style.transform = `translateX(${-pos(idx)}px)`;
+    }
+    requestAnimationFrame(() => render(true));
+  }
+
+  function next() {
+    if (idx + 1 > maxStart) jump(realStart, false);
+    else { idx += 1; render(true); }
+  }
+
+  function prev() {
+    if (idx - 1 < realStart) jump(maxStart, false);
+    else { idx -= 1; render(true); }
+  }
+
+  nextBtn.addEventListener('click', next);
+  prevBtn.addEventListener('click', prev);
+  window.addEventListener('resize', () => render(false));
+  render(false);
+</script>
+
+<style>
+  .testimonials .t-card {
+    width: 100%;
+  }
+  .testimonials [data-t-track] {
+    gap: 1rem;
+    align-items: stretch;
+  }
+  @media (min-width: 768px) {
+    .testimonials .t-card {
+      width: calc((100% - 2rem) / 3);
+    }
+  }
+  .testimonials .t-arrow {
+    position: absolute;
+    top: 44%;
+    transform: translateY(-50%);
+    width: 3rem;
+    height: 3rem;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    padding-bottom: 0.30em;
+    font-size: 2rem;
+    line-height: 1;
+    color: var(--color-offwhite, #fff);
+    background: var(--color-burgundy, #59010B);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+    z-index: 5;
+  }
+  .testimonials .t-arrow:hover {
+    opacity: 0.85;
+  }
+  .testimonials .t-arrow.left {
+    left: -0.75rem;
+    text-indent: -1px;
+  }
+  .testimonials .t-arrow.right {
+    right: -0.75rem;
+    text-indent: 1px;
+  }
+</style>
+
+<style>
+  .service-ph {
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .group:hover .service-ph {
+    transform: scale(1.03);
+  }
+</style>

@@ -5,6 +5,20 @@
 export const SUCCESS_MESSAGE =
   'Obrigada! O teu pedido foi registado. Responderei assim que possível, num prazo de até 48h com todas as informações.';
 
+export interface FormMessages {
+  sending: string;
+  success: string;
+  error: string;
+}
+
+function messagesFromForm(form: HTMLFormElement, override?: FormMessages): FormMessages {
+  return {
+    sending: override?.sending ?? form.dataset.msgSending ?? 'A enviar...',
+    success: override?.success ?? form.dataset.msgSuccess ?? SUCCESS_MESSAGE,
+    error: override?.error ?? form.dataset.msgError ?? '',
+  };
+}
+
 const REQUIRED_ERROR_CLS = '!border-burgundy !bg-[#FBEDF0]';
 
 /**
@@ -62,11 +76,14 @@ export function validateRequiredFields(form: HTMLFormElement): boolean {
  */
 export async function submitForm(
   form: HTMLFormElement,
-  statusEl: HTMLElement | null
+  statusEl: HTMLElement | null,
+  override?: FormMessages,
 ): Promise<boolean> {
   if (!statusEl) return false;
+  const messages = messagesFromForm(form, override);
+  const ownerEmail = import.meta.env.PUBLIC_OWNER_EMAIL || 'hello@marianapita.pt';
 
-  statusEl.textContent = 'A enviar...';
+  statusEl.textContent = messages.sending;
   statusEl.className = 'mt-3 text-sm text-darkbrown/60';
 
   try {
@@ -79,7 +96,7 @@ export async function submitForm(
     const result = await response.json();
 
     if (result.success) {
-      statusEl.textContent = SUCCESS_MESSAGE;
+      statusEl.textContent = messages.success;
       statusEl.className = 'mt-3 text-sm font-medium text-burgundy';
       form.reset();
       return true;
@@ -87,11 +104,11 @@ export async function submitForm(
     throw new Error(result.message || 'Erro ao enviar');
   } catch (err) {
     const msg = err instanceof Error ? err.message : '';
-    const ownerEmail = import.meta.env.PUBLIC_OWNER_EMAIL || 'hello@marianapita.pt';
+    const fallback = messages.error
+      ? messages.error.replace('{email}', ownerEmail)
+      : `Algo correu mal. Tenta novamente ou escreve para ${ownerEmail}.`;
     statusEl.textContent =
-      msg && msg !== 'Erro ao enviar'
-        ? msg
-        : `Algo correu mal. Tenta novamente ou escreve para ${ownerEmail}.`;
+      msg && msg !== 'Erro ao enviar' ? msg : fallback;
     statusEl.className = 'mt-3 text-sm text-red-700';
     return false;
   }

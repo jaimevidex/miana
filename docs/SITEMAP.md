@@ -6,22 +6,27 @@ Estado: 🟢 completo
 
 ## Páginas & Estrutura do Menu
 
-| Ordem | Página | Tipo de Conteúdo | Formulário Integrado |
-|---|---|---|---|
-| 1 | **Home / Início** | Visão geral da marca, 3 cards de serviços, testemunhos, CTA final | - |
-| 2 | **Meet Mariana** | História, percurso (Bioquímica/Cosmetologia), 3 pilares da marca | - |
-| 3 | **Bridal & Beauty** | Conceito glow/sunkissed, The Bridal Experience, Guests & Events | **Formulário 1** |
-| 4 | **The Skin Call** | Conceito científico, processo em 4 passos, 4 Planos de acompanhamento | **Formulário 2 (Quiz)** |
-| 5 | **Beauty Education** | Conceito formativo, Automaquilhagem 1:1, Skincare Education, Group Sessions | **Formulário 3** |
-| 6 | **Contacto** | E-mail direto, redes sociais e formulário geral de contacto | **Formulário Geral** |
+| Ordem | Página | PT | EN | Tipo de Conteúdo | Formulário Integrado |
+|---|---|---|---|---|---|
+| 1 | **Home / Início** | `/` | `/en/` | Visão geral da marca, 3 cards de serviços, testemunhos, CTA final | - |
+| 2 | **Meet Mariana** | `/sobre` | `/en/sobre` | História, percurso (Bioquímica/Cosmetologia), 3 pilares da marca | - |
+| 3 | **Bridal & Beauty** | `/servicos/bridal` | `/en/servicos/bridal` | Conceito glow/sunkissed, The Bridal Experience, Guests & Events | **Formulário 1** |
+| 4 | **The Skin Call** | `/servicos/skin-call` | `/en/servicos/skin-call` | Conceito científico, processo em 4 passos, 4 Planos de acompanhamento | **Formulário 2 (Quiz)** |
+| 5 | **Beauty Education** | `/servicos/education` | `/en/servicos/education` | Conceito formativo, Automaquilhagem 1:1, Skincare Education, Group Sessions | **Formulário 3** |
+| 6 | **Política de privacidade** | `/politica-privacidade` | `/en/politica-privacidade` | RGPD / cookies | - |
+
+PT sem prefixo; EN com prefixo `/en/` e os mesmos slugs. Navbar `PT | EN` troca o path equivalente. `/diagnostico` é privado (token) e não usa prefixo `/en/` - a língua vem da lead/cliente.
 
 * **Botão de Destaque no Menu (Header):** `[ Let's Book Your Glow ]` *(Scroll direto para agendamento/contacto)*.
+* **Switcher de idioma:** `PT | EN` no header (desktop e mobile).
 
 ---
 
 ## Formulários por Página (Especificação Técnica)
 
 > **Mensagem de Sucesso (Comum a todos os formulários pós-submissão):** > *"Obrigada! O teu pedido foi registado. Responderei assim que possível, num prazo de até 48h com todas as informações."*
+
+Os 3 formulários enviam `locale` hidden (`pt` | `en`) conforme a URL. Os **valores** dos radios/checkboxes guardados em `form_data` mantêm as strings actuais; só as labels visíveis traduzem.
 
 ### 📝 FORMULÁRIO 1: BRIDAL & BEAUTY
 * **Campos Comuns:**
@@ -35,9 +40,6 @@ Estado: 🟢 completo
   2. Hora a que tens de estar pronta `[ Horário ]`
   3. Local da preparação `[ Texto ]`
   4. Local da prova `[ Texto ]`
-  5. Que serviços procuras? `Makeup` | `Pack Makeup & Hair`
-  6. Número de guests `[ Número ]`
-  7. Queres adicionar o Add-on Skin Call? `Sim` | `Não`
 
 * **Se selecionar GUESTS & EVENTS:**
   1. Data do evento `[ Data ]`

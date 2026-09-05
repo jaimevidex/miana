@@ -4,6 +4,10 @@ import type { Env, LeadType } from './lib';
 import { TYPE_LABELS } from './lib';
 import { siteUrl, fromEmail, fromName, ownerEmail, adminLeadUrl, adminClientUrl } from './config';
 import { getContacts } from './pricing';
+import { getEmailCopy, fillTemplateBody } from './email-copy';
+import { wrapEmail } from './templates/base';
+import { diagnosticBlock } from './templates/blocks';
+import { parseLocale } from './locale';
 
 export type EmailAttachment = {
   filename: string;
@@ -227,28 +231,21 @@ export type DiagnosticInviteContent = {
   text: string;
 };
 
-export function diagnosticInviteContent(
+export async function diagnosticInviteContent(
   env: Env,
-  lead: { nome: string; token: string }
-): DiagnosticInviteContent {
+  lead: { nome: string; token: string; locale?: string }
+): Promise<DiagnosticInviteContent> {
+  const locale = parseLocale(lead.locale);
   const url = `${siteUrl(env)}/diagnostico?token=${encodeURIComponent(lead.token)}`;
-  const subject = 'Estás quase lá! Diagnóstico de pele Skin Call';
-  const html = `
-    <div style="font-family: Arial, Helvetica, sans-serif; line-height:1.6; color:#3b2a2a; max-width:560px; margin:0 auto;">
-      <p>Olá ${lead.nome},</p>
-      <p>Estamos quase lá! Para eu perceber o plano mais indicado para ti, preciso que preenchas este breve diagnóstico de pele.</p>
-      <p style="text-align:center; margin:32px 0;">
-        <a href="${url}" style="display:inline-block; background:#8a2831; color:#fbf5ef; text-decoration:none; padding:14px 28px; border-radius:999px; font-weight:600;">
-          Abrir diagnóstico
-        </a>
-      </p>
-      <p style="font-size:13px; color:#8a7a74;">Este link é pessoal e de uso único.</p>
-      <p style="font-size:13px; color:#8a7a74;">Se tiveres qualquer dúvida, envia um email para <a href="mailto:${ownerEmail(env)}" style="color:#8a2831;">${ownerEmail(env)}</a>.</p>
-      <p>Com carinho,<br/>Mariana Pita</p>
-    </div>
-  `;
-  const text = `Olá ${lead.nome},\n\nEstamos quase lá! Preenche este diagnóstico de pele para eu perceber o plano mais indicado:\n\n${url}\n\nEste link é pessoal e de uso único.\n\nCom carinho,\nMariana Pita`;
-  return { subject, html, text };
+  const copy = await getEmailCopy(env, locale);
+  const tpl = copy.diagnostic_invite;
+  const vars = { nome: lead.nome };
+  const html = wrapEmail(
+    fillTemplateBody(tpl.body, diagnosticBlock(url, locale), vars),
+    copy.wrapFooter,
+  );
+  const text = htmlToText(html) + `\n\n${url}`;
+  return { subject: tpl.subject, html, text };
 }
 
 // ─── Link de diagnóstico enviado ao cliente ─────────────────────────────────
@@ -257,7 +254,7 @@ export async function sendDiagnosticInvite(
   env: Env,
   lead: { nome: string; email: string; token: string }
 ): Promise<SendEmailResult> {
-  const content = diagnosticInviteContent(env, lead);
+  const content = await diagnosticInviteContent(env, lead);
   return sendEmail(env, { to: lead.email, ...content });
 }
 
