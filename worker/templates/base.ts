@@ -14,7 +14,7 @@ export function emailHeading(title: string): string {
 }
 
 function iconLink(href: string, src: string, alt: string): string {
-  return `<a href="${htmlEscape(href)}" style="display:inline-block;margin:0 10px 0 0;text-decoration:none" target="_blank" rel="noopener noreferrer"><img src="${htmlEscape(src)}" width="28" height="28" alt="${htmlEscape(alt)}" style="display:block;border:0;width:28px;height:28px" /></a>`;
+  return `<a href="${htmlEscape(href)}" style="display:inline-block;margin:0 8px;text-decoration:none" target="_blank" rel="noopener noreferrer"><img src="${htmlEscape(src)}" width="28" height="28" alt="${htmlEscape(alt)}" style="display:block;border:0;width:28px;height:28px" /></a>`;
 }
 
 export function emailSignatureHtml(footer?: EmailWrapFooter): string {
@@ -37,7 +37,7 @@ export function emailSignatureHtml(footer?: EmailWrapFooter): string {
         </td>
       </tr>
       <tr>
-        <td align="left" style="padding:10px 0 0;border:0">
+        <td align="center" style="padding:10px 0 0;border:0;text-align:center">
           ${iconLink(`mailto:${email}`, `${base}/email/icon-email.png`, 'Email')}
           ${iconLink(instagram, `${base}/email/icon-instagram.png`, 'Instagram')}
           ${iconLink(website, `${base}/email/icon-web.png`, 'Website')}

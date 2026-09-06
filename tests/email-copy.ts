@@ -16,7 +16,8 @@ import {
   textToHtml,
 } from '../worker/email-copy.ts';
 import { EMAIL_COPY_FALLBACKS_EN } from '../worker/email-copy-en.ts';
-import { bridalBlock, diagnosticBlock } from '../worker/templates/blocks.ts';
+import { beautyBlock, bridalBlock, diagnosticBlock } from '../worker/templates/blocks.ts';
+import { beautyQuoteTotal, bridalQuoteTotal } from '../worker/bridal-pricing.ts';
 import { parseLocale } from '../worker/locale.ts';
 import { bridalEmail } from '../worker/templates/bridal.ts';
 import { bridalIntroEmail } from '../worker/templates/bridal_intro.ts';
@@ -82,7 +83,7 @@ assert(quoteHtml.includes('mailto:hello@test.pt'), 'signature email icon');
 assert(quoteHtml.includes('/email/assinatura.png'), 'signature logo');
 assert(quoteHtml.includes('/email/icon-instagram.png'), 'signature instagram icon');
 assert((quoteHtml.match(/\/email\/assinatura\.png/g) || []).length === 1, 'quote wraps signature once');
-assert(quoteHtml.includes('Investimento'), 'generated price block stays');
+assert(quoteHtml.includes('Valor'), 'generated price block stays');
 assert(!quoteHtml.includes('<script>'), 'no raw script from copy');
 assert(!quoteHtml.includes('{{bloco}}'), 'sent email has no placeholder');
 
@@ -143,9 +144,9 @@ const footer = {
   assetBase: 'https://marianapita.pt',
 };
 const sig = emailSignatureHtml(footer);
-assert(sig.includes('align="left"'), 'signature cells are left aligned');
-assert(!sig.includes('margin:16px auto'), 'signature is not centered');
-assert(!sig.includes('align="center"'), 'signature has no center align');
+assert(sig.includes('align="left"'), 'signature logo stays left aligned');
+assert(sig.includes('align="center"'), 'signature icons are centered');
+assert(!sig.includes('margin:16px auto'), 'signature block is not centered');
 assert((wrapEmail('<p>Corpo</p>', footer).match(/\/email\/assinatura\.png/g) || []).length === 1, 'wrapEmail adds one signature');
 
 for (const id of EMAIL_TEMPLATE_IDS) {
@@ -212,13 +213,38 @@ const enQuote = bridalEmail(
   },
   'en',
 );
-assert(enQuote.includes('Investment'), 'EN bridal block uses Investment');
+assert(enQuote.includes('Amount'), 'EN bridal block uses Amount');
 assert(!enQuote.includes('Investimento'), 'EN bridal block has no Investimento');
 assert(enQuote.includes('Details'), 'EN bridal block uses Details');
 
 const enBlock = bridalBlock({ nome: 'Ana', data_casamento: '2026-10-15' }, PRICING_FALLBACKS, undefined, 'en');
-assert(enBlock.includes('Investment'), 'bridalBlock en investment');
-assert(diagnosticBlock('https://example.com/diagnostico', 'en').includes('Open diagnostic'), 'diagnosticBlock en button');
-assert(diagnosticBlock('https://example.com/diagnostico', 'pt').includes('Abrir diagnóstico'), 'diagnosticBlock pt button');
+assert(enBlock.includes('Amount'), 'bridalBlock en amount');
+assert(diagnosticBlock('https://example.com/diagnostico', 'en').includes('Open skin assessment'), 'diagnosticBlock en button');
+assert(diagnosticBlock('https://example.com/diagnostico', 'pt').includes('Abrir avaliação de pele'), 'diagnosticBlock pt button');
+
+const withTravel = bridalQuoteTotal(
+  { servicos_procurados: 'Makeup', guests_makeup: '1', valor_deslocacao: '40' },
+  PRICING_FALLBACKS,
+);
+assert(withTravel.travel === 40, 'bridal travel parsed');
+assert(withTravel.total === withTravel.bridePrice + withTravel.guestTotal + 40, 'bridal total includes travel');
+assert(bridalBlock({ nome: 'Ana', valor_deslocacao: '40' }, PRICING_FALLBACKS).includes('Deslocação'), 'PT travel row');
+assert(!bridalBlock({ nome: 'Ana' }, PRICING_FALLBACKS).includes('Deslocação'), 'empty travel hidden');
+
+const beautyNew = beautyQuoteTotal(
+  { guests_makeup: '2', guests_hair: '1', guests_pack: '0' },
+  PRICING_FALLBACKS,
+);
+assert(!beautyNew.legacy, 'beauty uses per-service when guests_* present');
+assert(beautyNew.guests.makeup === 2 && beautyNew.guests.hair === 1, 'beauty guest counts');
+assert(beautyNew.total === 2 * PRICING_FALLBACKS.beauty.makeup + PRICING_FALLBACKS.beauty.hair, 'beauty per-service total');
+
+const beautyLegacy = beautyQuoteTotal(
+  { servicos_procurados_guests: 'Makeup', numero_pessoas: '4' },
+  PRICING_FALLBACKS,
+);
+assert(beautyLegacy.legacy, 'beauty falls back without guests_*');
+assert(beautyLegacy.total === PRICING_FALLBACKS.beauty.makeup + 3 * PRICING_FALLBACKS.beauty.hair, 'beauty legacy extras');
+assert(beautyBlock({ guests_makeup: '2' }, PRICING_FALLBACKS).includes('Guests makeup'), 'beauty block per-service rows');
 
 if (!process.exitCode) console.log('email-copy: all passed');

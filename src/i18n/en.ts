@@ -245,6 +245,11 @@ export const en: SiteCopy = {
       },
     ],
     plansTitle: 'Choose your plan',
+    plansIntro: [
+      'Each skin is a unique ecosystem. The number of sessions depends on your skin\'s starting point and the goals we want to reach. Our priority is to help you have beautiful skin, but always healthy.',
+      'Skin with a compromised barrier should not introduce intense ingredients straight away, and even when skin is healthy, some treatments need a gradual introduction.',
+      'Not sure which plan is right for you? Talk to us and we will help you decide.',
+    ],
     focus: 'Focus:',
     plans: [
       {
@@ -399,6 +404,7 @@ export const en: SiteCopy = {
       pack: 'Pack Makeup & Hair',
       hair: 'Hair',
       people: 'Number of people',
+      guestsQty: 'Number of people per service',
     },
     skin: {
       plan: 'Which plan are you looking for?',
@@ -424,7 +430,6 @@ export const en: SiteCopy = {
         { value: 'Normal', label: 'Normal' },
         { value: 'Oleosa', label: 'Oily' },
         { value: 'Seca', label: 'Dry' },
-        { value: 'Mista', label: 'Combination' },
         { value: 'Sensível / reativa', label: 'Sensitive / reactive' },
       ],
       concerns: 'What are your main skin concerns?',

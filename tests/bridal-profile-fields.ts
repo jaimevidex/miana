@@ -63,15 +63,23 @@ const orderedKeys = visibleFormEntries('bridal', {
   servicos_procurados: 'Makeup',
 }).map(([key]) => key);
 assert(
-  orderedKeys.slice(-5).join(',') === BRIDAL_KEYS.join(','),
-  'bridal profile keys stay grouped at the end'
+  orderedKeys.slice(-6, -1).join(',') === BRIDAL_KEYS.join(','),
+  'bridal profile keys stay grouped before travel'
 );
+assert(orderedKeys.at(-1) === 'valor_deslocacao', 'travel fee is last common field');
 
 const beauty = Object.fromEntries(visibleFormEntries('beauty', { numero_pessoas: '4' }));
 assert(beauty.numero_pessoas === '4', 'beauty keeps own fields');
-for (const key of BRIDAL_KEYS) {
-  assert(!(key in beauty), `beauty profile omits ${key}`);
-}
+assert(beauty.guests_makeup === '', 'beauty injects empty guests_makeup');
+assert(beauty.guests_hair === '', 'beauty injects empty guests_hair');
+assert(beauty.guests_pack === '', 'beauty injects empty guests_pack');
+assert(beauty.valor_deslocacao === '', 'beauty injects empty travel fee');
+assert(!('servicos_procurados' in beauty), 'beauty omits bride service');
+assert(!('addon_skin_call' in beauty), 'beauty omits addon plan');
+
+assert(Object.fromEntries(visibleFormEntries('skin-call', {})).valor_deslocacao === '', 'skin-call has travel fee');
+assert(Object.fromEntries(visibleFormEntries('education', {})).valor_deslocacao === '', 'education has travel fee');
+assert(fieldKind('valor_deslocacao') === 'number', 'travel fee is a number');
 
 assert(formatFieldDisplay('addon_skin_call', '') === '-', 'empty addon displays as -');
 assert(formatFieldDisplay('guests_makeup', '') === '-', 'empty guests displays as -');

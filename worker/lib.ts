@@ -264,6 +264,7 @@ export const FIELD_LABELS: Record<string, string> = {
   local_evento: 'Local do evento',
   servicos_procurados_guests: 'Serviços procurados',
   numero_pessoas: 'Número de pessoas',
+  valor_deslocacao: 'Valor de deslocação',
   mensagem: 'Mensagem',
   // Education
   formato: 'Formato',

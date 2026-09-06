@@ -6,6 +6,7 @@ import { createDb } from './db';
 import { leads as leadsTable, diagnostics as diagnosticsTable, clients as clientsTable } from './db/schema';
 import { htmlEscape, TYPE_LABELS, type Env, type LeadType } from './lib';
 import { calculateDuration, formatDuration, suggestTimeRange, suggestBridalDualSchedule } from './scheduling';
+import { beautyHeadcount } from './bridal-pricing';
 import { getTiming } from './pricing';
 import { photoAdminUrl } from './photos';
 import { CHAT_CSS, renderChatPanel, chatScript } from './admin/chat';
@@ -956,7 +957,7 @@ export async function renderClientDetail(env: Env, id: string, csrfToken: string
           ['Medicação contínua', diag.medicacaoContinua],
         ]},
         { title: 'Histórico Dermatológico', fields: [
-          ['Diagnóstico médico', diag.diagnosticoMedico], ['Outro diagnóstico', diag.diagnosticoOutro],
+          ['Condição médica', diag.diagnosticoMedico], ['Outra condição médica', diag.diagnosticoOutro],
           ['Medicação oral', diag.medicacaoOral], ['Medicação tópica', diag.medicacaoTopica],
           ['Tratamentos estéticos', diag.tratamentosEsteticos], ['Burnout cutâneo', diag.burnoutCutaneo],
           ['Vasos visíveis', diag.vasosVisiveis], ['Rubor', diag.rubor],
@@ -1036,15 +1037,15 @@ export async function renderClientDetail(env: Env, id: string, csrfToken: string
       }
     } else {
       diagHtml = `
-        <p style="color:#8a7a74">Diagnóstico ainda não preenchido.</p>
+        <p style="color:#8a7a74">Avaliação de pele ainda não preenchida.</p>
         ${hasToken
-          ? '<button class="btn btn-outline btn-sm" onclick="sendDiagnosticInvite()" style="margin-top:8px">Enviar Link Diagnóstico</button>'
-          : '<p style="color:#8a7a74;font-size:13px;margin-top:8px">Cliente criado manualmente - sem lead associada para enviar diagnóstico.</p>'
+          ? '<button class="btn btn-outline btn-sm" onclick="sendDiagnosticInvite()" style="margin-top:8px">Enviar link de avaliação de pele</button>'
+          : '<p style="color:#8a7a74;font-size:13px;margin-top:8px">Cliente criado manualmente - sem lead associada para enviar avaliação de pele.</p>'
         }
       `;
     }
 
-    diagHtml = `<h3 style="font-size:16px;color:#8a2831;margin:20px 0 8px">Estado do Diagnóstico ${statusBadge}</h3>` + diagHtml;
+    diagHtml = `<h3 style="font-size:16px;color:#8a2831;margin:20px 0 8px">Estado da avaliação de pele ${statusBadge}</h3>` + diagHtml;
   }
 
   // Horário sugerido para Bridal (duas agendas) e Beauty
@@ -1096,7 +1097,7 @@ export async function renderClientDetail(env: Env, id: string, csrfToken: string
     }
   } else if (client.type === 'beauty' && data) {
     const readyTime = data.hora_pronta_evento;
-    const guestCount = parseInt(data.numero_pessoas || '0', 10);
+    const guestCount = beautyHeadcount(data);
     const timing = await getTiming(env);
     const duration = calculateDuration(client.type, guestCount, timing);
     const timeRange = suggestTimeRange(readyTime, duration);
@@ -1151,7 +1152,7 @@ export async function renderClientDetail(env: Env, id: string, csrfToken: string
     ${formCard}
 
     ${diagHtml ? `
-      <h2>Diagnóstico de Pele</h2>
+      <h2>Avaliação de pele</h2>
       <div class="card">${diagHtml}</div>
     ` : ''}
 
@@ -1201,7 +1202,7 @@ export async function renderClientDetail(env: Env, id: string, csrfToken: string
         const res = await fetch('/api/admin/client/${client.id}/diagnostic-invite', { method: 'POST', credentials: 'same-origin' });
         const data = await res.json();
         if (data.success) {
-          msg.textContent = 'Link de diagnóstico enviado!';
+          msg.textContent = 'Link de avaliação de pele enviado!';
           msg.className = 'status';
         } else {
           msg.textContent = data.error || 'Erro ao enviar.';

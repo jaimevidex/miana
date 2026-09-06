@@ -52,8 +52,8 @@ export const EMAIL_FLOW_REGISTRY: EmailFlowEntry[] = [
   { id: 'skin_call', flow: 'skin-call', step: 'quote', audience: 'client', label: 'Orçamento' },
   { id: 'schedule', flow: 'skin-call', step: 'schedule', audience: 'client', label: 'Marcar sessões' },
   { id: 'schedule_form', flow: 'skin-call', step: 'schedule_form', audience: 'client', label: 'Confirmação' },
-  { id: 'diagnostic_invite', flow: 'skin-call', step: 'diagnostic_invite', audience: 'client', label: 'Diagnóstico' },
-  { id: 'diagnostic_complete', flow: 'skin-call', step: 'diagnostic_complete', audience: 'system', label: 'Diagnóstico preenchido' },
+  { id: 'diagnostic_invite', flow: 'skin-call', step: 'diagnostic_invite', audience: 'client', label: 'Avaliação de pele' },
+  { id: 'diagnostic_complete', flow: 'skin-call', step: 'diagnostic_complete', audience: 'system', label: 'Avaliação de pele preenchida' },
   { id: 'education', flow: 'education', step: 'quote', audience: 'client', label: 'Orçamento' },
 ];
 
@@ -63,7 +63,7 @@ export const EMAIL_FLOW_GROUPS: { id: EmailFlowId; label: string; hint: string }
   { id: 'shared', label: 'Partilhados', hint: 'Termos e assinatura comuns a todos os pedidos.' },
   { id: 'bridal', label: 'Bridal', hint: 'Introdutório primeiro; orçamento depois da resposta da noiva.' },
   { id: 'beauty', label: 'Beauty', hint: 'Orçamento para Guests & Events.' },
-  { id: 'skin-call', label: 'Skin Call', hint: 'Orçamento, e depois de aceitar: marcar sessões, confirmação Meet e diagnóstico.' },
+  { id: 'skin-call', label: 'Skin Call', hint: 'Orçamento, e depois de aceitar: marcar sessões, confirmação Meet e avaliação de pele.' },
   { id: 'education', label: 'Education', hint: 'Orçamento para workshops.' },
 ];
 
@@ -171,9 +171,9 @@ export const EMAIL_COPY_FALLBACKS: EmailCopy = {
       '<p>Este texto é provisório e será substituído pela copy final.</p>',
   },
   diagnostic_invite: {
-    subject: 'Estás quase lá! Diagnóstico de pele Skin Call',
+    subject: 'Estás quase lá! Avaliação de pele Skin Call',
     body:
-      '<p>Olá {{nome}},</p><p>Estamos quase lá! Para eu perceber o plano mais indicado para ti, preciso que preenchas este breve diagnóstico de pele.</p>' +
+      '<p>Olá {{nome}},</p><p>Estamos quase lá! Para eu perceber o plano mais indicado para ti, preciso que preenchas esta breve avaliação de pele.</p>' +
       EMAIL_BLOCO +
       '<p>Este link é pessoal e de uso único.</p>',
   },

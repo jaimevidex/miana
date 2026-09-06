@@ -112,7 +112,7 @@ export function renderChatPanel(opts: {
       <div class="modal" style="max-width:420px">
         <button class="close" onclick="document.getElementById('meet-modal').classList.remove('active')">&times;</button>
         <h2>Marcar e formulário</h2>
-        <p style="color:#8a7a74;font-size:14px;margin-bottom:16px">Escolhe a data e hora (Lisboa). O Google Calendar cria o Meet e o email inclui o link do diagnóstico.</p>
+        <p style="color:#8a7a74;font-size:14px;margin-bottom:16px">Escolhe a data e hora (Lisboa). O Google Calendar cria o Meet e o email inclui o link da avaliação de pele.</p>
         ${opts.googleConnected ? '' : '<p class="status err">Liga o Google Calendar em Settings antes de marcar.</p>'}
         <label class="lbl" for="meet-datetime">Data e hora</label>
         <input id="meet-datetime" class="in" type="datetime-local" />

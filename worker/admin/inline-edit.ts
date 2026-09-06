@@ -76,8 +76,7 @@ function optionLabel(opt: SelectOption): string {
 
 const BRIDAL_ONLY = [
   'data_casamento', 'hora_pronta', 'local_preparacao', 'local_prova',
-  'servicos_procurados', 'guests_makeup', 'guests_hair', 'guests_pack', 'numero_guests',
-  'addon_skin_call',
+  'servicos_procurados', 'numero_guests', 'addon_skin_call',
 ];
 
 export const BRIDAL_PROFILE_KEYS = [
@@ -87,6 +86,14 @@ export const BRIDAL_PROFILE_KEYS = [
   'guests_pack',
   'addon_skin_call',
 ] as const;
+
+export const BEAUTY_PROFILE_KEYS = [
+  'guests_makeup',
+  'guests_hair',
+  'guests_pack',
+] as const;
+
+export const COMMON_PROFILE_KEYS = ['valor_deslocacao'] as const;
 
 const BEAUTY_ONLY = ['data_evento', 'hora_pronta_evento', 'local_evento', 'numero_pessoas'];
 
@@ -104,7 +111,7 @@ export function fieldKind(key: string, explicit?: FieldKind): FieldKind {
   if (key === 'data_hora') return 'datetime-local';
   if (key.startsWith('data_')) return 'date';
   if (key.startsWith('hora_')) return 'time';
-  if (key.startsWith('numero_') || key.startsWith('guests_')) return 'number';
+  if (key.startsWith('numero_') || key.startsWith('guests_') || key.startsWith('valor_')) return 'number';
   if (key === 'mensagem' || key === 'rotina') return 'textarea';
   if (key === 'email') return 'email';
   if (key === 'telefone') return 'tel';
@@ -146,21 +153,22 @@ function toEntries(data: Record<string, unknown>, allowKey: (key: string) => boo
     .map(([key, value]) => [key, value == null || value === '' ? '' : String(value)]);
 }
 
-function withBridalProfileKeys(entries: [string, string][]): [string, string][] {
+function withKeys(entries: [string, string][], keys: readonly string[]): [string, string][] {
   const values = new Map(entries);
-  const rest = entries.filter(([key]) => !BRIDAL_PROFILE_KEYS.includes(key as typeof BRIDAL_PROFILE_KEYS[number]));
-  const profile = BRIDAL_PROFILE_KEYS.map((key) => [key, values.get(key) ?? ''] as [string, string]);
-  return [...rest, ...profile];
+  const rest = entries.filter(([key]) => !keys.includes(key));
+  const extra = keys.map((key) => [key, values.get(key) ?? ''] as [string, string]);
+  return [...rest, ...extra];
 }
 
 export function visibleFormEntries(type: string, data: Record<string, unknown>): [string, string][] {
-  const entries = toEntries(data, (key) => {
+  let entries = toEntries(data, (key) => {
     if (type === 'bridal') return !BEAUTY_ONLY.includes(key);
     if (type === 'beauty') return !BRIDAL_ONLY.includes(key);
     return true;
   });
-  if (type === 'bridal') return withBridalProfileKeys(entries);
-  return entries;
+  if (type === 'bridal') entries = withKeys(entries, BRIDAL_PROFILE_KEYS);
+  if (type === 'beauty') entries = withKeys(entries, BEAUTY_PROFILE_KEYS);
+  return withKeys(entries, COMMON_PROFILE_KEYS);
 }
 
 function renderEditControl(field: EditableField, kind: FieldKind): string {

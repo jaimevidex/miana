@@ -50,7 +50,7 @@ const labelCls = 'block text-sm font-medium text-darkbrown';
     <legend class={labelCls}>{b.serviceOption} <span class="text-burgundy">*</span></legend>
     <div class="flex flex-wrap gap-6 mt-2">
       <label class="inline-flex items-center gap-2 text-sm">
-        <input type="radio" name="opcao_servico" value="Bride" required class={radioCls} data-service-opt="bride" />
+        <input type="radio" name="opcao_servico" value="Bride" required checked class={radioCls} data-service-opt="bride" />
         {b.bride}
       </label>
       <label class="inline-flex items-center gap-2 text-sm">
@@ -100,29 +100,23 @@ const labelCls = 'block text-sm font-medium text-darkbrown';
       <label class={labelCls} for="b-event-location">{b.eventLocation} <span class="text-burgundy">*</span></label>
       <input id="b-event-location" name="local_evento" type="text" required class={inputCls} />
     </div>
-    <div class="grid sm:grid-cols-2 gap-5">
-      <fieldset>
-        <legend class={labelCls}>{b.servicesWanted} <span class="text-burgundy">*</span></legend>
-        <div class="flex flex-wrap gap-6 mt-2">
-          <label class="inline-flex items-center gap-2 text-sm">
-            <input type="radio" name="servicos_procurados_guests" value="Makeup" required class={radioCls} />
-            {b.makeup}
-          </label>
-          <label class="inline-flex items-center gap-2 text-sm">
-            <input type="radio" name="servicos_procurados_guests" value="Pack Makeup & Hair" required class={radioCls} />
-            {b.pack}
-          </label>
-          <label class="inline-flex items-center gap-2 text-sm">
-            <input type="radio" name="servicos_procurados_guests" value="Hair" required class={radioCls} />
-            {b.hair}
-          </label>
+    <fieldset>
+      <legend class={labelCls}>{b.guestsQty} <span class="text-burgundy">*</span></legend>
+      <div class="grid sm:grid-cols-3 gap-5 mt-2">
+        <div>
+          <label class={labelCls} for="b-guests-makeup">{b.makeup}</label>
+          <input id="b-guests-makeup" name="guests_makeup" type="number" min="0" value="0" class={inputCls} />
         </div>
-      </fieldset>
-      <div>
-        <label class={labelCls} for="b-people">{b.people} <span class="text-burgundy">*</span></label>
-        <input id="b-people" name="numero_pessoas" type="number" min="1" required class={inputCls} />
+        <div>
+          <label class={labelCls} for="b-guests-hair">{b.hair}</label>
+          <input id="b-guests-hair" name="guests_hair" type="number" min="0" value="0" class={inputCls} />
+        </div>
+        <div>
+          <label class={labelCls} for="b-guests-pack">{b.pack}</label>
+          <input id="b-guests-pack" name="guests_pack" type="number" min="0" value="0" class={inputCls} />
+        </div>
       </div>
-    </div>
+    </fieldset>
   </div>
 
   <div>
@@ -154,16 +148,42 @@ const labelCls = 'block text-sm font-medium text-darkbrown';
     guestsFields?.classList.toggle('hidden', isBride);
   };
 
+  const guestInputs = () =>
+    ['guests_makeup', 'guests_hair', 'guests_pack']
+      .map((name) => form?.querySelector<HTMLInputElement>(`[name="${name}"]`))
+      .filter((el): el is HTMLInputElement => !!el);
+
+  const validateGuestCounts = (): boolean => {
+    if (guestsFields?.classList.contains('hidden')) return true;
+    const inputs = guestInputs();
+    const total = inputs.reduce((sum, el) => sum + (parseInt(el.value || '0', 10) || 0), 0);
+    inputs.forEach((el) => {
+      el.classList.toggle('!border-burgundy', total < 1);
+      el.classList.toggle('!bg-[#FBEDF0]', total < 1);
+    });
+    return total > 0;
+  };
+
+  const restoreBrideDefault = () => {
+    const brideRadio = form?.querySelector<HTMLInputElement>('[data-service-opt="bride"]');
+    if (brideRadio) brideRadio.checked = true;
+    showFields('bride');
+  };
+
   form?.querySelectorAll<HTMLInputElement>('[data-service-opt]').forEach((radio) => {
     radio.addEventListener('change', () => showFields(radio.getAttribute('data-service-opt') ?? ''));
   });
 
+  restoreBrideDefault();
+
   form?.addEventListener('submit', (e) => {
     e.preventDefault();
-    if (!validateRequiredFields(form)) {
+    if (!validateRequiredFields(form) || !validateGuestCounts()) {
       scrollFormIntoView(form);
       return;
     }
-    void submitForm(form, status);
+    void submitForm(form, status).then((ok) => {
+      if (ok) restoreBrideDefault();
+    });
   });
 </script>

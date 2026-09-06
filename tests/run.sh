@@ -189,12 +189,12 @@ if [ "$LOGIN_STATUS" = "200" ]; then
   LEAD_ID=$(echo "$LEADS_HTML" | grep -oE "/admin/lead/[0-9a-f-]{36}" | head -1 | sed 's|/admin/lead/||')
   if [ -n "$LEAD_ID" ]; then
     DEFAULT_TPL=$(curl -s -b "$COOKIE_JAR" "$BASE/api/admin/templates/quote?leadId=${LEAD_ID}")
-    assert_contains "Template default usa locale da lead (EN)" 'Investment' "$DEFAULT_TPL"
+    assert_contains "Template default usa locale da lead (EN)" 'Amount' "$DEFAULT_TPL"
     assert_contains "Template default EN subject" 'Bridal quote' "$DEFAULT_TPL"
     PT_OVERRIDE=$(curl -s -b "$COOKIE_JAR" "$BASE/api/admin/templates/quote?leadId=${LEAD_ID}&locale=pt")
-    assert_contains "Override ?locale=pt usa Investimento" 'Investimento' "$PT_OVERRIDE"
+    assert_contains "Override ?locale=pt usa Valor" 'Valor' "$PT_OVERRIDE"
     EN_OVERRIDE=$(curl -s -b "$COOKIE_JAR" "$BASE/api/admin/templates/quote?leadId=${LEAD_ID}&locale=en")
-    assert_contains "Override ?locale=en usa Investment" 'Investment' "$EN_OVERRIDE"
+    assert_contains "Override ?locale=en usa Amount" 'Amount' "$EN_OVERRIDE"
   else
     echo -e "  ${YELLOW}⊘${NC} Não encontrei lead ID no admin (skip templates)"
   fi

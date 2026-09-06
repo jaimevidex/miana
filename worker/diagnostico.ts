@@ -225,14 +225,14 @@ function renderPage1(lead: DiagnosticLead): string {
         </div>
       </fieldset>
 
-      ${textareaField('diag-doenca', 'doenca_cronica', 'Tens alguma doença ou condição crónica diagnosticada?', '', 'Descreve se aplicável...')}
+      ${textareaField('diag-doenca', 'doenca_cronica', 'Tens alguma doença ou condição crónica?', '', 'Descreve se aplicável...')}
       ${textareaField('diag-alergias-alim', 'alergias_alimentares', 'Tens Alergias ou Intolerâncias Alimentares conhecidas?', '', 'Descreve se aplicável...')}
       ${textareaField('diag-alergias-cosm', 'alergias_cosmeticos', 'Tens Alergias conhecidas a ingredientes cosméticos, medicamentos ou substâncias?', '', 'Descreve se aplicável...')}
       ${textareaField('diag-medicacao', 'medicacao_continua', 'Tomas alguma medicação contínua?', '', 'Descreve se aplicável...')}
 
       ${h2Label('Histórico Dermatológico')}
       <fieldset>
-        ${requiredLegend('Tens algum DIAGNÓSTICO MÉDICO para alguma destas condições?')}
+        ${requiredLegend('Tens alguma CONDIÇÃO MÉDICA para alguma destas condições?')}
         <div class="grid" style="margin-top:8px">
           ${checkboxOpts('diagnostico_medico', [
             'Acne',
@@ -242,7 +242,7 @@ function renderPage1(lead: DiagnosticLead): string {
             'Psoríase',
             'Melasma',
             'Lúpus ou outra doença autoimune com manifestação cutânea',
-            'Nenhum / Nunca fui diagnosticada com doenças de pele',
+            'Nenhum / Nunca tive uma condição médica de pele',
             'Outro',
           ])}
         </div>
@@ -954,19 +954,19 @@ function renderSuccess(): string {
 export function renderDiagnosticError(reason: 'missing' | 'invalid' | 'expired'): Response {
   const messages = {
     missing: 'Falta o token de acesso neste link.',
-    invalid: 'Este link de diagnóstico não é válido.',
-    expired: 'Este link de diagnóstico expirou (2 meses). Pede um novo no formulário da Skin Call.',
+    invalid: 'Este link de avaliação de pele não é válido.',
+    expired: 'Este link de avaliação de pele expirou (2 meses). Pede um novo no formulário da Skin Call.',
   } as const;
   const html = `<!doctype html>
 <html lang="pt">
 <head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><meta name="robots" content="noindex"/>
-<title>Diagnóstico</title>
+<title>Avaliação de pele</title>
 <style>body{font-family:-apple-system,sans-serif;background:#f6f0ea;color:#3b2a2a;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0;padding:24px}
 .card{background:#fff;border:1px solid rgba(59,42,42,.1);border-radius:12px;padding:32px;max-width:420px;text-align:center}
 h1{font-size:22px;color:#8a2831;margin:0 0 12px}p{color:#7a6a64;font-size:14px;line-height:1.6;margin:0}
 a{display:inline-block;margin-top:20px;background:#8a2831;color:#fbf5ef;text-decoration:none;padding:12px 24px;border-radius:999px;font-size:14px}</style>
 </head>
-<body><main class="card"><h1>Diagnóstico indisponível</h1><p>${messages[reason]}</p>
+<body><main class="card"><h1>Avaliação de pele indisponível</h1><p>${messages[reason]}</p>
 <a href="/servicos/skin-call">Voltar à Skin Call</a></main></body></html>`;
   return new Response(html, {
     status: reason === 'missing' ? 400 : 410,

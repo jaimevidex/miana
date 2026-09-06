@@ -49,12 +49,12 @@ const EMAIL_HINTS: Record<string, string> = {
   bridal_intro:
     'Campos da lead: {{nome}}, {{data_casamento}}, {{local_preparacao}}, {{hora_pronta}}. Envia o PDF dos serviços de noiva em anexo (placeholder até teres o ficheiro real). Sem tabela de preços.',
   bridal:
-    'Campos da lead: {{nome}}, {{data_casamento}}, {{hora_pronta}}, {{local_preparacao}}, {{local_prova}}, {{servicos_procurados}}, {{guests_makeup}}, {{guests_hair}}, {{guests_pack}}, {{addon_skin_call}}. A tabela de preços actualiza-se sozinha.',
+    'Campos da lead: {{nome}}, {{data_casamento}}, {{hora_pronta}}, {{local_preparacao}}, {{local_prova}}, {{servicos_procurados}}, {{guests_makeup}}, {{guests_hair}}, {{guests_pack}}, {{addon_skin_call}}, {{valor_deslocacao}}. A tabela de preços actualiza-se sozinha.',
   beauty:
-    'Campos da lead: {{nome}}, {{data_evento}}, {{hora_pronta_evento}}, {{local_evento}}, {{servicos_procurados_guests}}, {{numero_pessoas}}. A tabela de preços actualiza-se sozinha.',
-  skin_call: 'Campos da lead: {{nome}}, {{plano}}. A tabela de preços actualiza-se sozinha.',
+    'Campos da lead: {{nome}}, {{data_evento}}, {{hora_pronta_evento}}, {{local_evento}}, {{guests_makeup}}, {{guests_hair}}, {{guests_pack}}, {{valor_deslocacao}}. A tabela de preços actualiza-se sozinha.',
+  skin_call: 'Campos da lead: {{nome}}, {{plano}}, {{valor_deslocacao}}. A tabela de preços actualiza-se sozinha.',
   education:
-    'Campos da lead: {{nome}}, {{formato}}, {{local_workshop}}, {{data_hora}}, {{tipo}}, {{modalidade}}, {{numero_participantes}}, {{regime}}, {{mensagem}}. A tabela de preços actualiza-se sozinha.',
+    'Campos da lead: {{nome}}, {{formato}}, {{local_workshop}}, {{data_hora}}, {{tipo}}, {{modalidade}}, {{numero_participantes}}, {{regime}}, {{mensagem}}, {{valor_deslocacao}}. A tabela de preços actualiza-se sozinha.',
   terms: 'Campos: {{nome}}, {{titular}}, {{iban}}, {{mbway}}. IBAN e MB Way no bloco vêm da secção Pagamento.',
   schedule: 'Campo: {{nome}}.',
   schedule_form: 'Campos: {{nome}}, {{quando}}. Os botões actualizam-se sozinhos.',

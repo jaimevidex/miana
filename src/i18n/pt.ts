@@ -243,6 +243,11 @@ export const pt = {
       },
     ],
     plansTitle: 'Escolhe o teu plano',
+    plansIntro: [
+      'Cada pele é um ecossistema único. A escolha do número de sessões depende do estado inicial da tua pele e dos objetivos que queremos alcançar. Porque a nossa prioridade é ajudar-te a ter uma pele bonita, mas sempre saudável.',
+      'Uma pele com a barreira cutânea comprometida não deve introduzir ingredientes intensos de imediato e, mesmo que a pele esteja saudável, existem cuidados que precisam de uma introdução gradual.',
+      'Estás na dúvida sobre qual o plano ideal para ti? Fala connosco e ajudamos-te a decidir.',
+    ],
     focus: 'Foco:',
     plans: [
       {
@@ -397,6 +402,7 @@ export const pt = {
       pack: 'Pack Makeup & Hair',
       hair: 'Hair',
       people: 'Número de pessoas',
+      guestsQty: 'Número de pessoas por serviço',
     },
     skin: {
       plan: 'Qual o plano que procuras?',
@@ -422,7 +428,6 @@ export const pt = {
         { value: 'Normal', label: 'Normal' },
         { value: 'Oleosa', label: 'Oleosa' },
         { value: 'Seca', label: 'Seca' },
-        { value: 'Mista', label: 'Mista' },
         { value: 'Sensível / reativa', label: 'Sensível / reativa' },
       ],
       concerns: 'Quais as principais preocupações de pele?',

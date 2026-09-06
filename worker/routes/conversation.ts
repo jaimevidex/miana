@@ -332,7 +332,7 @@ export async function handleScheduleFormTemplate(
       return json({ error: 'Marcar e formulário só está disponível para Skin Call.' }, 400);
     }
     if (!recipient.token) {
-      return json({ error: 'Esta cliente não tem token de diagnóstico. Associa uma lead Skin Call.' }, 400);
+      return json({ error: 'Esta cliente não tem token de avaliação de pele. Associa uma lead Skin Call.' }, 400);
     }
 
     const meet = await createMeetEvent(env, {

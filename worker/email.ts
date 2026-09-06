@@ -205,22 +205,22 @@ export async function sendDiagnosticComplete(
   data: { nome: string; email: string; telefone: string },
   clientId: string
 ): Promise<void> {
-  const subject = `🔔 Diagnóstico de Preenchido - Skin Call`;
+  const subject = `🔔 Avaliação de pele preenchida - Skin Call`;
   const adminLink = adminClientUrl(env, clientId);
 
   const html = `
     <div style="font-family: Arial, Helvetica, sans-serif; line-height:1.6; color:#3b2a2a; max-width:480px; margin:0 auto;">
-      <p>A cliente <strong>${data.nome}</strong> preencheu o diagnóstico de pele.</p>
+      <p>A cliente <strong>${data.nome}</strong> preencheu a avaliação de pele.</p>
       <p><strong>${data.nome}</strong> - ${data.email} - ${data.telefone}</p>
       <p style="text-align:center; margin:32px 0;">
         <a href="${adminLink}" style="display:inline-block; background:#8a2831; color:#fbf5ef; text-decoration:none; padding:14px 28px; border-radius:999px; font-weight:600;">
-          Ver diagnóstico
+          Ver avaliação de pele
         </a>
       </p>
     </div>
   `;
 
-  const text = `Diagnóstico preenchido por ${data.nome} - ${data.email} - ${data.telefone}\n\nVer diagnóstico: ${adminLink}`;
+  const text = `Avaliação de pele preenchida por ${data.nome} - ${data.email} - ${data.telefone}\n\nVer avaliação de pele: ${adminLink}`;
   const contacts = await getContacts(env);
   await sendEmail(env, { to: contacts.email || ownerEmail(env), subject, html, text });
 }

@@ -44,7 +44,7 @@ export interface DiagChrome {
 const pt: DiagChrome = {
   title: 'Análise da tua Pele',
   pageTitle: (page) => `Análise da Pele - Página ${page}`,
-  successTitle: 'Diagnóstico Enviado',
+  successTitle: 'Avaliação de pele enviada',
   intro1:
     'Para que a nossa chamada seja o mais proveitosa possível, precisas de preencher este formulário detalhado. Todas as informações serão usadas exclusivamente para analisar a tua pele e rotina, sendo confidenciais.',
   intro2:
@@ -67,14 +67,14 @@ const pt: DiagChrome = {
   specify: 'Especifica se aplicável...',
   next: 'Próxima →',
   prev: '← Anterior',
-  submit: 'Submeter Diagnóstico',
+  submit: 'Submeter avaliação de pele',
   required: 'Faltam alguns campos obrigatórios.',
   requiredPhotos: 'Faltam alguns campos obrigatórios (incluindo fotos).',
   saving: 'A guardar...',
-  sending: 'A enviar diagnóstico...',
+  sending: 'A enviar avaliação de pele...',
   saveError: 'Erro ao guardar. Tenta de novo.',
   sendError: 'Algo correu mal. Tenta de novo.',
-  successBody: 'Obrigada! Recebi o teu diagnóstico. Entrarei em contacto dentro de 48h.',
+  successBody: 'Obrigada! Recebi a tua avaliação de pele. Entrarei em contacto dentro de 48h.',
   photosLabel: 'Upload de Fotos da Pele',
   photosHint:
     'Por favor, anexa 3 fotos da tua pele sem qualquer maquilhagem, creme ou filtro, tiradas com luz natural de janela (sem luz direta):<br/>1. Frente | 2. Perfil Esquerdo | 3. Perfil Direito<br/>Formatos: JPG, PNG ou HEIC (iPhone) - HEIC é convertido automaticamente.',
@@ -89,7 +89,7 @@ const pt: DiagChrome = {
 const en: DiagChrome = {
   title: 'Your skin analysis',
   pageTitle: (page) => `Skin analysis - Page ${page}`,
-  successTitle: 'Diagnostic sent',
+  successTitle: 'Skin assessment sent',
   intro1:
     'So our call is as useful as possible, please fill in this detailed form. All information is used only to analyse your skin and routine, and stays confidential.',
   intro2:
@@ -112,14 +112,14 @@ const en: DiagChrome = {
   specify: 'Specify if it applies...',
   next: 'Next →',
   prev: '← Back',
-  submit: 'Submit diagnostic',
+  submit: 'Submit skin assessment',
   required: 'Some required fields are missing.',
   requiredPhotos: 'Some required fields are missing (including photos).',
   saving: 'Saving...',
-  sending: 'Sending diagnostic...',
+  sending: 'Sending skin assessment...',
   saveError: 'Could not save. Please try again.',
   sendError: 'Something went wrong. Please try again.',
-  successBody: 'Thank you! I received your diagnostic. I will get back to you within 48 hours.',
+  successBody: 'Thank you! I received your skin assessment. I will get back to you within 48 hours.',
   photosLabel: 'Skin photo upload',
   photosHint:
     'Please attach 3 photos of your skin with no makeup, cream or filter, taken in natural window light (no direct sun):<br/>1. Front | 2. Left profile | 3. Right profile<br/>Formats: JPG, PNG or HEIC (iPhone) - HEIC is converted automatically.',
@@ -147,8 +147,8 @@ export const DIAG_OPTION_EN: Record<string, string> = {
   Melasma: 'Melasma',
   'Lúpus ou outra doença autoimune com manifestação cutânea':
     'Lupus or another autoimmune disease with skin signs',
-  'Nenhum / Nunca fui diagnosticada com doenças de pele':
-    'None / I have never been diagnosed with a skin condition',
+  'Nenhum / Nunca tive uma condição médica de pele':
+    'None / I have never had a medical skin condition',
   Outro: 'Other',
   Sim: 'Yes',
   Não: 'No',
@@ -307,15 +307,15 @@ export const DIAG_LABEL_EN: Record<string, string> = {
   'As tuas preferências e expectativas': 'Your preferences and expectations',
   'Avaliação Visual': 'Visual assessment',
   'Encontras-te nalguma destas situações?': 'Are you in any of these situations?',
-  'Tens alguma doença ou condição crónica diagnosticada?':
-    'Do you have any diagnosed chronic illness or condition?',
+  'Tens alguma doença ou condição crónica?':
+    'Do you have any chronic illness or medical condition?',
   'Tens Alergias ou Intolerâncias Alimentares conhecidas?':
     'Do you have any known food allergies or intolerances?',
   'Tens Alergias conhecidas a ingredientes cosméticos, medicamentos ou substâncias?':
     'Do you have any known allergies to cosmetic ingredients, medicines or substances?',
   'Tomas alguma medicação contínua?': 'Do you take any ongoing medication?',
-  'Tens algum DIAGNÓSTICO MÉDICO para alguma destas condições?':
-    'Do you have a MEDICAL DIAGNOSIS for any of these conditions?',
+  'Tens alguma CONDIÇÃO MÉDICA para alguma destas condições?':
+    'Do you have a MEDICAL CONDITION for any of these?',
   'Já fizeste medicação oral para a pele no passado? Se sim, qual?':
     'Have you taken oral medication for your skin in the past? If yes, which?',
   'Já usaste medicação tópica para a pele no passado? Se sim, qual? Como reagiu a tua pele?':

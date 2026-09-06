@@ -261,7 +261,7 @@ export async function handleDiagnosticoSave(request: Request, env: Env): Promise
 
     const client = await resolveClientForLead(db, leadRow.id);
     if (!client) {
-      return json({ success: false, error: 'Diagnóstico só está disponível após aceitar a lead (cliente).' }, 400);
+      return json({ success: false, error: 'A avaliação de pele só está disponível após aceitar a lead (cliente).' }, 400);
     }
 
     const existingDiag = await db.select().from(diagnostics).where(eq(diagnostics.leadId, leadRow.id)).limit(1);
@@ -332,7 +332,7 @@ export async function handleDiagnostico(request: Request, env: Env): Promise<Res
 
     const client = await resolveClientForLead(db, stored.id);
     if (!client) {
-      return json({ success: false, error: 'Diagnóstico só está disponível após aceitar a lead (cliente).' }, 400);
+      return json({ success: false, error: 'A avaliação de pele só está disponível após aceitar a lead (cliente).' }, 400);
     }
 
     // Upload fotos para R2. HEIC is converted in the browser (admin + diagnostico).
@@ -401,7 +401,7 @@ export async function handleDiagnostico(request: Request, env: Env): Promise<Res
 
     return json({
       success: true,
-      message: 'Obrigada! Recebi o teu diagnóstico. Entrarei em contacto dentro de 48h.',
+      message: 'Obrigada! Recebi a tua avaliação de pele. Entrarei em contacto dentro de 48h.',
     });
   } catch (e) {
     console.error('[api/diagnostico] error:', e);
@@ -695,7 +695,7 @@ export async function handleDiagnosticInvite(request: Request, env: Env, id: str
 
     if (!lead) return json({ error: 'Lead não encontrada.' }, 404);
     if (isLeadLocked(lead.status)) return json({ error: LEAD_LOCKED_MSG }, 409);
-    if (!lead.token) return json({ error: 'Esta lead não tem token de diagnóstico.' }, 400);
+    if (!lead.token) return json({ error: 'Esta lead não tem token de avaliação de pele.' }, 400);
 
     const content = await diagnosticInviteContent(env, { nome: lead.nome, token: lead.token, locale: lead.locale });
     const conv = await getOrCreateConversationForLead(env, lead.id);
@@ -767,13 +767,13 @@ export async function handleClientDiagnosticInvite(request: Request, env: Env, i
     const client = clientResult[0];
 
     if (!client) return json({ error: 'Cliente não encontrado.' }, 404);
-    if (!client.leadId) return json({ error: 'Cliente sem lead associada - sem token de diagnóstico.' }, 400);
+    if (!client.leadId) return json({ error: 'Cliente sem lead associada - sem token de avaliação de pele.' }, 400);
 
     // Buscar a lead original para ter o token
     const leadResult = await db.select().from(leads).where(eq(leads.id, client.leadId)).limit(1);
     const lead = leadResult[0];
 
-    if (!lead || !lead.token) return json({ error: 'Lead original sem token de diagnóstico.' }, 400);
+    if (!lead || !lead.token) return json({ error: 'Lead original sem token de avaliação de pele.' }, 400);
 
     const content = await diagnosticInviteContent(env, { nome: client.nome, token: lead.token, locale: client.locale });
     const conv = await getOrCreateConversationForClient(env, client.id);

@@ -1,7 +1,7 @@
 // Blocos gerados (preços, pagamento, botões) injectados em {{bloco}}.
 
 import type { Pricing } from '../pricing';
-import { bridalQuoteTotal } from '../bridal-pricing';
+import { beautyQuoteTotal, bridalQuoteTotal, parseTravelFee } from '../bridal-pricing';
 import { fieldRow, sectionTitle, priceRow } from './base';
 import { DEFAULT_LOCALE, type Locale } from '../locale';
 
@@ -9,8 +9,9 @@ const BLOCK = {
   pt: {
     data: 'Dados',
     services: 'Serviços',
-    investment: 'Investimento',
-    total: 'Total',
+    investment: 'Valor',
+    total: 'Valor total',
+    travel: 'Deslocação',
     notes: 'Notas',
     name: 'Nome',
     weddingDate: 'Data do casamento',
@@ -42,15 +43,16 @@ const BLOCK = {
     payment: 'Dados de pagamento',
     accountHolder: 'Titular',
     joinMeet: 'Entrar no Google Meet',
-    beforeCall: 'Antes da chamada, preenche por favor o formulário de diagnóstico:',
+    beforeCall: 'Antes da chamada, preenche por favor o formulário de avaliação de pele:',
     openForm: 'Abrir formulário',
-    openDiag: 'Abrir diagnóstico',
+    openDiag: 'Abrir avaliação de pele',
   },
   en: {
     data: 'Details',
     services: 'Services',
-    investment: 'Investment',
-    total: 'Total',
+    investment: 'Amount',
+    total: 'Total amount',
+    travel: 'Travel',
     notes: 'Notes',
     name: 'Name',
     weddingDate: 'Wedding date',
@@ -82,9 +84,9 @@ const BLOCK = {
     payment: 'Payment details',
     accountHolder: 'Account holder',
     joinMeet: 'Join Google Meet',
-    beforeCall: 'Before the call, please fill in the diagnostic form:',
+    beforeCall: 'Before the call, please fill in the skin assessment form:',
     openForm: 'Open form',
-    openDiag: 'Open diagnostic',
+    openDiag: 'Open skin assessment',
   },
 } as const;
 
@@ -103,6 +105,19 @@ function isPlaceholder(value: string | undefined): boolean {
 
 function showValue(raw: string | undefined, computed: string): string {
   return isPlaceholder(raw) ? raw! : computed;
+}
+
+function travelRow(formData: Record<string, string>, locale: Locale): string {
+  const travel = parseTravelFee(formData);
+  return travel > 0 ? priceRow(L(locale).travel, travel) : '';
+}
+
+function totalRow(label: string, amount: number): string {
+  return `
+    <p style="margin:12px 0 0;font-size:16px;border-top:1px solid #e5ded7;padding-top:8px;display:flex;justify-content:space-between">
+      <strong>${label}</strong>
+      <strong>${amount}€</strong>
+    </p>`;
 }
 
 export function bridalBlock(formData: Record<string, string>, pricing: Pricing, notes?: string, locale: Locale = DEFAULT_LOCALE): string {
@@ -138,29 +153,33 @@ export function bridalBlock(formData: Record<string, string>, pricing: Pricing, 
     ${sectionTitle(t.investment)}
     ${priceRow('Bridal - ' + quote.brideLabel, quote.bridePrice)}
     ${guestRows}
-    <p style="margin:12px 0 0;font-size:16px;border-top:1px solid #e5ded7;padding-top:8px;display:flex;justify-content:space-between">
-      <strong>${t.total}</strong>
-      <strong>${quote.total}€</strong>
-    </p>
+    ${travelRow(formData, locale)}
+    ${totalRow(t.total, quote.total)}
     ${notesHtml(notes, locale)}
   `;
 }
 
 export function beautyBlock(formData: Record<string, string>, pricing: Pricing, notes?: string, locale: Locale = DEFAULT_LOCALE): string {
   const t = L(locale);
-  const p = pricing.beauty;
-  const servicos = formData.servicos_procurados_guests || '';
-  const pessoas = parseInt(formData.numero_pessoas || '0', 10);
-  let total = p.pack;
-  let servicoLabel: string = t.packComplete;
-  if (servicos === 'Makeup') {
-    total = p.makeup;
-    servicoLabel = 'Makeup';
-  } else if (servicos === 'Hair') {
-    total = p.hair;
-    servicoLabel = 'Hair';
-  }
-  const extras = pessoas > 1 ? (pessoas - 1) * p.hair : 0;
+  const g = pricing.beauty;
+  const quote = beautyQuoteTotal(formData, pricing);
+  const { guests } = quote;
+
+  const serviceRows = quote.legacy
+    ? `${fieldRow(t.service, showValue(formData.servicos_procurados_guests, quote.servicoLabel))}
+    ${fieldRow(t.people, showValue(formData.numero_pessoas, quote.pessoas > 0 ? String(quote.pessoas) : ''))}`
+    : `${fieldRow('Guests makeup', showValue(formData.guests_makeup, guests.makeup > 0 ? String(guests.makeup) : '0'))}
+    ${fieldRow('Guests hair', showValue(formData.guests_hair, guests.hair > 0 ? String(guests.hair) : '0'))}
+    ${fieldRow('Guests pack', showValue(formData.guests_pack, guests.pack > 0 ? String(guests.pack) : '0'))}`;
+
+  const priceRows = quote.legacy
+    ? `${priceRow('Beauty - ' + quote.servicoLabel, quote.base)}
+    ${quote.extras > 0 ? priceRow(`${t.extras} × ` + (quote.pessoas - 1) + ' × ' + g.hair + '€', quote.extras) : ''}`
+    : [
+        guests.makeup > 0 ? priceRow(`Guests makeup × ${guests.makeup} × ${g.makeup}€`, guests.makeup * g.makeup) : '',
+        guests.hair > 0 ? priceRow(`Guests hair × ${guests.hair} × ${g.hair}€`, guests.hair * g.hair) : '',
+        guests.pack > 0 ? priceRow(`Guests pack × ${guests.pack} × ${g.pack}€`, guests.pack * g.pack) : '',
+      ].join('');
 
   return `
     ${sectionTitle(t.data)}
@@ -168,15 +187,11 @@ export function beautyBlock(formData: Record<string, string>, pricing: Pricing, 
     ${fieldRow(t.readyTime, formData.hora_pronta_evento || '')}
     ${fieldRow(t.eventLocation, formData.local_evento || '')}
     ${sectionTitle(t.services)}
-    ${fieldRow(t.service, showValue(formData.servicos_procurados_guests, servicoLabel))}
-    ${fieldRow(t.people, showValue(formData.numero_pessoas, pessoas > 0 ? String(pessoas) : ''))}
+    ${serviceRows}
     ${sectionTitle(t.investment)}
-    ${priceRow('Beauty - ' + servicoLabel, total)}
-    ${pessoas > 1 ? priceRow(`${t.extras} × ` + (pessoas - 1) + ' × ' + p.hair + '€', extras) : ''}
-    <p style="margin:12px 0 0;font-size:16px;border-top:1px solid #e5ded7;padding-top:8px;display:flex;justify-content:space-between">
-      <strong>${t.total}</strong>
-      <strong>${total + extras}€</strong>
-    </p>
+    ${priceRows}
+    ${travelRow(formData, locale)}
+    ${totalRow(t.total, quote.total)}
     ${notesHtml(notes, locale)}
   `;
 }
@@ -201,16 +216,20 @@ export function skinCallBlock(formData: Record<string, string>, pricing: Pricing
     planoLabel = t.quatro;
   }
 
+  const travel = parseTravelFee(formData);
+  const showPrices = !isPlaceholder(formData.plano);
   return `
     ${sectionTitle(t.plan)}
     ${fieldRow(t.chosenPlan, showValue(formData.plano, planoLabel))}
-    ${isPlaceholder(formData.plano) ? '' : `${sectionTitle(t.investment)}${priceRow(planoLabel, total)}`}
+    ${showPrices ? `${sectionTitle(t.investment)}${priceRow(planoLabel, total)}${travelRow(formData, locale)}${travel > 0 ? totalRow(t.total, total + travel) : ''}` : ''}
     ${notesHtml(notes, locale)}
   `;
 }
 
 export function educationBlock(formData: Record<string, string>, pricing: Pricing, notes?: string, locale: Locale = DEFAULT_LOCALE): string {
   const t = L(locale);
+  const travel = parseTravelFee(formData);
+  const workshop = pricing.education.workshop;
   return `
     ${sectionTitle(t.data)}
     ${fieldRow(t.format, formData.formato || '')}
@@ -222,7 +241,9 @@ export function educationBlock(formData: Record<string, string>, pricing: Pricin
     ${fieldRow(t.regime, formData.regime || '')}
     ${fieldRow(t.message, formData.mensagem || '')}
     ${sectionTitle(t.investment)}
-    ${priceRow(t.workshop, pricing.education.workshop)}
+    ${priceRow(t.workshop, workshop)}
+    ${travelRow(formData, locale)}
+    ${travel > 0 ? totalRow(t.total, workshop + travel) : ''}
     ${notesHtml(notes, locale)}
   `;
 }
@@ -285,8 +306,9 @@ export const DEMO_FORM: Record<EmailDemoId, Record<string, string>> = {
     data_evento: '{{data_evento}}',
     hora_pronta_evento: '{{hora_pronta_evento}}',
     local_evento: '{{local_evento}}',
-    servicos_procurados_guests: '{{servicos_procurados_guests}}',
-    numero_pessoas: '{{numero_pessoas}}',
+    guests_makeup: '{{guests_makeup}}',
+    guests_hair: '{{guests_hair}}',
+    guests_pack: '{{guests_pack}}',
   },
   skin_call: {
     nome: '{{nome}}',

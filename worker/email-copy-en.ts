@@ -64,9 +64,9 @@ export const EMAIL_COPY_FALLBACKS_EN: EmailCopy = {
       '<p>This text is provisional and will be replaced by the final copy.</p>',
   },
   diagnostic_invite: {
-    subject: 'You are almost there! Skin Call skin diagnostic',
+    subject: 'You are almost there! Skin Call skin assessment',
     body:
-      '<p>Hi {{nome}},</p><p>We are almost there! So I can understand the best plan for you, I need you to fill in this short skin diagnostic.</p>' +
+      '<p>Hi {{nome}},</p><p>We are almost there! So I can understand the best plan for you, I need you to fill in this short skin assessment.</p>' +
       EMAIL_BLOCO +
       '<p>This link is personal and for one-time use.</p>',
   },
