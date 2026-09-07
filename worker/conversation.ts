@@ -22,12 +22,8 @@ import {
   splitReferences,
 } from './email-match';
 import { EMAIL_ATTACHMENTS_FOLDER, MAX_CHAT_EXTRA_ATTACHMENTS, MAX_EMAIL_ATTACHMENT_BYTES } from './constants';
-import { termosPlaceholderPdf, TERMOS_PLACEHOLDER_FILENAME, TERMOS_PLACEHOLDER_TYPE } from './assets/termos-placeholder';
-import {
-  bridalServicesPlaceholderPdf,
-  BRIDAL_SERVICES_PLACEHOLDER_FILENAME,
-  BRIDAL_SERVICES_PLACEHOLDER_TYPE,
-} from './assets/bridal-services-placeholder';
+import { resolveSelectedTemplateAttachments, isEmailTemplateId } from './template-attachments';
+import { parseLocale, type Locale } from './locale';
 
 export type TemplateKind =
   | 'free'
@@ -287,13 +283,16 @@ export async function sendConversationMessage(
     html: string;
     userId: string;
     templateKind?: TemplateKind;
-    attachTermsPdf?: boolean;
+    templateId?: string;
+    locale?: Locale | string;
+    attachmentIds?: string[];
     extraAttachments?: EmailAttachment[];
   },
 ): Promise<{ ok: boolean; error?: string; messageId?: string }> {
   const extras = opts.extraAttachments || [];
-  if (extras.length > MAX_CHAT_EXTRA_ATTACHMENTS) {
-    return { ok: false, error: `Máximo de ${MAX_CHAT_EXTRA_ATTACHMENTS} anexos extra por envio.` };
+  const attachmentIds = opts.attachmentIds || [];
+  if (extras.length + attachmentIds.length > MAX_CHAT_EXTRA_ATTACHMENTS) {
+    return { ok: false, error: `Máximo de ${MAX_CHAT_EXTRA_ATTACHMENTS} anexos por envio.` };
   }
   for (const extra of extras) {
     const invalid = validateOutgoingAttachment(extra.filename, extra.contentType, extra.content);
@@ -311,19 +310,18 @@ export async function sendConversationMessage(
   const replyTo = replyToForConversation(env, conv.id);
 
   const attachments: EmailAttachment[] = [];
-  if (opts.attachTermsPdf || opts.templateKind === 'terms') {
-    attachments.push({
-      filename: TERMOS_PLACEHOLDER_FILENAME,
-      contentType: TERMOS_PLACEHOLDER_TYPE,
-      content: termosPlaceholderPdf(),
-    });
-  }
-  if (opts.templateKind === 'bridal_intro') {
-    attachments.push({
-      filename: BRIDAL_SERVICES_PLACEHOLDER_FILENAME,
-      contentType: BRIDAL_SERVICES_PLACEHOLDER_TYPE,
-      content: bridalServicesPlaceholderPdf(),
-    });
+  if (attachmentIds.length) {
+    if (!opts.templateId || !isEmailTemplateId(opts.templateId)) {
+      return { ok: false, error: 'Template de anexos inválido.' };
+    }
+    const selected = await resolveSelectedTemplateAttachments(
+      env,
+      opts.templateId,
+      parseLocale(opts.locale),
+      attachmentIds,
+    );
+    if (!selected.ok) return { ok: false, error: selected.error };
+    attachments.push(...selected.attachments);
   }
   for (const extra of extras) {
     const type = resolveOutgoingAttachmentType(extra.filename, extra.contentType, extra.content);

@@ -38,6 +38,11 @@ import {
   handleGoogleStatus,
   handleDevInbound,
 } from './routes/conversation';
+import {
+  handleAddTemplateAttachment,
+  handleRemoveTemplateAttachment,
+  handleServeTemplateAttachment,
+} from './routes/template-attachments';
 import { handleIncomingEmail } from './email-inbound';
 
 function conversationIdFrom(path: string, prefix: string, suffix: string): string {
@@ -121,6 +126,9 @@ export default {
         return handleEditClient(request, env, path.split('/api/admin/client/')[1]);
       }
       if (path === '/api/admin/settings' && method === 'PUT') return handleUpdateSettings(request, env);
+      if (path === '/api/admin/settings/attachments' && method === 'POST') return handleAddTemplateAttachment(request, env);
+      if (path === '/api/admin/settings/attachments' && method === 'DELETE') return handleRemoveTemplateAttachment(request, env);
+      if (path === '/api/admin/template-attachment' && method === 'GET') return handleServeTemplateAttachment(env, request);
       if (path === '/api/admin/export/leads' && method === 'GET') return handleExportLeads(request, env);
       if (path === '/api/admin/export/clients' && method === 'GET') return handleExportClients(request, env);
       if ((path === '/api/admin/photo' || path.startsWith('/api/admin/photo/')) && method === 'GET') {

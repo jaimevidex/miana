@@ -12,6 +12,7 @@ import { verifyPassword } from '../auth/password';
 import { getPricing } from '../pricing';
 import { getCookieValue } from '../http';
 import { attachPersonFields, interpolate } from '../email-copy';
+import { isAttachmentsSettingKey } from '../template-attachments';
 import { generateQuoteHtml, generateQuoteSubject } from '../services/quotes';
 import { DEFAULT_LOCALE, parseLocale } from '../locale';
 import { isSafePhotoKey, isUploadedPhoto, MAX_PHOTOS, MAX_PHOTO_BYTES, prepareStoredPhoto, sniffImageType } from '../photos';
@@ -635,6 +636,7 @@ export async function handleUpdateSettings(request: Request, env: Env): Promise<
 
     for (const [key, value] of Object.entries(body)) {
       if (key === 'google_calendar_refresh_token') continue;
+      if (isAttachmentsSettingKey(key)) continue;
       await db.insert(settingsTable).values({ key, value, updatedAt: now }).onConflictDoUpdate({
         target: settingsTable.key,
         set: { value, updatedAt: now },

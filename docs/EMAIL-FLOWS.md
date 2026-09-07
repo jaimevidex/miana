@@ -121,4 +121,4 @@ A tabela de preços (Bridal, Beauty, Skin Call, Education) já vem no preview do
 
 No editor (Settings e chat) podes mudar tamanho e cor do texto.
 
-No chat podes anexar até 5 PDF/imagens extra (10 MB cada). Termos e o introdutório Bridal continuam a juntar o PDF automático.
+No chat podes anexar até 5 PDF/imagens (10 MB cada). Cada template (PT e EN) tem anexos default em Settings; ao carregar o template eles entram na lista e podes retirar ou juntar outros. Sem lista gravada, Termos trazem o PDF de termos e o Introdutório Bridal o PDF de serviços de noiva.

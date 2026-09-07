@@ -9,7 +9,7 @@ Browser (Astro pages: PT unprefixed, EN under `/en/`)
        ├── Public: leads, diagnostic funnel
        ├── Admin SSR (worker/admin/*) + Admin API
        ├── D1 (Drizzle schema in worker/db/schema.ts)
-       ├── R2 DIAG_PHOTOS (diagnostics/ + email-attachments/)
+       ├── R2 DIAG_PHOTOS (diagnostics/ + email-attachments/ + template-attachments/)
        └── Email (Resend / Mailpit outbound; Cloudflare Email Routing inbound)
   → Fallback: env.ASSETS → Astro dist/
 ```
@@ -20,7 +20,7 @@ Browser (Astro pages: PT unprefixed, EN under `/en/`)
 |---------|------|---------|
 | `ASSETS` | Static assets | Astro `dist/` |
 | `DB` | D1 | App database |
-| `DIAG_PHOTOS` | R2 | Diagnostic photos and email attachments |
+| `DIAG_PHOTOS` | R2 | Diagnostic photos, sent email attachments, and template default attachments |
 
 Env vars: `EMAIL_ENABLED`, `OWNER_EMAIL`, `SITE_URL`, `FROM_EMAIL` (hello@), `FROM_NAME`, `ADMIN_URL` (optional), `EMAIL_FORWARD_TO` (optional inbound copy). Secrets: `RESEND_API_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`.
 
@@ -31,7 +31,7 @@ Env vars: `EMAIL_ENABLED`, `OWNER_EMAIL`, `SITE_URL`, `FROM_EMAIL` (hello@), `FR
 - **Conversation** - email thread per lead (continues on the client after accept).
 - **Email messages / attachments** - outbound and inbound, stored in D1 + R2.
 - **Diagnostic** - Skin Call questionnaire; photos in R2; linked to lead and/or client.
-- **Settings** - key/value prices, timing, contacts, payment placeholders, Google refresh token, and editable client-email copy (subject + constructed body with `{{bloco}}` for generated tables and `{{botao_chamada}}` / `{{botao_formulario}}` for Skin Call confirmation buttons). PT keys stay `email_*_subject` / `email_*_body`; EN keys are `*_en`. Settings → Emails has a PT | EN toggle. A fixed logo signature (email / Instagram / site icons) is appended by `wrapEmail`, not stored in the body.
+- **Settings** - key/value prices, timing, contacts, payment placeholders, Google refresh token, and editable client-email copy (subject + constructed body with `{{bloco}}` for generated tables and `{{botao_chamada}}` / `{{botao_formulario}}` for Skin Call confirmation buttons). PT keys stay `email_*_subject` / `email_*_body`; EN keys are `*_en`. Template default attachments are `email_{id}_attachments` / `*_en` (JSON) with files in R2 `template-attachments/`. Settings → Emails has a PT | EN toggle. A fixed logo signature (email / Instagram / site icons) is appended by `wrapEmail`, not stored in the body.
 - **Sessions / rate_limits** - auth and abuse control in D1 (not KV).
 
 Timestamps are **milliseconds** since epoch (`Date.now()`).
@@ -57,6 +57,7 @@ Timestamps are **milliseconds** since epoch (`Date.now()`).
 | `worker/admin/chat.ts` | Chat UI |
 | `worker/templates/*` | Quote, terms, schedule HTML (already wrapped - do not double-wrap) |
 | `worker/email-copy.ts` | Editable email subjects/copy from settings + fallbacks + `EMAIL_FLOW_REGISTRY`. EN keys are `email_*_subject_en` / `email_*_body_en` (`getEmailCopy(env, locale)`) |
+| `worker/template-attachments.ts` | Default attachments per email template + locale (builtin PDFs until edited; uploads in R2) |
 | `worker/email-copy-en.ts` | English fallbacks for client templates |
 | `public/email/` | Signature logo + icon PNGs used in client email footers |
 | `worker/pricing.ts` | Pricing/timing/contacts from settings + fallbacks |

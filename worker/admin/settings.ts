@@ -40,6 +40,11 @@ import {
   termsBlock,
 } from '../templates/blocks';
 import { rteFormatBindJs, rteFormatButtons } from './rte';
+import {
+  listTemplateAttachmentsFromMap,
+  publicAttachmentList,
+  type TemplateAttachmentRef,
+} from '../template-attachments';
 
 const SECTIONS: { id: string; label: string }[] = [
   { id: 'precos', label: 'Preços' },
@@ -156,12 +161,41 @@ function renderFieldPicker(
     </details>`;
 }
 
+function attachmentHref(id: EmailTemplateId, locale: 'pt' | 'en', attId: string): string {
+  return `/api/admin/template-attachment?templateId=${encodeURIComponent(id)}&locale=${encodeURIComponent(locale)}&id=${encodeURIComponent(attId)}`;
+}
+
+function renderAttachmentZone(
+  id: EmailTemplateId,
+  locale: 'pt' | 'en',
+  items: TemplateAttachmentRef[],
+): string {
+  const rows = items.length
+    ? items.map((item) => {
+      const href = attachmentHref(id, locale, item.id);
+      return `<li><a href="${htmlEscape(href)}" target="_blank" rel="noopener">${htmlEscape(item.filename)}</a><button type="button" data-remove-att="${htmlEscape(item.id)}">Remover</button></li>`;
+    }).join('')
+    : '<li class="tpl-atts-empty">Sem anexos default.</li>';
+  return `
+    <div class="tpl-atts" data-tpl-atts data-template-id="${htmlEscape(id)}" data-locale="${htmlEscape(locale)}">
+      <span class="lbl">Anexos default</span>
+      <p class="settings-hint">Vão no envio deste template. No chat podes retirar ou juntar outros.</p>
+      <ul class="chat-file-list tpl-atts-list">${rows}</ul>
+      <label class="btn btn-outline btn-sm tpl-atts-add">
+        Adicionar anexo
+        <input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,application/pdf,image/jpeg,image/png,image/webp,image/gif" hidden />
+      </label>
+      <p class="tpl-atts-status status" role="status"></p>
+    </div>`;
+}
+
 function emailTemplateFields(
   id: EmailTemplateId,
   fallback: EmailTemplateCopy,
   demoBlock: string,
   locale: 'pt' | 'en' = 'pt',
   extras: Record<string, string> = {},
+  attachments: TemplateAttachmentRef[] = [],
 ): string {
   const suffix = locale === 'en' ? '_en' : '';
   const prefix = `email_${id}`;
@@ -173,7 +207,8 @@ function emailTemplateFields(
       <input id="${prefix}_subject${suffix}" class="in" value="${htmlEscape(fallback.subject)}" />
     </div>
     ${renderFieldPicker(id, rteId, demoBlock, extras)}
-    ${renderRteField(rteId, 'Corpo', preview, 'Corpo do email…')}`;
+    ${renderRteField(rteId, 'Corpo', preview, 'Corpo do email…')}
+    ${renderAttachmentZone(id, locale, attachments)}`;
 }
 
 export async function buildSettingsPage(env: Env): Promise<{ content: string; script: string }> {
@@ -236,8 +271,8 @@ export async function buildSettingsPage(env: Env): Promise<{ content: string; sc
     return `
         <div class="settings-email-panel${active}" data-email="${p.id}" data-email-flow="${p.flow}">
           <h3>${htmlEscape(p.label)}</h3>
-          <div data-email-locale="pt">${emailTemplateFields(p.id, emailCopyPt[p.id], demoBlockFor(p.id, pricing, pay, assetBase, 'pt'), 'pt', demoExtrasFor(p.id, assetBase, 'pt'))}</div>
-          <div data-email-locale="en" hidden>${emailTemplateFields(p.id, emailCopyEn[p.id], demoBlockFor(p.id, pricing, pay, assetBase, 'en'), 'en', demoExtrasFor(p.id, assetBase, 'en'))}</div>
+          <div data-email-locale="pt">${emailTemplateFields(p.id, emailCopyPt[p.id], demoBlockFor(p.id, pricing, pay, assetBase, 'pt'), 'pt', demoExtrasFor(p.id, assetBase, 'pt'), publicAttachmentList(listTemplateAttachmentsFromMap(settingsMap, p.id, 'pt')))}</div>
+          <div data-email-locale="en" hidden>${emailTemplateFields(p.id, emailCopyEn[p.id], demoBlockFor(p.id, pricing, pay, assetBase, 'en'), 'en', demoExtrasFor(p.id, assetBase, 'en'), publicAttachmentList(listTemplateAttachmentsFromMap(settingsMap, p.id, 'en')))}</div>
         </div>`;
   }).join('');
 
@@ -356,7 +391,7 @@ export async function buildSettingsPage(env: Env): Promise<{ content: string; sc
 
       <section class="settings-panel" data-section="emails">
         <h2>Emails</h2>
-        <p class="settings-hint">Organizados pelo flow de cada formulário. Notificações internas não se editam aqui.</p>
+        <p class="settings-hint">Organizados pelo flow de cada formulário. Notificações internas não se editam aqui. Anexos default gravam na hora (PT e EN separados).</p>
         <nav class="filters" role="tablist" aria-label="Idioma da copy">
           <button type="button" class="filter-btn active" data-email-locale-btn="pt">PT</button>
           <button type="button" class="filter-btn" data-email-locale-btn="en">EN</button>
@@ -476,6 +511,86 @@ export async function buildSettingsPage(env: Env): Promise<{ content: string; sc
           if (!editor || !tpl) return;
           editor.focus();
           document.execCommand('insertHTML', false, tpl.innerHTML);
+        });
+      });
+
+      function escapeAtt(text) {
+        return String(text || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      }
+      function renderTplAtts(box, items) {
+        var list = box.querySelector('.tpl-atts-list');
+        if (!list) return;
+        if (!items || !items.length) {
+          list.innerHTML = '<li class="tpl-atts-empty">Sem anexos default.</li>';
+          return;
+        }
+        var templateId = box.getAttribute('data-template-id');
+        var locale = box.getAttribute('data-locale');
+        list.innerHTML = items.map(function(item){
+          var href = '/api/admin/template-attachment?templateId=' + encodeURIComponent(templateId) + '&locale=' + encodeURIComponent(locale) + '&id=' + encodeURIComponent(item.id);
+          return '<li><a href="' + href + '" target="_blank" rel="noopener">' + escapeAtt(item.filename) + '</a><button type="button" data-remove-att="' + escapeAtt(item.id) + '">Remover</button></li>';
+        }).join('');
+      }
+      document.querySelectorAll('[data-tpl-atts]').forEach(function (box) {
+        var input = box.querySelector('input[type="file"]');
+        var status = box.querySelector('.tpl-atts-status');
+        function setStatus(text, err) {
+          if (!status) return;
+          status.textContent = text || '';
+          status.className = err ? 'status err' : 'status';
+        }
+        box.addEventListener('click', async function (e) {
+          var btn = e.target.closest('[data-remove-att]');
+          if (!btn) return;
+          e.preventDefault();
+          setStatus('A remover...');
+          try {
+            var res = await fetch('/api/admin/settings/attachments', {
+              method: 'DELETE',
+              credentials: 'same-origin',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                templateId: box.getAttribute('data-template-id'),
+                locale: box.getAttribute('data-locale'),
+                id: btn.getAttribute('data-remove-att'),
+              }),
+            });
+            var data = await res.json();
+            if (!data.success) {
+              setStatus(data.error || 'Erro ao remover.', true);
+              return;
+            }
+            renderTplAtts(box, data.attachments || []);
+            setStatus('Removido.');
+          } catch (err) {
+            setStatus('Erro ao remover.', true);
+          }
+        });
+        if (input) input.addEventListener('change', async function () {
+          var file = input.files && input.files[0];
+          input.value = '';
+          if (!file) return;
+          var fd = new FormData();
+          fd.append('templateId', box.getAttribute('data-template-id') || '');
+          fd.append('locale', box.getAttribute('data-locale') || 'pt');
+          fd.append('file', file);
+          setStatus('A carregar...');
+          try {
+            var res = await fetch('/api/admin/settings/attachments', {
+              method: 'POST',
+              credentials: 'same-origin',
+              body: fd,
+            });
+            var data = await res.json();
+            if (!data.success) {
+              setStatus(data.error || 'Erro ao adicionar.', true);
+              return;
+            }
+            renderTplAtts(box, data.attachments || []);
+            setStatus('Adicionado.');
+          } catch (err) {
+            setStatus('Erro ao adicionar.', true);
+          }
         });
       });
     })();

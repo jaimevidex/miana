@@ -17,6 +17,8 @@ if command -v npx >/dev/null 2>&1; then
   npx tsx tests/email-copy.ts
   echo "bridal-profile-fields unit"
   npx tsx tests/bridal-profile-fields.ts
+  echo "template-attachments unit"
+  npx tsx tests/template-attachments.ts
 fi
 
 RED='\033[0;31m'

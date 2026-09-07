@@ -22,6 +22,8 @@ import type { EmailAttachment } from '../email';
 import { generateQuoteHtml, generateQuoteSubject } from '../services/quotes';
 import { getPricing, getPaymentDetails } from '../pricing';
 import { attachPersonFields, getEmailCopy, interpolate, termsCopyForType } from '../email-copy';
+import { quoteTemplateId, termsTemplateId } from '../template-attachments';
+import { attachmentsPayload } from './template-attachments';
 import { termsEmail, termsSubject } from '../templates/terms';
 import { scheduleEmail, scheduleSubject } from '../templates/schedule';
 import { scheduleFormEmail, scheduleFormSubject } from '../templates/schedule_form';
@@ -157,11 +159,6 @@ function isFormFile(value: FormDataEntryValue): value is File {
   return typeof value === 'object' && value !== null && 'arrayBuffer' in value && 'name' in value;
 }
 
-function truthyFormFlag(value: FormDataEntryValue | null): boolean {
-  const raw = String(value || '').trim().toLowerCase();
-  return raw === 'true' || raw === '1' || raw === 'on';
-}
-
 async function parseOutgoingFiles(form: FormData): Promise<EmailAttachment[] | { error: string }> {
   const raw = [...form.getAll('files'), ...form.getAll('files[]')].filter(isFormFile);
   const files = raw.filter((file) => file.name || file.size > 0);
@@ -183,8 +180,31 @@ async function parseOutgoingFiles(form: FormData): Promise<EmailAttachment[] | {
   return extras;
 }
 
+function parseAttachmentIds(raw: unknown): string[] {
+  if (Array.isArray(raw)) {
+    return raw.map((id) => String(id || '').trim()).filter(Boolean);
+  }
+  const text = String(raw || '').trim();
+  if (!text) return [];
+  try {
+    const parsed = JSON.parse(text) as unknown;
+    if (Array.isArray(parsed)) return parsed.map((id) => String(id || '').trim()).filter(Boolean);
+  } catch {
+    // comma-separated fallback
+  }
+  return text.split(',').map((id) => id.trim()).filter(Boolean);
+}
+
 async function parseSendPayload(request: Request): Promise<
-  | { subject: string; html: string; templateKind: TemplateKind; attachTermsPdf: boolean; extraAttachments: EmailAttachment[] }
+  | {
+    subject: string;
+    html: string;
+    templateKind: TemplateKind;
+    templateId: string;
+    locale: string;
+    attachmentIds: string[];
+    extraAttachments: EmailAttachment[];
+  }
   | { error: string; status: number }
 > {
   const ct = request.headers.get('content-type') || '';
@@ -196,7 +216,9 @@ async function parseSendPayload(request: Request): Promise<
       subject: String(form.get('subject') || '').trim(),
       html: String(form.get('html') || '').trim(),
       templateKind: (String(form.get('templateKind') || 'free') as TemplateKind) || 'free',
-      attachTermsPdf: truthyFormFlag(form.get('attachTermsPdf')),
+      templateId: String(form.get('templateId') || '').trim(),
+      locale: String(form.get('locale') || '').trim(),
+      attachmentIds: parseAttachmentIds(form.get('attachmentIds')),
       extraAttachments: files,
     };
   }
@@ -204,13 +226,17 @@ async function parseSendPayload(request: Request): Promise<
     subject?: string;
     html?: string;
     templateKind?: TemplateKind;
-    attachTermsPdf?: boolean;
+    templateId?: string;
+    locale?: string;
+    attachmentIds?: unknown;
   };
   return {
     subject: (body.subject || '').trim(),
     html: (body.html || '').trim(),
     templateKind: body.templateKind || 'free',
-    attachTermsPdf: !!body.attachTermsPdf,
+    templateId: (body.templateId || '').trim(),
+    locale: (body.locale || '').trim(),
+    attachmentIds: parseAttachmentIds(body.attachmentIds),
     extraAttachments: [],
   };
 }
@@ -225,7 +251,7 @@ export async function handleSendConversationMessage(
   try {
     const parsed = await parseSendPayload(request);
     if ('error' in parsed) return json({ error: parsed.error }, parsed.status);
-    const { subject, html, templateKind, attachTermsPdf, extraAttachments } = parsed;
+    const { subject, html, templateKind, templateId, locale, attachmentIds, extraAttachments } = parsed;
     if (!subject || !html) return json({ error: 'Assunto e corpo do email são obrigatórios.' }, 400);
 
     const db = createDb(env);
@@ -250,7 +276,9 @@ export async function handleSendConversationMessage(
       html,
       userId,
       templateKind,
-      attachTermsPdf,
+      templateId,
+      locale,
+      attachmentIds,
       extraAttachments,
     });
     if (!result.ok) return json({ error: result.error || 'Falha ao enviar.' }, 502);
@@ -275,7 +303,8 @@ export async function handleQuoteTemplate(env: Env, request: Request): Promise<R
     const pricing = await getPricing(env);
     const html = await generateQuoteHtml(env, type, ctx.formData, pricing, undefined, locale);
     const subject = interpolate(await generateQuoteSubject(env, type, locale), ctx.formData);
-    return json({ success: true, subject, html, nome: ctx.nome, templateKind: 'quote' });
+    const atts = await attachmentsPayload(env, quoteTemplateId(type), locale);
+    return json({ success: true, subject, html, nome: ctx.nome, templateKind: 'quote', ...atts });
   } catch (e) {
     console.error('[api/admin/templates/quote]', e);
     return json({ error: 'Erro ao gerar orçamento.' }, 500);
@@ -296,11 +325,13 @@ export async function handleBridalIntroTemplate(env: Env, request: Request): Pro
 
   const locale = templateLocale(request, ctx.locale);
   const copy = await getEmailCopy(env, locale);
+  const atts = await attachmentsPayload(env, 'bridal_intro', locale);
   return json({
     success: true,
     subject: interpolate(bridalIntroSubject(copy.bridal_intro), ctx.formData),
     html: bridalIntroEmail(ctx.formData, copy.bridal_intro, copy.wrapFooter),
     templateKind: 'bridal_intro',
+    ...atts,
   });
 }
 
@@ -318,6 +349,8 @@ export async function handleTermsTemplate(env: Env, request: Request): Promise<R
   const copy = await getEmailCopy(env, locale);
   const termsCopy = type ? termsCopyForType(copy, type) : copy.bridal_terms;
   const vars = { ...formData, titular: pay.accountName, iban: pay.iban, mbway: pay.mbway };
+  const termsId = type ? termsTemplateId(type) : 'bridal_terms';
+  const atts = await attachmentsPayload(env, termsId, locale);
   return json({
     success: true,
     subject: interpolate(termsSubject(termsCopy), vars),
@@ -332,7 +365,7 @@ export async function handleTermsTemplate(env: Env, request: Request): Promise<R
       formData,
     }),
     templateKind: 'terms',
-    attachTermsPdf: true,
+    ...atts,
   });
 }
 
@@ -349,11 +382,13 @@ export async function handleScheduleTemplate(env: Env, request: Request): Promis
   }
   const locale = templateLocale(request, ctx?.locale);
   const copy = await getEmailCopy(env, locale);
+  const atts = await attachmentsPayload(env, 'schedule', locale);
   return json({
     success: true,
     subject: interpolate(scheduleSubject(copy.schedule), formData),
     html: scheduleEmail(formData, copy.schedule, copy.wrapFooter),
     templateKind: 'schedule',
+    ...atts,
   });
 }
 
@@ -402,6 +437,7 @@ export async function handleScheduleFormTemplate(
     const ctx = await loadTemplateContext(env, conv.leadId, conv.clientId);
     const formData = ctx?.formData || { nome: recipient.nome, email: recipient.email, locale: recipient.locale };
     const vars = { ...formData, quando: whenLabel };
+    const atts = await attachmentsPayload(env, 'schedule_form', locale);
     return json({
       success: true,
       subject: interpolate(scheduleFormSubject(copy.schedule_form), vars),
@@ -417,6 +453,7 @@ export async function handleScheduleFormTemplate(
       }),
       meetUrl: meet.meetUrl,
       templateKind: 'schedule_form',
+      ...atts,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Erro ao criar a marcação.';

@@ -98,6 +98,11 @@ textarea.in.email-area{min-height:110px}
 .field-picker-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .field-chip{font-size:12px;font-weight:600;padding:4px 10px;border:1px solid #e5ded7;background:#fbf5ef;color:#8a2831;border-radius:8px;cursor:pointer}
 .field-chip:hover{border-color:#8a2831}
+.tpl-atts{margin:16px 0 8px}
+.tpl-atts .settings-hint{margin:4px 0 10px}
+.tpl-atts-add{display:inline-flex;align-items:center;margin-top:10px;cursor:pointer}
+.tpl-atts-add input{display:none}
+.tpl-atts-empty{color:#8a7a74;background:transparent;padding:0}
 .sig-preview{padding:8px 0;margin:0 0 8px}
 .sig-preview table{width:200px;border-collapse:collapse}
 .sig-preview td{padding:0;border:none}

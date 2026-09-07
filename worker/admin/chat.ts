@@ -117,7 +117,7 @@ export function renderChatPanel(opts: {
         <button type="button" class="btn" id="chat-send">Enviar</button>
         <span id="chat-status" class="status" role="status"></span>
       </div>
-      <p style="color:#8a7a74;font-size:12px;margin-top:8px">Para ${escapeHtml(opts.recipientEmail)}</p>
+      <p style="color:#8a7a74;font-size:12px;margin-top:8px">Para ${escapeHtml(opts.recipientEmail)}. Ao carregar um template, os anexos default vêm na lista - podes retirar ou juntar outros.</p>
     </div>
     <div id="meet-modal" class="modal-overlay">
       <div class="modal" style="max-width:420px">
@@ -159,9 +159,9 @@ export function chatScript(): string {
       const editor = document.getElementById('chat-body-editor');
       const subjectEl = document.getElementById('chat-subject');
       let pendingKind = 'free';
-      let attachTerms = false;
+      let pendingTemplateId = '';
       let tplLocale = panel.getAttribute('data-locale') || 'pt';
-      let pendingFiles = [];
+      let pendingAttachments = [];
       const MAX_EXTRA = 5;
       const MAX_BYTES = 10 * 1024 * 1024;
       const ALLOWED_EXT = { pdf:1, jpg:1, jpeg:1, png:1, webp:1, gif:1 };
@@ -174,18 +174,29 @@ export function chatScript(): string {
         return !!ALLOWED_TYPE[file.type] || !!ALLOWED_EXT[ext];
       }
 
+      function escapeName(name) {
+        return String(name).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      }
+
       function renderPendingFiles() {
         if (!fileList) return;
-        fileList.innerHTML = pendingFiles.map(function(file, i){
-          const name = String(file.name).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-          return '<li><span>' + name + '</span><button type="button" data-remove-file="' + i + '">Remover</button></li>';
+        fileList.innerHTML = pendingAttachments.map(function(item, i){
+          return '<li><span>' + escapeName(item.name) + '</span><button type="button" data-remove-file="' + i + '">Remover</button></li>';
         }).join('');
+      }
+
+      function setTemplateAttachments(templateId, atts) {
+        pendingTemplateId = templateId || '';
+        pendingAttachments = (atts || []).map(function(att){
+          return { kind: 'template', id: att.id, name: att.filename };
+        });
+        renderPendingFiles();
       }
 
       if (fileList) fileList.addEventListener('click', function(e){
         const btn = e.target.closest('[data-remove-file]');
         if (!btn) return;
-        pendingFiles.splice(Number(btn.getAttribute('data-remove-file')), 1);
+        pendingAttachments.splice(Number(btn.getAttribute('data-remove-file')), 1);
         renderPendingFiles();
       });
       if (fileInput) fileInput.addEventListener('change', function(){
@@ -193,8 +204,8 @@ export function chatScript(): string {
         const added = Array.prototype.slice.call(fileInput.files || []);
         for (var i = 0; i < added.length; i++) {
           const file = added[i];
-          if (pendingFiles.length >= MAX_EXTRA) {
-            if (msg) { msg.textContent = 'Máximo de 5 anexos extra por envio.'; msg.className = 'status err'; }
+          if (pendingAttachments.length >= MAX_EXTRA) {
+            if (msg) { msg.textContent = 'Máximo de 5 anexos por envio.'; msg.className = 'status err'; }
             break;
           }
           if (!fileAllowed(file)) {
@@ -205,7 +216,7 @@ export function chatScript(): string {
             if (msg) { msg.textContent = file.name + ': demasiado grande (máx. 10 MB).'; msg.className = 'status err'; }
             continue;
           }
-          pendingFiles.push(file);
+          pendingAttachments.push({ kind: 'file', file: file, name: file.name });
         }
         fileInput.value = '';
         renderPendingFiles();
@@ -255,7 +266,7 @@ export function chatScript(): string {
         if (box) mianaBindRteFormat(box, editor);
       }
 
-      async function loadTpl(path, kind, extra) {
+      async function loadTpl(path, kind) {
         const msg = document.getElementById('chat-status');
         if (msg) { msg.textContent = 'A carregar template...'; msg.className = 'status'; }
         try {
@@ -268,7 +279,7 @@ export function chatScript(): string {
           if (subjectEl) subjectEl.value = data.subject || '';
           setBody(data.html || '');
           pendingKind = kind;
-          attachTerms = !!(extra && extra.attachTerms) || !!data.attachTermsPdf;
+          setTemplateAttachments(data.templateId || '', data.attachments || []);
           if (msg) { msg.textContent = 'Template inserido - podes editar antes de enviar.'; msg.className = 'status'; }
         } catch (e) {
           if (msg) { msg.textContent = 'Erro no template.'; msg.className = 'status err'; }
@@ -280,7 +291,7 @@ export function chatScript(): string {
       const qBtn = document.getElementById('tpl-quote');
       if (qBtn) qBtn.addEventListener('click', function(){ loadTpl('/api/admin/templates/quote' + qs(), 'quote'); });
       const tBtn = document.getElementById('tpl-terms');
-      if (tBtn) tBtn.addEventListener('click', function(){ loadTpl('/api/admin/templates/terms' + qs(), 'terms', { attachTerms: true }); });
+      if (tBtn) tBtn.addEventListener('click', function(){ loadTpl('/api/admin/templates/terms' + qs(), 'terms'); });
       const sBtn = document.getElementById('tpl-schedule');
       if (sBtn) sBtn.addEventListener('click', function(){ loadTpl('/api/admin/templates/schedule' + qs(), 'schedule'); });
       const sfBtn = document.getElementById('tpl-schedule-form');
@@ -315,7 +326,7 @@ export function chatScript(): string {
           if (subjectEl) subjectEl.value = data.subject || '';
           setBody(data.html || '');
           pendingKind = 'schedule_form';
-          attachTerms = false;
+          setTemplateAttachments(data.templateId || 'schedule_form', data.attachments || []);
           document.getElementById('meet-modal').classList.remove('active');
           const msg = document.getElementById('chat-status');
           if (msg) { msg.textContent = 'Template com Meet inserido - envia quando estiveres pronta.'; msg.className = 'status'; }
@@ -338,14 +349,18 @@ export function chatScript(): string {
         msg.textContent = 'A enviar...';
         msg.className = 'status';
         try {
+          const templateIds = pendingAttachments.filter(function(item){ return item.kind === 'template'; }).map(function(item){ return item.id; });
+          const extraFiles = pendingAttachments.filter(function(item){ return item.kind === 'file'; }).map(function(item){ return item.file; });
           let res;
-          if (pendingFiles.length) {
+          if (extraFiles.length) {
             const fd = new FormData();
             fd.append('subject', subject);
             fd.append('html', html);
             fd.append('templateKind', pendingKind);
-            fd.append('attachTermsPdf', attachTerms ? 'true' : 'false');
-            pendingFiles.forEach(function(file){ fd.append('files', file); });
+            fd.append('templateId', pendingTemplateId);
+            fd.append('locale', tplLocale);
+            fd.append('attachmentIds', JSON.stringify(templateIds));
+            extraFiles.forEach(function(file){ fd.append('files', file); });
             res = await fetch('/api/admin/conversation/' + convId + '/messages', {
               method: 'POST',
               credentials: 'same-origin',
@@ -356,14 +371,22 @@ export function chatScript(): string {
               method: 'POST',
               credentials: 'same-origin',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ subject, html, templateKind: pendingKind, attachTermsPdf: attachTerms }),
+              body: JSON.stringify({
+                subject: subject,
+                html: html,
+                templateKind: pendingKind,
+                templateId: pendingTemplateId,
+                locale: tplLocale,
+                attachmentIds: templateIds,
+              }),
             });
           }
           const data = await res.json();
           if (data.success) {
             msg.textContent = 'Enviado!';
             pendingKind = 'free';
-            attachTerms = false;
+            pendingTemplateId = '';
+            pendingAttachments = [];
             setTimeout(function(){ location.reload(); }, 600);
           } else {
             msg.textContent = data.error || 'Erro ao enviar.';
