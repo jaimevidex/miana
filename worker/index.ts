@@ -30,6 +30,7 @@ import {
   handleBridalIntroTemplate,
   handleTermsTemplate,
   handleScheduleTemplate,
+  handleCustomTemplate,
   handleScheduleFormTemplate,
   handleServeEmailAttachment,
   handleGoogleConnect,
@@ -43,6 +44,10 @@ import {
   handleRemoveTemplateAttachment,
   handleServeTemplateAttachment,
 } from './routes/template-attachments';
+import {
+  handleCreateCustomTemplate,
+  handleDeleteCustomTemplate,
+} from './routes/custom-templates';
 import { handleIncomingEmail } from './email-inbound';
 
 function conversationIdFrom(path: string, prefix: string, suffix: string): string {
@@ -126,6 +131,8 @@ export default {
         return handleEditClient(request, env, path.split('/api/admin/client/')[1]);
       }
       if (path === '/api/admin/settings' && method === 'PUT') return handleUpdateSettings(request, env);
+      if (path === '/api/admin/settings/templates' && method === 'POST') return handleCreateCustomTemplate(request, env);
+      if (path === '/api/admin/settings/templates' && method === 'DELETE') return handleDeleteCustomTemplate(request, env);
       if (path === '/api/admin/settings/attachments' && method === 'POST') return handleAddTemplateAttachment(request, env);
       if (path === '/api/admin/settings/attachments' && method === 'DELETE') return handleRemoveTemplateAttachment(request, env);
       if (path === '/api/admin/template-attachment' && method === 'GET') return handleServeTemplateAttachment(env, request);
@@ -158,6 +165,7 @@ export default {
       if (path === '/api/admin/templates/bridal-intro' && method === 'GET') return handleBridalIntroTemplate(env, request);
       if (path === '/api/admin/templates/terms' && method === 'GET') return handleTermsTemplate(env, request);
       if (path === '/api/admin/templates/schedule' && method === 'GET') return handleScheduleTemplate(env, request);
+      if (path === '/api/admin/templates/custom' && method === 'GET') return handleCustomTemplate(env, request);
       if ((path === '/api/admin/email-attachment' || path.startsWith('/api/admin/email-attachment/')) && method === 'GET') {
         const fromQuery = url.searchParams.get('key') || '';
         const fromPath = path.startsWith('/api/admin/email-attachment/')

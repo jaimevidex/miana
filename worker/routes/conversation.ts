@@ -20,8 +20,21 @@ import {
 import { MAX_CHAT_EXTRA_ATTACHMENTS } from '../constants';
 import type { EmailAttachment } from '../email';
 import { generateQuoteHtml, generateQuoteSubject } from '../services/quotes';
-import { getPricing, getPaymentDetails } from '../pricing';
-import { attachPersonFields, getEmailCopy, interpolate, termsCopyForType } from '../email-copy';
+import { getPricing, getPaymentDetails, loadSettingsMap } from '../pricing';
+import { attachSinalVars } from '../bridal-pricing';
+import {
+  attachPersonFields,
+  customTemplateFromMap,
+  EMAIL_CUSTOM_REGISTRY_KEY,
+  fillTemplateBody,
+  flowForLeadType,
+  getEmailCopy,
+  interpolate,
+  isCustomTemplateId,
+  parseCustomRegistry,
+  termsCopyForType,
+} from '../email-copy';
+import { wrapEmail } from '../templates/base';
 import { quoteTemplateId, termsTemplateId } from '../template-attachments';
 import { attachmentsPayload } from './template-attachments';
 import { termsEmail, termsSubject } from '../templates/terms';
@@ -302,7 +315,10 @@ export async function handleQuoteTemplate(env: Env, request: Request): Promise<R
     const locale = templateLocale(request, ctx.locale);
     const pricing = await getPricing(env);
     const html = await generateQuoteHtml(env, type, ctx.formData, pricing, undefined, locale);
-    const subject = interpolate(await generateQuoteSubject(env, type, locale), ctx.formData);
+    const subject = interpolate(await generateQuoteSubject(env, type, locale), {
+      ...ctx.formData,
+      ...attachSinalVars(type, ctx.formData, pricing),
+    });
     const atts = await attachmentsPayload(env, quoteTemplateId(type), locale);
     return json({ success: true, subject, html, nome: ctx.nome, templateKind: 'quote', ...atts });
   } catch (e) {
@@ -325,11 +341,13 @@ export async function handleBridalIntroTemplate(env: Env, request: Request): Pro
 
   const locale = templateLocale(request, ctx.locale);
   const copy = await getEmailCopy(env, locale);
+  const pricing = await getPricing(env);
+  const vars = { ...ctx.formData, ...attachSinalVars('bridal', ctx.formData, pricing) };
   const atts = await attachmentsPayload(env, 'bridal_intro', locale);
   return json({
     success: true,
-    subject: interpolate(bridalIntroSubject(copy.bridal_intro), ctx.formData),
-    html: bridalIntroEmail(ctx.formData, copy.bridal_intro, copy.wrapFooter),
+    subject: interpolate(bridalIntroSubject(copy.bridal_intro), vars),
+    html: bridalIntroEmail(ctx.formData, copy.bridal_intro, copy.wrapFooter, pricing),
     templateKind: 'bridal_intro',
     ...atts,
   });
@@ -346,9 +364,16 @@ export async function handleTermsTemplate(env: Env, request: Request): Promise<R
   const formData = ctx?.formData || { nome };
   const locale = templateLocale(request, storedLocale);
   const pay = await getPaymentDetails(env);
+  const pricing = await getPricing(env);
   const copy = await getEmailCopy(env, locale);
   const termsCopy = type ? termsCopyForType(copy, type) : copy.bridal_terms;
-  const vars = { ...formData, titular: pay.accountName, iban: pay.iban, mbway: pay.mbway };
+  const vars = {
+    ...formData,
+    titular: pay.accountName,
+    iban: pay.iban,
+    mbway: pay.mbway,
+    ...(type ? attachSinalVars(type, formData, pricing) : {}),
+  };
   const termsId = type ? termsTemplateId(type) : 'bridal_terms';
   const atts = await attachmentsPayload(env, termsId, locale);
   return json({
@@ -363,6 +388,8 @@ export async function handleTermsTemplate(env: Env, request: Request): Promise<R
       footer: copy.wrapFooter,
       locale,
       formData,
+      type: type || undefined,
+      pricing,
     }),
     templateKind: 'terms',
     ...atts,
@@ -388,6 +415,39 @@ export async function handleScheduleTemplate(env: Env, request: Request): Promis
     subject: interpolate(scheduleSubject(copy.schedule), formData),
     html: scheduleEmail(formData, copy.schedule, copy.wrapFooter),
     templateKind: 'schedule',
+    ...atts,
+  });
+}
+
+export async function handleCustomTemplate(env: Env, request: Request): Promise<Response> {
+  const url = new URL(request.url);
+  const id = String(url.searchParams.get('id') || '');
+  const leadId = url.searchParams.get('leadId');
+  const clientId = url.searchParams.get('clientId');
+  if (!isCustomTemplateId(id)) return json({ error: 'Template inválido.' }, 400);
+  if (!leadId && !clientId) return json({ error: 'Indica leadId ou clientId.' }, 400);
+  const ctx = await loadTemplateContext(env, leadId, clientId);
+  if (!ctx) return json({ error: leadId ? 'Lead não encontrada.' : 'Cliente não encontrado.' }, 404);
+
+  const map = await loadSettingsMap(env);
+  const entry = parseCustomRegistry(map[EMAIL_CUSTOM_REGISTRY_KEY]).find((item) => item.id === id);
+  if (!entry) return json({ error: 'Template não encontrado.' }, 404);
+  const flow = flowForLeadType(ctx.type as LeadType);
+  if (!flow || entry.flow !== flow) {
+    return json({ error: 'Este template não pertence a este tipo de lead.' }, 400);
+  }
+
+  const locale = templateLocale(request, ctx.locale);
+  const copy = customTemplateFromMap(map, id, locale);
+  const pricing = await getPricing(env);
+  const emailCopy = await getEmailCopy(env, locale);
+  const vars = { ...ctx.formData, ...attachSinalVars(ctx.type as LeadType, ctx.formData, pricing) };
+  const atts = await attachmentsPayload(env, id, locale);
+  return json({
+    success: true,
+    subject: interpolate(copy.subject, vars),
+    html: wrapEmail(fillTemplateBody(copy.body, '', vars), emailCopy.wrapFooter),
+    templateKind: 'free',
     ...atts,
   });
 }

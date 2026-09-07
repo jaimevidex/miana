@@ -115,9 +115,11 @@ Sem grupo Partilhados. Assinatura não aparece na UI. Termos no fim de cada flow
 - Skin Call: Orçamento, Marcar sessões, Confirmação, Termos
 - Education: Orçamento, Termos
 
+Podes criar templates extra em Settings → Emails (**Adicionar template** no flow activo). Cada extra nasce já com copy e anexos PT e EN (vazios). Ficam no registry `email_custom_registry` com id `c_*` e as chaves `email_{id}_subject` / `_body` / `_en` e `email_{id}_attachments` / `_en`. No chat aparecem como botões a seguir aos fixos daquele tipo de lead. Interpolam os campos do flow (incluindo `{{sinal_reserva}}` em bridal/beauty/education) mas não têm tabela de preços. Máximo 20 extras. Remover apaga copy, anexos e o registo. Os fixos não se apagam.
+
 Copy de termos PT/EN começa igual em todos; se ainda não houver `email_{flow}_terms_*`, lê-se o legado `email_terms_*`.
 
-A tabela de preços (Bridal, Beauty, Skin Call, Education) já vem no preview do orçamento e gera-se outra vez ao enviar. O botão **Tabela de Preço** volta a inseri-la se a apagares. Alterações dentro da tabela não gravam. Números vêm de Preços / Pagamento. A lista de campos tem todos os dados da lead/cliente (pessoais + formulário). Termos também incluem titular, IBAN e MB Way. Na confirmação da Skin Call, **Botão da chamada** e **Botão do formulário** inserem os dois botões; o Meet e o link do diagnóstico geram-se outra vez ao enviar.
+A tabela de preços (Bridal, Beauty, Skin Call, Education) já vem no preview do orçamento e gera-se outra vez ao enviar. Bridal, Beauty e Education mostram deslocação, **Valor total** e **Valor sinal** por baixo (Bridal: deslocação + addon Skin Call + 50% do serviço da noiva; Beauty/Education: 50% do total). Skin Call só mostra o valor do serviço (plano), sem deslocação, total ou sinal. O campo `{{sinal_reserva}}` está no picker desses templates e no cartão da lead/cliente. O botão **Tabela de Preço** volta a inseri-la se a apagares. Alterações dentro da tabela não gravam. Números vêm de Preços / Pagamento. A lista de campos tem todos os dados da lead/cliente (pessoais + formulário). Termos também incluem titular, IBAN e MB Way. Na confirmação da Skin Call, **Botão da chamada** e **Botão do formulário** inserem os dois botões; o Meet e o link do diagnóstico geram-se outra vez ao enviar.
 
 No editor (Settings e chat) podes mudar tamanho e cor do texto.
 

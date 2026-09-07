@@ -31,7 +31,13 @@ assert(isAttachmentsSettingKey('email_bridal_terms_attachments'), 'detects PT at
 assert(isAttachmentsSettingKey('email_bridal_terms_attachments_en'), 'detects EN attachments key');
 assert(!isAttachmentsSettingKey('email_bridal_terms_body'), 'copy keys are not attachments');
 assert(isEmailTemplateId('bridal_intro') && isEmailTemplateId('schedule_form'), 'known template ids');
+assert(isEmailTemplateId('c_a1b2c3d4'), 'custom template ids are attachable');
 assert(!isEmailTemplateId('quote') && !isEmailTemplateId('terms'), 'chat kinds are not template ids');
+assert(isAttachmentsSettingKey('email_c_a1b2c3d4_attachments'), 'custom PT attachments key');
+assert(isAttachmentsSettingKey('email_c_a1b2c3d4_attachments_en'), 'custom EN attachments key');
+assert(attachmentsSettingKey('c_a1b2c3d4', 'en') === 'email_c_a1b2c3d4_attachments_en', 'custom EN attachments key name');
+assert(defaultTemplateAttachments('c_a1b2c3d4').length === 0, 'custom templates have no builtin PDF');
+assert(parseAttachmentList('[]', 'c_a1b2c3d4', true).length === 0, 'custom empty list stays empty');
 assert(quoteTemplateId('skin-call') === 'skin_call', 'quote id for skin-call');
 assert(termsTemplateId('beauty') === 'beauty_terms', 'terms id for beauty');
 

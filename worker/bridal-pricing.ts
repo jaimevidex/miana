@@ -1,5 +1,6 @@
 // Bridal quote pricing helpers (shared by email template).
 
+import type { LeadType } from './lib';
 import type { Pricing } from './pricing';
 
 export type BrideService = 'Makeup' | 'Hair' | 'Pack' | string;
@@ -173,4 +174,44 @@ export function bridalQuoteTotal(formData: Record<string, string>, pricing: Pric
     guests,
     brideLabel: brideServiceLabel(formData.servicos_procurados || ''),
   };
+}
+
+export function educationQuoteTotal(formData: Record<string, string>, pricing: Pricing): {
+  workshop: number;
+  travel: number;
+  total: number;
+} {
+  const workshop = pricing.education.workshop;
+  const travel = parseTravelFee(formData);
+  return { workshop, travel, total: workshop + travel };
+}
+
+/** Sinal de reserva. Skin Call não tem. Valores em euros inteiros. */
+export function reservationDeposit(
+  type: LeadType,
+  formData: Record<string, string>,
+  pricing: Pricing,
+): number | null {
+  if (type === 'skin-call') return null;
+  if (type === 'bridal') {
+    const quote = bridalQuoteTotal(formData, pricing);
+    return quote.travel + quote.addonPrice + Math.round(quote.bridePrice / 2);
+  }
+  if (type === 'beauty') {
+    return Math.round(beautyQuoteTotal(formData, pricing).total / 2);
+  }
+  return Math.round(educationQuoteTotal(formData, pricing).total / 2);
+}
+
+export function formatSinalReserva(amount: number | null): string {
+  return amount == null ? '' : `${amount}€`;
+}
+
+export function attachSinalVars(
+  type: LeadType,
+  formData: Record<string, string>,
+  pricing: Pricing,
+): Record<string, string> {
+  const value = formatSinalReserva(reservationDeposit(type, formData, pricing));
+  return value ? { sinal_reserva: value } : {};
 }

@@ -1,7 +1,7 @@
 // Blocos gerados (preços, pagamento, botões) injectados em {{bloco}} ou tokens de botão.
 
 import type { Pricing } from '../pricing';
-import { beautyQuoteTotal, bridalQuoteTotal, parseTravelFee, skinCallPlanPrice } from '../bridal-pricing';
+import { beautyQuoteTotal, bridalQuoteTotal, educationQuoteTotal, parseTravelFee, reservationDeposit, skinCallPlanPrice } from '../bridal-pricing';
 import { fieldRow, sectionTitle, priceRow } from './base';
 import { DEFAULT_LOCALE, type Locale } from '../locale';
 
@@ -11,6 +11,7 @@ const BLOCK = {
     services: 'Serviços',
     investment: 'Valor',
     total: 'Valor total',
+    deposit: 'Valor sinal',
     travel: 'Deslocação',
     pending: 'a calcular',
     addon: 'Add-on Skin Call',
@@ -57,6 +58,7 @@ const BLOCK = {
     services: 'Services',
     investment: 'Amount',
     total: 'Total amount',
+    deposit: 'Deposit amount',
     travel: 'Travel',
     pending: 'to be calculated',
     addon: 'Add-on Skin Call',
@@ -128,6 +130,12 @@ function totalRow(label: string, amount: number): string {
     </p>`;
 }
 
+function sinalRow(type: 'bridal' | 'beauty' | 'education', formData: Record<string, string>, pricing: Pricing, locale: Locale): string {
+  const amount = reservationDeposit(type, formData, pricing);
+  if (amount == null) return '';
+  return totalRow(L(locale).deposit, amount);
+}
+
 function guestPriceRows(
   guests: { makeup: number; hair: number; pack: number },
   pricing: Pricing,
@@ -169,6 +177,7 @@ export function bridalBlock(
     ${addonRow}
     ${travelRow(formData, locale)}
     ${totalRow(t.total, quote.total)}
+    ${sinalRow('bridal', formData, pricing, locale)}
     ${notesHtml(notes, locale)}
   `;
 }
@@ -193,6 +202,7 @@ export function beautyBlock(
     ${priceRows}
     ${travelRow(formData, locale)}
     ${totalRow(t.total, quote.total)}
+    ${sinalRow('beauty', formData, pricing, locale)}
     ${notesHtml(notes, locale)}
   `;
 }
@@ -206,19 +216,15 @@ export function skinCallBlock(
 ): string {
   const t = L(locale);
   const plan = skinCallPlanPrice(formData.plano, pricing);
-  const travel = parseTravelFee(formData);
   const planRow = plan
     ? priceRow(plan.label, plan.price)
     : preview
       ? priceRowOpen(t.plan, '—')
       : '';
-  const total = (plan?.price ?? 0) + travel;
 
   return `
     ${sectionTitle(t.investment)}
     ${planRow}
-    ${travelRow(formData, locale)}
-    ${totalRow(t.total, total)}
     ${notesHtml(notes, locale)}
   `;
 }
@@ -230,13 +236,13 @@ export function educationBlock(
   locale: Locale = DEFAULT_LOCALE,
 ): string {
   const t = L(locale);
-  const travel = parseTravelFee(formData);
-  const workshop = pricing.education.workshop;
+  const quote = educationQuoteTotal(formData, pricing);
   return `
     ${sectionTitle(t.investment)}
-    ${priceRow(t.workshop, workshop)}
+    ${priceRow(t.workshop, quote.workshop)}
     ${travelRow(formData, locale)}
-    ${totalRow(t.total, workshop + travel)}
+    ${totalRow(t.total, quote.total)}
+    ${sinalRow('education', formData, pricing, locale)}
     ${notesHtml(notes, locale)}
   `;
 }
@@ -317,7 +323,6 @@ export const DEMO_FORM: Record<EmailDemoId, Record<string, string>> = {
   skin_call: {
     nome: '{{nome}}',
     plano: '{{plano}}',
-    valor_deslocacao: '{{valor_deslocacao}}',
   },
   education: {
     nome: '{{nome}}',

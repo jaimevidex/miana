@@ -164,10 +164,12 @@ export function visibleFormEntries(type: string, data: Record<string, unknown>):
   let entries = toEntries(data, (key) => {
     if (type === 'bridal') return !BEAUTY_ONLY.includes(key);
     if (type === 'beauty') return !BRIDAL_ONLY.includes(key);
+    if (type === 'skin-call') return key !== 'valor_deslocacao';
     return true;
   });
   if (type === 'bridal') entries = withKeys(entries, BRIDAL_PROFILE_KEYS);
   if (type === 'beauty') entries = withKeys(entries, BEAUTY_PROFILE_KEYS);
+  if (type === 'skin-call') return entries;
   return withKeys(entries, COMMON_PROFILE_KEYS);
 }
 

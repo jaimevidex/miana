@@ -6,8 +6,8 @@ import { createDb } from './db';
 import { leads as leadsTable, diagnostics as diagnosticsTable, clients as clientsTable } from './db/schema';
 import { htmlEscape, TYPE_LABELS, type Env, type LeadType } from './lib';
 import { calculateDuration, formatDuration, suggestTimeRange, suggestBridalDualSchedule } from './scheduling';
-import { beautyHeadcount } from './bridal-pricing';
-import { getTiming } from './pricing';
+import { beautyHeadcount, formatSinalReserva, reservationDeposit } from './bridal-pricing';
+import { getPricing, getTiming, PRICING_FALLBACKS, type Pricing } from './pricing';
 import { photoAdminUrl } from './photos';
 import { CHAT_CSS, renderChatPanel, chatScript } from './admin/chat';
 import { RTE_FORMAT_CSS } from './admin/rte';
@@ -26,6 +26,18 @@ import {
 } from './conversation';
 import { getGoogleStatus } from './google-calendar';
 import { buildSettingsPage } from './admin/settings';
+import {
+  customTemplatesForFlow,
+  flowForLeadType,
+  loadCustomRegistry,
+} from './email-copy';
+
+async function chatCustomTemplates(env: Env, type: string): Promise<{ id: string; label: string }[]> {
+  const flow = flowForLeadType(type as LeadType);
+  if (!flow) return [];
+  const extras = customTemplatesForFlow(await loadCustomRegistry(env), flow);
+  return extras.map((entry) => ({ id: entry.id, label: entry.label }));
+}
 
 // ─── CSS partilhado ─────────────────────────────────────────────────────────
 const CSS = `
@@ -88,6 +100,9 @@ tr.lead-row-eliminado:hover td{background:rgba(183,28,28,.14)}
 .settings-email-flows{margin-bottom:8px}
 .settings-email-steps{display:none;margin-bottom:16px}
 .settings-email-steps.active{display:flex}
+.settings-email-extra-actions{margin:0 0 16px}
+.settings-email-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+.settings-email-panel-head h3{margin:0}
 .settings-hint{color:#8a7a74;font-size:13px;margin-bottom:16px}
 textarea.in.email-area{min-height:110px}
 .rte-editor.email-rte{min-height:280px;max-height:56vh}
@@ -107,11 +122,15 @@ textarea.in.email-area{min-height:110px}
 .sig-preview table{width:200px;border-collapse:collapse}
 .sig-preview td{padding:0;border:none}
 .actions{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}
-.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:100;justify-content:center;align-items:center}
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(59,42,42,.45);z-index:100;justify-content:center;align-items:center;padding:24px}
 .modal-overlay.active{display:flex}
-.modal{background:#fff;border-radius:16px;padding:32px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto}
+.modal{background:#fff;border-radius:16px;padding:32px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 18px 48px rgba(59,42,42,.18)}
 .modal h2{margin-top:0}
 .modal .close{float:right;background:none;border:none;font-size:24px;cursor:pointer;color:#8a7a74}
+.modal.settings-dialog{max-width:420px}
+.modal.settings-dialog h2{margin-bottom:8px}
+.modal.settings-dialog .settings-hint{margin-bottom:16px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:20px}
 /* Navbar */
 .navbar{background:#8a2831;color:#fbf5ef;padding:0 16px;display:flex;align-items:center;gap:0;height:56px;margin-bottom:24px;border-radius:0 0 16px 16px}
 .navbar-brand{font-weight:700;font-size:16px;color:#fbf5ef;text-decoration:none;padding:0 16px 0 0;border-right:1px solid rgba(255,255,255,.2)}
@@ -151,6 +170,21 @@ const STATUS_LABELS: Record<string, string> = {
 
 function badgeTypeClass(type: string): string {
   return type in TYPE_LABELS ? type : 'unknown';
+}
+
+function sinalCardField(type: string, data: Record<string, unknown>, pricing: Pricing) {
+  if (type === 'skin-call' || !(type in TYPE_LABELS)) return [];
+  const formData: Record<string, string> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (value != null) formData[key] = String(value);
+  }
+  const value = formatSinalReserva(reservationDeposit(type as LeadType, formData, pricing)) || '—';
+  return [{
+    key: 'sinal_reserva',
+    value,
+    label: 'Valor sinal',
+    readOnlyHtml: htmlEscape(value),
+  }];
 }
 
 function formatDate(d: Date | number): string {
@@ -585,6 +619,7 @@ export async function renderLeadDetail(env: Env, id: string, csrfToken: string =
       googleConnected: google.connected,
       showBookingTemplates: false,
       locale: lead.locale,
+      customTemplates: await chatCustomTemplates(env, lead.type),
     });
   } catch (e) {
     console.error('[admin] chat lead', e);
@@ -620,11 +655,15 @@ export async function renderLeadDetail(env: Env, id: string, csrfToken: string =
     saveKind: 'personal',
   });
 
+  const pricing = await getPricing(env).catch(() => PRICING_FALLBACKS);
   const formEntries = visibleFormEntries(lead.type, formData);
   const formCard = renderEditableCard({
     id: 'card-lead-form',
     title: 'Dados do Formulário',
-    fields: formEntries.map(([key, value]) => ({ key, value })),
+    fields: [
+      ...formEntries.map(([key, value]) => ({ key, value })),
+      ...sinalCardField(lead.type, formData, pricing),
+    ],
     editable: !locked,
     saveUrl: `/api/admin/lead/${lead.id}`,
     saveKind: 'form-lead',
@@ -925,11 +964,15 @@ export async function renderClientDetail(env: Env, id: string, csrfToken: string
     saveKind: 'personal',
   });
 
+  const pricing = await getPricing(env).catch(() => PRICING_FALLBACKS);
   const formEntries = visibleFormEntries(client.type, data);
   const formCard = renderEditableCard({
     id: 'card-client-form',
     title: 'Dados do Formulário',
-    fields: formEntries.map(([key, value]) => ({ key, value })),
+    fields: [
+      ...formEntries.map(([key, value]) => ({ key, value })),
+      ...sinalCardField(client.type, data, pricing),
+    ],
     editable: true,
     saveUrl: `/api/admin/client/${client.id}`,
     saveKind: 'form-client',
@@ -1144,6 +1187,7 @@ export async function renderClientDetail(env: Env, id: string, csrfToken: string
       googleConnected: google.connected,
       showBookingTemplates: client.type === 'skin-call',
       locale: client.locale,
+      customTemplates: await chatCustomTemplates(env, client.type),
     });
   } catch (e) {
     console.error('[admin] chat client', e);

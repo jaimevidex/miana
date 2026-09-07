@@ -1,7 +1,6 @@
 // API admin: anexos default dos templates de email.
 
 import { json, type Env } from '../lib';
-import type { EmailTemplateId } from '../email-copy';
 import type { Locale } from '../locale';
 import {
   addTemplateAttachment,
@@ -73,7 +72,7 @@ export async function handleServeTemplateAttachment(env: Env, request: Request):
   return new Response(copy, { headers });
 }
 
-export async function attachmentsPayload(env: Env, templateId: EmailTemplateId, locale: Locale) {
+export async function attachmentsPayload(env: Env, templateId: string, locale: Locale) {
   const items = await listTemplateAttachments(env, templateId, locale);
   return {
     templateId,

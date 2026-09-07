@@ -71,7 +71,6 @@ const SKIN_CALL_FORM_FIELDS = [
   'pele_tipo',
   'preocupacoes',
   'preocupacoes_outro',
-  'valor_deslocacao',
 ] as const;
 
 const EDUCATION_FORM_FIELDS = [
@@ -88,10 +87,12 @@ const EDUCATION_FORM_FIELDS = [
 
 const PAYMENT_FIELDS = ['titular', 'iban', 'mbway'] as const;
 
-const BRIDAL_FIELDS = [...CONTACT_FIELDS, ...BRIDAL_FORM_FIELDS];
-const BEAUTY_FIELDS = [...CONTACT_FIELDS, ...BEAUTY_FORM_FIELDS];
+const COMPUTED_SINAL = ['sinal_reserva'] as const;
+
+const BRIDAL_FIELDS = [...CONTACT_FIELDS, ...BRIDAL_FORM_FIELDS, ...COMPUTED_SINAL];
+const BEAUTY_FIELDS = [...CONTACT_FIELDS, ...BEAUTY_FORM_FIELDS, ...COMPUTED_SINAL];
 const SKIN_CALL_FIELDS = [...CONTACT_FIELDS, ...SKIN_CALL_FORM_FIELDS];
-const EDUCATION_FIELDS = [...CONTACT_FIELDS, ...EDUCATION_FORM_FIELDS];
+const EDUCATION_FIELDS = [...CONTACT_FIELDS, ...EDUCATION_FORM_FIELDS, ...COMPUTED_SINAL];
 
 /** Campos da lead/cliente inseríveis no texto. A tabela gerada não é um campo. */
 export const EMAIL_TEMPLATE_FIELDS: Record<EmailTemplateId, readonly string[]> = {
@@ -117,6 +118,7 @@ export const EMAIL_FIELD_LABELS: Record<string, string> = {
   iban: 'IBAN',
   mbway: 'MB Way',
   quando: 'Data e hora da sessão',
+  sinal_reserva: 'Valor sinal',
 };
 
 export function emailFieldLabel(token: string): string {
@@ -183,6 +185,122 @@ export function settingsEmailEntries(): EmailFlowEntry[] {
 
 export function settingsPanelId(id: EmailFlowEntryId): string {
   return id === 'signature' ? 'footer' : id;
+}
+
+export const EMAIL_CUSTOM_REGISTRY_KEY = 'email_custom_registry';
+export const MAX_CUSTOM_TEMPLATES = 20;
+export const CUSTOM_TEMPLATE_ID_RE = /^c_[a-z0-9]{8}$/;
+
+export type CustomEmailFlow = Exclude<EmailFlowId, 'shared'>;
+
+export interface CustomTemplateEntry {
+  id: string;
+  flow: CustomEmailFlow;
+  label: string;
+}
+
+const CUSTOM_FLOWS: readonly CustomEmailFlow[] = ['bridal', 'beauty', 'skin-call', 'education'];
+
+export function isBuiltinTemplateId(value: string): value is EmailTemplateId {
+  return (EMAIL_TEMPLATE_IDS as readonly string[]).includes(value);
+}
+
+export function isCustomTemplateId(value: string): boolean {
+  return CUSTOM_TEMPLATE_ID_RE.test(value);
+}
+
+export function isCustomEmailFlow(value: string): value is CustomEmailFlow {
+  return (CUSTOM_FLOWS as readonly string[]).includes(value);
+}
+
+export function sanitizeCustomLabel(raw: string): string {
+  return raw.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim().slice(0, 40);
+}
+
+export function newCustomTemplateId(): string {
+  return `c_${crypto.randomUUID().replace(/-/g, '').slice(0, 8)}`;
+}
+
+export function parseCustomRegistry(raw: string | undefined): CustomTemplateEntry[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    const out: CustomTemplateEntry[] = [];
+    const seen = new Set<string>();
+    for (const item of parsed) {
+      if (!item || typeof item !== 'object') continue;
+      const row = item as { id?: unknown; flow?: unknown; label?: unknown };
+      const id = String(row.id || '');
+      const flow = String(row.flow || '');
+      const label = sanitizeCustomLabel(String(row.label || ''));
+      if (!isCustomTemplateId(id) || !isCustomEmailFlow(flow) || !label || seen.has(id)) continue;
+      seen.add(id);
+      out.push({ id, flow, label });
+      if (out.length >= MAX_CUSTOM_TEMPLATES) break;
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
+export function serializeCustomRegistry(entries: CustomTemplateEntry[]): string {
+  return JSON.stringify(entries.map(({ id, flow, label }) => ({ id, flow, label })));
+}
+
+export function fieldsForFlow(flow: CustomEmailFlow): readonly string[] {
+  switch (flow) {
+    case 'bridal':
+      return BRIDAL_FIELDS;
+    case 'beauty':
+      return BEAUTY_FIELDS;
+    case 'skin-call':
+      return SKIN_CALL_FIELDS;
+    case 'education':
+      return EDUCATION_FIELDS;
+  }
+}
+
+export function flowForLeadType(type: LeadType): CustomEmailFlow | null {
+  return isCustomEmailFlow(type) ? type : null;
+}
+
+export function customTemplatesForFlow(
+  registry: CustomTemplateEntry[],
+  flow: CustomEmailFlow,
+): CustomTemplateEntry[] {
+  return registry.filter((entry) => entry.flow === flow);
+}
+
+export function customCopySettingKeys(id: string): string[] {
+  return [
+    `email_${id}_subject`,
+    `email_${id}_body`,
+    `email_${id}_subject_en`,
+    `email_${id}_body_en`,
+  ];
+}
+
+export function customAttachmentSettingKeys(id: string): string[] {
+  return [`email_${id}_attachments`, `email_${id}_attachments_en`];
+}
+
+export function customTemplateFromMap(
+  map: Record<string, string>,
+  id: string,
+  locale: Locale = DEFAULT_LOCALE,
+): EmailTemplateCopy {
+  const suffix = locale === 'en' ? '_en' : '';
+  return {
+    subject: map[`email_${id}_subject${suffix}`] || '',
+    body: map[`email_${id}_body${suffix}`] || '',
+  };
+}
+
+export async function loadCustomRegistry(env: Env): Promise<CustomTemplateEntry[]> {
+  const map = await loadSettingsMap(env);
+  return parseCustomRegistry(map[EMAIL_CUSTOM_REGISTRY_KEY]);
 }
 
 export interface EmailTemplateCopy {

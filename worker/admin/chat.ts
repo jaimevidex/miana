@@ -68,6 +68,7 @@ export function renderChatPanel(opts: {
   googleConnected: boolean;
   showBookingTemplates?: boolean;
   locale?: string;
+  customTemplates?: { id: string; label: string }[];
 }): string {
   const emptyHint = opts.leadType === 'bridal'
     ? 'Ainda não há emails nesta conversa. Envia o introdutório para começar.'
@@ -105,6 +106,9 @@ export function renderChatPanel(opts: {
           <button type="button" class="rte-btn rte-tpl" id="tpl-terms" title="Inserir termos e pagamento">Termos e condições</button>
           ${isSkin ? `<button type="button" class="rte-btn rte-tpl" id="tpl-schedule" title="Pedir datas">Marcar sessões</button>
           <button type="button" class="rte-btn rte-tpl" id="tpl-schedule-form" title="Meet + formulário">Marcar e formulário</button>` : ''}
+          ${(opts.customTemplates || []).map((tpl) =>
+            `<button type="button" class="rte-btn rte-tpl" data-custom-tpl="${escapeHtml(tpl.id)}" title="${escapeHtml(tpl.label)}">${escapeHtml(tpl.label)}</button>`
+          ).join('')}
         </div>
         <div id="chat-body-editor" class="rte-editor" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Escreve a mensagem…"></div>
       </div>
@@ -297,6 +301,11 @@ export function chatScript(): string {
       const sfBtn = document.getElementById('tpl-schedule-form');
       if (sfBtn) sfBtn.addEventListener('click', function(){
         document.getElementById('meet-modal').classList.add('active');
+      });
+      panel.querySelectorAll('[data-custom-tpl]').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          loadTpl('/api/admin/templates/custom' + qs() + '&id=' + encodeURIComponent(btn.getAttribute('data-custom-tpl') || ''), 'free');
+        });
       });
 
       const meetGen = document.getElementById('meet-generate');

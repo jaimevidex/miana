@@ -10,9 +10,24 @@ import {
   EMAIL_QUOTE_TEMPLATE_IDS,
   EMAIL_TEMPLATE_FIELDS,
   EMAIL_TEMPLATE_IDS,
+  CUSTOM_TEMPLATE_ID_RE,
+  MAX_CUSTOM_TEMPLATES,
   attachPersonFields,
+  customAttachmentSettingKeys,
+  customCopySettingKeys,
+  customTemplateFromMap,
+  customTemplatesForFlow,
   emailFieldLabel,
+  fieldsForFlow,
+  flowForLeadType,
+  isBuiltinTemplateId,
+  isCustomEmailFlow,
+  isCustomTemplateId,
   isQuoteTemplate,
+  newCustomTemplateId,
+  parseCustomRegistry,
+  sanitizeCustomLabel,
+  serializeCustomRegistry,
   settingsEmailEntries,
   settingsPanelId,
   fillTemplateBody,
@@ -23,8 +38,8 @@ import {
   textToHtml,
 } from '../worker/email-copy.ts';
 import { EMAIL_COPY_FALLBACKS_EN } from '../worker/email-copy-en.ts';
-import { beautyBlock, bridalBlock, diagnosticBlock } from '../worker/templates/blocks.ts';
-import { beautyQuoteTotal, bridalQuoteTotal } from '../worker/bridal-pricing.ts';
+import { beautyBlock, bridalBlock, diagnosticBlock, educationBlock, skinCallBlock } from '../worker/templates/blocks.ts';
+import { beautyQuoteTotal, bridalQuoteTotal, reservationDeposit } from '../worker/bridal-pricing.ts';
 import { parseLocale } from '../worker/locale.ts';
 import { bridalEmail } from '../worker/templates/bridal.ts';
 import { bridalIntroEmail } from '../worker/templates/bridal_intro.ts';
@@ -281,11 +296,11 @@ for (const id of EMAIL_TEMPLATE_IDS) {
   assert(fields.includes('nome'), `${id} includes nome`);
 }
 const CONTACT = 'nome,email,telefone,locale';
-assert(EMAIL_TEMPLATE_FIELDS.bridal.join(',') === `${CONTACT},opcao_servico,data_casamento,hora_pronta,local_preparacao,local_prova,servicos_procurados,guests_makeup,guests_hair,guests_pack,addon_skin_call,mensagem,valor_deslocacao`, 'bridal field list');
+assert(EMAIL_TEMPLATE_FIELDS.bridal.join(',') === `${CONTACT},opcao_servico,data_casamento,hora_pronta,local_preparacao,local_prova,servicos_procurados,guests_makeup,guests_hair,guests_pack,addon_skin_call,mensagem,valor_deslocacao,sinal_reserva`, 'bridal field list');
 assert(EMAIL_TEMPLATE_FIELDS.bridal_intro.includes('telefone') && EMAIL_TEMPLATE_FIELDS.bridal_intro.includes('mensagem') && !EMAIL_TEMPLATE_FIELDS.bridal_intro.includes('bloco'), 'bridal intro has all lead fields');
-assert(EMAIL_TEMPLATE_FIELDS.beauty.includes('email') && EMAIL_TEMPLATE_FIELDS.beauty.includes('data_evento') && EMAIL_TEMPLATE_FIELDS.beauty.includes('mensagem') && !EMAIL_TEMPLATE_FIELDS.beauty.includes('bloco'), 'beauty fields');
-assert(EMAIL_TEMPLATE_FIELDS.skin_call.includes('rotina') && EMAIL_TEMPLATE_FIELDS.skin_call.includes('preocupacoes') && EMAIL_TEMPLATE_FIELDS.skin_call.includes('telefone'), 'skin_call has all form fields');
-assert(EMAIL_TEMPLATE_FIELDS.education.includes('formato') && EMAIL_TEMPLATE_FIELDS.education.includes('mensagem') && EMAIL_TEMPLATE_FIELDS.education.includes('email'), 'education fields');
+assert(EMAIL_TEMPLATE_FIELDS.beauty.includes('sinal_reserva') && EMAIL_TEMPLATE_FIELDS.beauty.includes('data_evento') && !EMAIL_TEMPLATE_FIELDS.beauty.includes('bloco'), 'beauty fields');
+assert(EMAIL_TEMPLATE_FIELDS.skin_call.includes('rotina') && !EMAIL_TEMPLATE_FIELDS.skin_call.includes('sinal_reserva') && !EMAIL_TEMPLATE_FIELDS.skin_call.includes('valor_deslocacao'), 'skin_call has no deposit or travel field');
+assert(EMAIL_TEMPLATE_FIELDS.education.includes('sinal_reserva') && EMAIL_TEMPLATE_FIELDS.education.includes('formato'), 'education fields');
 assert(EMAIL_TEMPLATE_FIELDS.bridal_terms.includes('data_casamento') && EMAIL_TEMPLATE_FIELDS.bridal_terms.includes('titular'), 'bridal terms has lead + payment fields');
 assert(EMAIL_TEMPLATE_FIELDS.beauty_terms.includes('data_evento') && EMAIL_TEMPLATE_FIELDS.beauty_terms.includes('iban'), 'beauty terms has lead + payment fields');
 assert(EMAIL_TEMPLATE_FIELDS.schedule.includes('plano') && EMAIL_TEMPLATE_FIELDS.schedule.includes('email'), 'schedule has skin-call fields');
@@ -300,6 +315,7 @@ assert(emailFieldLabel('quando') === 'Data e hora da sessão', 'friendly label q
 assert(emailFieldLabel('telefone') === 'Telefone', 'friendly label telefone');
 assert(emailFieldLabel('rotina') === 'Rotina', 'friendly label rotina');
 assert(emailFieldLabel('opcao_servico') === 'Opção de serviço', 'friendly label opcao_servico');
+assert(emailFieldLabel('sinal_reserva') === 'Valor sinal', 'friendly label sinal');
 assert(bodyFromEditor('<p>Olá</p><!--miana-block-start--><div data-miana-block="1"><p>editado</p></div><!--miana-block-end-->') === '<p>Olá</p>{{bloco}}', 'edited block still restores {{bloco}}');
 assert(
   bodyFromEditor('<p>Olá</p><!--miana-block-start:botao_chamada--><div data-miana-block="botao_chamada"><a>x</a></div><!--miana-block-end:botao_chamada-->') === `<p>Olá</p>${EMAIL_BOTAO_CHAMADA}`,
@@ -405,6 +421,35 @@ assert(beautyLegacy.legacy, 'beauty falls back without guests_*');
 assert(beautyLegacy.total === PRICING_FALLBACKS.beauty.makeup + 3 * PRICING_FALLBACKS.beauty.hair, 'beauty legacy extras');
 assert(beautyBlock({ guests_makeup: '2' }, PRICING_FALLBACKS).includes('Guests makeup'), 'beauty block per-service rows');
 
+const bridalSinal = reservationDeposit(
+  'bridal',
+  { servicos_procurados: 'Makeup', valor_deslocacao: '40', addon_skin_call: 'Duo Call (Plano 6M)' },
+  PRICING_FALLBACKS,
+);
+assert(
+  bridalSinal === 40 + PRICING_FALLBACKS.skin_call.session2 + Math.round(PRICING_FALLBACKS.bridal.makeup / 2),
+  'bridal deposit is travel + addon + half bride',
+);
+assert(
+  reservationDeposit('beauty', { guests_makeup: '2' }, PRICING_FALLBACKS)
+    === Math.round((2 * PRICING_FALLBACKS.beauty.makeup) / 2),
+  'beauty deposit is half total',
+);
+assert(
+  reservationDeposit('education', { valor_deslocacao: '20' }, PRICING_FALLBACKS)
+    === Math.round((PRICING_FALLBACKS.education.workshop + 20) / 2),
+  'education deposit is half total',
+);
+assert(reservationDeposit('skin-call', { plano: 'Duo Call (Plano 6M)' }, PRICING_FALLBACKS) === null, 'skin-call has no deposit');
+assert(bridalBlock({ servicos_procurados: 'Makeup' }, PRICING_FALLBACKS).includes('Valor sinal'), 'PT deposit row under total');
+assert(bridalBlock({ servicos_procurados: 'Makeup' }, PRICING_FALLBACKS, undefined, 'en').includes('Deposit amount'), 'EN deposit row');
+assert(educationBlock({}, PRICING_FALLBACKS).includes('Valor sinal'), 'education block has deposit');
+assert(!skinCallBlock({ plano: 'Duo Call (Plano 6M)' }, PRICING_FALLBACKS).includes('Valor sinal'), 'skin-call block has no deposit');
+assert(!skinCallBlock({ plano: 'Duo Call (Plano 6M)', valor_deslocacao: '40' }, PRICING_FALLBACKS).includes('Deslocação'), 'skin-call block has no travel');
+assert(!skinCallBlock({ plano: 'Duo Call (Plano 6M)' }, PRICING_FALLBACKS).includes('Valor total'), 'skin-call block has no total');
+assert(skinCallBlock({ plano: 'Duo Call (Plano 6M)' }, PRICING_FALLBACKS).includes(`${PRICING_FALLBACKS.skin_call.session2}€`), 'skin-call block has service price');
+assert(bridalIntroEmail({ servicos_procurados: 'Makeup' }, { subject: '', body: '<p>{{sinal_reserva}}</p>' }).includes('125€'), 'intro interpolates deposit');
+
 const pdfBytes = new TextEncoder().encode('%PDF-1.4 placeholder');
 assert(resolveOutgoingAttachmentType('servicos.pdf', 'application/pdf', pdfBytes) === 'application/pdf', 'pdf magic accepted');
 assert(resolveOutgoingAttachmentType('fake.pdf', 'application/pdf', new Uint8Array([1, 2, 3, 4])) === null, 'pdf declared without magic rejected');
@@ -412,5 +457,56 @@ assert(!!validateOutgoingAttachment('nota.exe', 'application/octet-stream', new 
 const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0]);
 assert(resolveOutgoingAttachmentType('foto.jpg', 'image/jpeg', jpeg) === 'image/jpeg', 'jpeg magic accepted');
 assert(resolveOutgoingAttachmentType('foto.jpg', 'image/jpeg', new Uint8Array([1, 2, 3])) === null, 'jpeg declared without magic rejected');
+
+assert(isCustomTemplateId('c_a1b2c3d4'), 'custom id matches c_ + 8 hex');
+assert(!isCustomTemplateId('bridal') && !isCustomTemplateId('c_SHORT') && !isCustomTemplateId('c_ABCDEFGH'), 'rejects builtin and invalid custom ids');
+assert(isBuiltinTemplateId('bridal_intro') && !isBuiltinTemplateId('c_a1b2c3d4'), 'builtin id guard');
+assert(isCustomEmailFlow('bridal') && isCustomEmailFlow('skin-call') && !isCustomEmailFlow('shared'), 'custom flows');
+assert(flowForLeadType('beauty') === 'beauty' && flowForLeadType('skin-call') === 'skin-call', 'lead type maps to flow');
+assert(sanitizeCustomLabel('  <b>Follow-up</b>  ') === 'Follow-up', 'label strips html');
+assert(sanitizeCustomLabel('') === '', 'empty label rejected after sanitize');
+assert(sanitizeCustomLabel('x'.repeat(50)).length === 40, 'label max 40');
+assert(CUSTOM_TEMPLATE_ID_RE.test(newCustomTemplateId()), 'generated id is valid');
+
+const parsed = parseCustomRegistry(JSON.stringify([
+  { id: 'c_a1b2c3d4', flow: 'bridal', label: 'Follow-up' },
+  { id: 'bridal', flow: 'bridal', label: 'Nope' },
+  { id: 'c_deadbeef', flow: 'shared', label: 'Bad flow' },
+  { id: 'c_aaaaaaaa', flow: 'beauty', label: '<em>Hi</em>' },
+  { id: 'c_a1b2c3d4', flow: 'education', label: 'Dup' },
+]));
+assert(parsed.length === 2 && parsed[0].id === 'c_a1b2c3d4' && parsed[0].label === 'Follow-up', 'parse keeps valid extras');
+assert(parsed[1].label === 'Hi', 'parse sanitizes label');
+assert(parseCustomRegistry('{"id":"c_a1b2c3d4"}').length === 0, 'non-array registry is empty');
+assert(parseCustomRegistry(undefined).length === 0, 'missing registry is empty');
+assert(parseCustomRegistry('not-json').length === 0, 'invalid json is empty');
+
+const overflow = parseCustomRegistry(JSON.stringify(
+  Array.from({ length: MAX_CUSTOM_TEMPLATES + 5 }, (_, i) => ({
+    id: `c_${i.toString(16).padStart(8, '0')}`,
+    flow: 'bridal',
+    label: `Extra ${i}`,
+  })),
+));
+assert(overflow.length === MAX_CUSTOM_TEMPLATES, 'parse caps at max extras');
+
+const roundtrip = parseCustomRegistry(serializeCustomRegistry(parsed));
+assert(roundtrip.length === 2 && roundtrip[1].flow === 'beauty', 'serialize roundtrip');
+assert(customTemplatesForFlow(parsed, 'bridal').length === 1, 'filter extras by flow');
+assert(fieldsForFlow('bridal').includes('sinal_reserva') && fieldsForFlow('bridal').includes('data_casamento'), 'bridal extra fields');
+assert(fieldsForFlow('beauty').includes('sinal_reserva') && fieldsForFlow('education').includes('sinal_reserva'), 'beauty/education extras have sinal');
+assert(!fieldsForFlow('skin-call').includes('sinal_reserva') && !fieldsForFlow('skin-call').includes('valor_deslocacao') && fieldsForFlow('skin-call').includes('rotina'), 'skin-call extras have no sinal or travel');
+assert(!fieldsForFlow('bridal').includes('titular'), 'extras have no payment fields');
+assert(customCopySettingKeys('c_a1b2c3d4').join(',') === 'email_c_a1b2c3d4_subject,email_c_a1b2c3d4_body,email_c_a1b2c3d4_subject_en,email_c_a1b2c3d4_body_en', 'custom copy keys PT+EN');
+assert(customAttachmentSettingKeys('c_a1b2c3d4').join(',') === 'email_c_a1b2c3d4_attachments,email_c_a1b2c3d4_attachments_en', 'custom attachment keys PT+EN');
+
+const customCopy = customTemplateFromMap({
+  email_c_a1b2c3d4_subject: 'Olá {{nome}}',
+  email_c_a1b2c3d4_body: '<p>PT</p>',
+  email_c_a1b2c3d4_subject_en: 'Hi {{nome}}',
+  email_c_a1b2c3d4_body_en: '<p>EN</p>',
+}, 'c_a1b2c3d4', 'en');
+assert(customCopy.subject === 'Hi {{nome}}' && customCopy.body === '<p>EN</p>', 'custom EN copy from map');
+assert(customTemplateFromMap({}, 'c_a1b2c3d4', 'pt').subject === '', 'missing custom copy is empty');
 
 if (!process.exitCode) console.log('email-copy: all passed');

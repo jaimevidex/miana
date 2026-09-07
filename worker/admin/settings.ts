@@ -6,16 +6,24 @@ import { htmlEscape, type Env } from '../lib';
 import { getGoogleStatus } from '../google-calendar';
 import {
   EMAIL_COPY_SETTING_KEYS,
+  EMAIL_CUSTOM_REGISTRY_KEY,
   EMAIL_FLOW_GROUPS,
   EMAIL_TEMPLATE_FIELDS,
+  customCopySettingKeys,
+  customTemplateFromMap,
   emailFieldLabel,
+  fieldsForFlow,
   getEmailCopy,
+  isBuiltinTemplateId,
+  isCustomEmailFlow,
   isQuoteTemplate,
+  parseCustomRegistry,
   previewTemplateBody,
   wrapPreviewBlock,
   settingsEmailEntries,
   settingsPanelId,
   toEditorHtml,
+  type CustomTemplateEntry,
   type EmailTemplateCopy,
   type EmailTemplateId,
 } from '../email-copy';
@@ -55,17 +63,22 @@ const SECTIONS: { id: string; label: string }[] = [
   { id: 'emails', label: 'Emails' },
 ];
 
-type EmailPanelId = EmailTemplateId;
+type EmailPanel = { id: string; flow: string; label: string; custom: boolean };
 
-function emailSettingsPanels(): { id: EmailPanelId; flow: string; label: string }[] {
-  return settingsEmailEntries().map((entry) => {
-    const id = settingsPanelId(entry.id) as EmailPanelId;
-    return {
-      id,
-      flow: entry.flow,
-      label: entry.label,
-    };
-  });
+function emailSettingsPanels(custom: CustomTemplateEntry[]): EmailPanel[] {
+  const builtin = settingsEmailEntries().map((entry) => ({
+    id: settingsPanelId(entry.id),
+    flow: entry.flow,
+    label: entry.label,
+    custom: false,
+  }));
+  const extras = custom.map((entry) => ({
+    id: entry.id,
+    flow: entry.flow,
+    label: entry.label,
+    custom: true,
+  }));
+  return [...builtin, ...extras];
 }
 
 function priceField(id: string, label: string, value: string): string {
@@ -140,17 +153,18 @@ function demoExtrasFor(id: EmailTemplateId, site: string, locale: 'pt' | 'en'): 
 }
 
 function renderFieldPicker(
-  id: EmailTemplateId,
+  fields: readonly string[],
   rteId: string,
   demoBlock: string,
   extras: Record<string, string>,
+  showPriceTable: boolean,
 ): string {
-  const chips = EMAIL_TEMPLATE_FIELDS[id].map((token) => {
+  const chips = fields.map((token) => {
     const label = emailFieldLabel(token);
     return `<button type="button" class="field-chip" data-insert-field="${htmlEscape(token)}" data-rte-target="${htmlEscape(rteId)}" title="${htmlEscape(`{{${token}}}`)}">${htmlEscape(label)}</button>`;
   }).join('');
   const liveChips = [
-    isQuoteTemplate(id) ? liveChip(rteId, 'bloco', 'Tabela de Preço', 'Tabela de preços com as contas', demoBlock) : '',
+    showPriceTable ? liveChip(rteId, 'bloco', 'Tabela de Preço', 'Tabela de preços com as contas', demoBlock) : '',
     extras.botao_chamada ? liveChip(rteId, 'botao_chamada', 'Botão da chamada', 'Link do Meet gerado no envio', extras.botao_chamada) : '',
     extras.botao_formulario ? liveChip(rteId, 'botao_formulario', 'Botão do formulário', 'Link do formulário gerado no envio', extras.botao_formulario) : '',
   ].join('');
@@ -161,12 +175,12 @@ function renderFieldPicker(
     </details>`;
 }
 
-function attachmentHref(id: EmailTemplateId, locale: 'pt' | 'en', attId: string): string {
+function attachmentHref(id: string, locale: 'pt' | 'en', attId: string): string {
   return `/api/admin/template-attachment?templateId=${encodeURIComponent(id)}&locale=${encodeURIComponent(locale)}&id=${encodeURIComponent(attId)}`;
 }
 
 function renderAttachmentZone(
-  id: EmailTemplateId,
+  id: string,
   locale: 'pt' | 'en',
   items: TemplateAttachmentRef[],
 ): string {
@@ -190,12 +204,14 @@ function renderAttachmentZone(
 }
 
 function emailTemplateFields(
-  id: EmailTemplateId,
+  id: string,
   fallback: EmailTemplateCopy,
   demoBlock: string,
   locale: 'pt' | 'en' = 'pt',
   extras: Record<string, string> = {},
   attachments: TemplateAttachmentRef[] = [],
+  fields: readonly string[] = [],
+  showPriceTable = false,
 ): string {
   const suffix = locale === 'en' ? '_en' : '';
   const prefix = `email_${id}`;
@@ -206,7 +222,7 @@ function emailTemplateFields(
       <label class="lbl" for="${prefix}_subject${suffix}">Assunto</label>
       <input id="${prefix}_subject${suffix}" class="in" value="${htmlEscape(fallback.subject)}" />
     </div>
-    ${renderFieldPicker(id, rteId, demoBlock, extras)}
+    ${renderFieldPicker(fields, rteId, demoBlock, extras, showPriceTable)}
     ${renderRteField(rteId, 'Corpo', preview, 'Corpo do email…')}
     ${renderAttachmentZone(id, locale, attachments)}`;
 }
@@ -237,7 +253,8 @@ export async function buildSettingsPage(env: Env): Promise<{ content: string; sc
     `<button type="button" class="filter-btn${i === 0 ? ' active' : ''}" data-section-btn="${s.id}">${s.label}</button>`,
   ).join('');
 
-  const emailPanelsMeta = emailSettingsPanels();
+  const customRegistry = parseCustomRegistry(settingsMap[EMAIL_CUSTOM_REGISTRY_KEY]);
+  const emailPanelsMeta = emailSettingsPanels(customRegistry);
   const firstFlow = EMAIL_FLOW_GROUPS[0].id;
   const flowNav = EMAIL_FLOW_GROUPS.map((g, i) =>
     `<button type="button" class="filter-btn${i === 0 ? ' active' : ''}" data-email-flow-btn="${g.id}">${g.label}</button>`,
@@ -268,11 +285,27 @@ export async function buildSettingsPage(env: Env): Promise<{ content: string; sc
   const assetBase = siteUrl(env).replace(/\/$/, '');
   const emailPanels = emailPanelsMeta.map((p, i) => {
     const active = i === 0 ? ' active' : '';
+    const builtinId = isBuiltinTemplateId(p.id) ? p.id : null;
+    const flow = isCustomEmailFlow(p.flow) ? p.flow : 'bridal';
+    const fields = builtinId ? EMAIL_TEMPLATE_FIELDS[builtinId] : fieldsForFlow(flow);
+    const copyPt = builtinId ? emailCopyPt[builtinId] : customTemplateFromMap(settingsMap, p.id, 'pt');
+    const copyEn = builtinId ? emailCopyEn[builtinId] : customTemplateFromMap(settingsMap, p.id, 'en');
+    const demoPt = builtinId ? demoBlockFor(builtinId, pricing, pay, assetBase, 'pt') : '';
+    const demoEn = builtinId ? demoBlockFor(builtinId, pricing, pay, assetBase, 'en') : '';
+    const extrasPt = builtinId ? demoExtrasFor(builtinId, assetBase, 'pt') : {};
+    const extrasEn = builtinId ? demoExtrasFor(builtinId, assetBase, 'en') : {};
+    const showPrice = builtinId ? isQuoteTemplate(builtinId) : false;
+    const removeBtn = p.custom
+      ? `<button type="button" class="btn btn-outline btn-sm" data-remove-template="${htmlEscape(p.id)}">Remover template</button>`
+      : '';
     return `
-        <div class="settings-email-panel${active}" data-email="${p.id}" data-email-flow="${p.flow}">
-          <h3>${htmlEscape(p.label)}</h3>
-          <div data-email-locale="pt">${emailTemplateFields(p.id, emailCopyPt[p.id], demoBlockFor(p.id, pricing, pay, assetBase, 'pt'), 'pt', demoExtrasFor(p.id, assetBase, 'pt'), publicAttachmentList(listTemplateAttachmentsFromMap(settingsMap, p.id, 'pt')))}</div>
-          <div data-email-locale="en" hidden>${emailTemplateFields(p.id, emailCopyEn[p.id], demoBlockFor(p.id, pricing, pay, assetBase, 'en'), 'en', demoExtrasFor(p.id, assetBase, 'en'), publicAttachmentList(listTemplateAttachmentsFromMap(settingsMap, p.id, 'en')))}</div>
+        <div class="settings-email-panel${active}" data-email="${htmlEscape(p.id)}" data-email-flow="${htmlEscape(p.flow)}">
+          <div class="settings-email-panel-head">
+            <h3>${htmlEscape(p.label)}</h3>
+            ${removeBtn}
+          </div>
+          <div data-email-locale="pt">${emailTemplateFields(p.id, copyPt, demoPt, 'pt', extrasPt, publicAttachmentList(listTemplateAttachmentsFromMap(settingsMap, p.id, 'pt')), fields, showPrice)}</div>
+          <div data-email-locale="en" hidden>${emailTemplateFields(p.id, copyEn, demoEn, 'en', extrasEn, publicAttachmentList(listTemplateAttachmentsFromMap(settingsMap, p.id, 'en')), fields, showPrice)}</div>
         </div>`;
   }).join('');
 
@@ -399,6 +432,9 @@ export async function buildSettingsPage(env: Env): Promise<{ content: string; sc
         <nav class="filters settings-email-flows" role="tablist" aria-label="Flows de email">${flowNav}</nav>
         <p class="settings-hint" id="email-flow-hint">${htmlEscape(EMAIL_FLOW_GROUPS[0].hint)}</p>
         ${stepNav}
+        <div class="settings-email-extra-actions">
+          <button type="button" class="btn btn-outline btn-sm" id="add-email-template">Adicionar template</button>
+        </div>
         <div class="card">
           ${emailPanels}
         </div>
@@ -409,9 +445,37 @@ export async function buildSettingsPage(env: Env): Promise<{ content: string; sc
       </div>
       <p id="settings-status" class="status" role="status" aria-live="polite"></p>
     </form>
+
+    <div id="add-template-modal" class="modal-overlay">
+      <div class="modal settings-dialog" role="dialog" aria-modal="true" aria-labelledby="add-template-title">
+        <h2 id="add-template-title">Novo template</h2>
+        <p class="settings-hint">O nome aparece no chat e nas Settings. A copy em PT e EN fica vazia até a escreveres.</p>
+        <label class="lbl" for="add-template-name">Nome</label>
+        <input id="add-template-name" class="in" maxlength="40" placeholder="Ex. Follow-up" autocomplete="off" />
+        <p id="add-template-status" class="status" role="status"></p>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" id="add-template-cancel">Cancelar</button>
+          <button type="button" class="btn" id="add-template-confirm">Criar</button>
+        </div>
+      </div>
+    </div>
+    <div id="remove-template-modal" class="modal-overlay">
+      <div class="modal settings-dialog" role="dialog" aria-modal="true" aria-labelledby="remove-template-title">
+        <h2 id="remove-template-title">Apagar template</h2>
+        <p class="settings-hint" id="remove-template-copy">A copy e os anexos deste template desaparecem. Isto não se desfaz.</p>
+        <p id="remove-template-status" class="status" role="status"></p>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" id="remove-template-cancel">Cancelar</button>
+          <button type="button" class="btn btn-danger" id="remove-template-confirm">Apagar</button>
+        </div>
+      </div>
+    </div>
   `;
 
-  const emailKeysJson = JSON.stringify(EMAIL_COPY_SETTING_KEYS);
+  const emailKeysJson = JSON.stringify([
+    ...EMAIL_COPY_SETTING_KEYS,
+    ...customRegistry.flatMap((entry) => customCopySettingKeys(entry.id)),
+  ]);
 
   const script = `
     (function () {
@@ -439,7 +503,9 @@ export async function buildSettingsPage(env: Env): Promise<{ content: string; sc
 
       var flowHints = ${flowHintsJson};
       var flowFirstPanel = ${flowFirstPanelJson};
+      var currentFlow = ${JSON.stringify(firstFlow)};
       function showEmailFlow(flowId, panelId) {
+        currentFlow = flowId;
         document.querySelectorAll('[data-email-flow-btn]').forEach(function (el) {
           el.classList.toggle('active', el.getAttribute('data-email-flow-btn') === flowId);
         });
@@ -458,6 +524,11 @@ export async function buildSettingsPage(env: Env): Promise<{ content: string; sc
         document.querySelectorAll('[data-email-btn]').forEach(function (el) {
           el.classList.toggle('active', el.getAttribute('data-email-btn') === id);
         });
+      }
+      var emailParam = params.get('email');
+      if (emailParam && /^[a-z0-9_]+$/.test(emailParam)) {
+        var emailPanel = document.querySelector('[data-email="' + emailParam + '"]');
+        if (emailPanel) showEmailFlow(emailPanel.getAttribute('data-email-flow'), emailParam);
       }
       document.querySelectorAll('[data-email-flow-btn]').forEach(function (btn) {
         btn.addEventListener('click', function () {
@@ -592,6 +663,140 @@ export async function buildSettingsPage(env: Env): Promise<{ content: string; sc
             setStatus('Erro ao adicionar.', true);
           }
         });
+      });
+
+      function openOverlay(id) {
+        var el = document.getElementById(id);
+        if (el) el.classList.add('active');
+      }
+      function closeOverlay(id) {
+        var el = document.getElementById(id);
+        if (el) el.classList.remove('active');
+      }
+      function setModalStatus(id, text, err) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = text || '';
+        el.className = err ? 'status err' : 'status';
+      }
+
+      var addModal = document.getElementById('add-template-modal');
+      var addName = document.getElementById('add-template-name');
+      var addBusy = false;
+      function openAddModal() {
+        if (addName) addName.value = '';
+        setModalStatus('add-template-status', '');
+        openOverlay('add-template-modal');
+        setTimeout(function () { if (addName) addName.focus(); }, 20);
+      }
+      function closeAddModal() {
+        if (addBusy) return;
+        closeOverlay('add-template-modal');
+      }
+      async function createTemplate() {
+        if (addBusy) return;
+        var name = addName ? String(addName.value || '').trim() : '';
+        if (!name) {
+          setModalStatus('add-template-status', 'Indica o nome do template.', true);
+          if (addName) addName.focus();
+          return;
+        }
+        addBusy = true;
+        setModalStatus('add-template-status', 'A criar...');
+        try {
+          var res = await fetch('/api/admin/settings/templates', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ flow: currentFlow, label: name }),
+          });
+          var data = await res.json();
+          if (!data.success) {
+            setModalStatus('add-template-status', data.error || 'Erro ao criar template.', true);
+            addBusy = false;
+            return;
+          }
+          location.href = '/admin/settings?email=' + encodeURIComponent(data.template.id) + '#emails';
+        } catch (err) {
+          setModalStatus('add-template-status', 'Erro ao criar template.', true);
+          addBusy = false;
+        }
+      }
+      var addTplBtn = document.getElementById('add-email-template');
+      if (addTplBtn) addTplBtn.addEventListener('click', openAddModal);
+      var addCancel = document.getElementById('add-template-cancel');
+      if (addCancel) addCancel.addEventListener('click', closeAddModal);
+      var addConfirm = document.getElementById('add-template-confirm');
+      if (addConfirm) addConfirm.addEventListener('click', createTemplate);
+      if (addName) addName.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter') {
+          ev.preventDefault();
+          createTemplate();
+        }
+      });
+      if (addModal) addModal.addEventListener('click', function (ev) {
+        if (ev.target === addModal) closeAddModal();
+      });
+
+      var removeId = '';
+      var removeBusy = false;
+      var removeModal = document.getElementById('remove-template-modal');
+      function openRemoveModal(id, label) {
+        removeId = id || '';
+        var copy = document.getElementById('remove-template-copy');
+        if (copy) {
+          copy.textContent = label
+            ? 'Apagar "' + label + '"? A copy e os anexos desaparecem. Isto não se desfaz.'
+            : 'A copy e os anexos deste template desaparecem. Isto não se desfaz.';
+        }
+        setModalStatus('remove-template-status', '');
+        openOverlay('remove-template-modal');
+      }
+      function closeRemoveModal() {
+        if (removeBusy) return;
+        closeOverlay('remove-template-modal');
+      }
+      async function deleteTemplate() {
+        if (removeBusy || !removeId) return;
+        removeBusy = true;
+        setModalStatus('remove-template-status', 'A apagar...');
+        try {
+          var res = await fetch('/api/admin/settings/templates', {
+            method: 'DELETE',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: removeId }),
+          });
+          var data = await res.json();
+          if (!data.success) {
+            setModalStatus('remove-template-status', data.error || 'Erro ao apagar template.', true);
+            removeBusy = false;
+            return;
+          }
+          location.href = '/admin/settings#emails';
+        } catch (err) {
+          setModalStatus('remove-template-status', 'Erro ao apagar template.', true);
+          removeBusy = false;
+        }
+      }
+      document.querySelectorAll('[data-remove-template]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var panel = btn.closest('[data-email]');
+          var title = panel && panel.querySelector('h3');
+          openRemoveModal(btn.getAttribute('data-remove-template'), title ? title.textContent : '');
+        });
+      });
+      var removeCancel = document.getElementById('remove-template-cancel');
+      if (removeCancel) removeCancel.addEventListener('click', closeRemoveModal);
+      var removeConfirm = document.getElementById('remove-template-confirm');
+      if (removeConfirm) removeConfirm.addEventListener('click', deleteTemplate);
+      if (removeModal) removeModal.addEventListener('click', function (ev) {
+        if (ev.target === removeModal) closeRemoveModal();
+      });
+      document.addEventListener('keydown', function (ev) {
+        if (ev.key !== 'Escape') return;
+        closeAddModal();
+        closeRemoveModal();
       });
     })();
 

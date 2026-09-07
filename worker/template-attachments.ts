@@ -5,7 +5,8 @@ import { settings as settingsTable } from './db/schema';
 import type { Env, LeadType } from './lib';
 import { loadSettingsMap } from './pricing';
 import {
-  EMAIL_TEMPLATE_IDS,
+  isBuiltinTemplateId,
+  isCustomTemplateId,
   type EmailTemplateId,
 } from './email-copy';
 import { parseLocale, type Locale } from './locale';
@@ -40,16 +41,16 @@ type StoredAttachment = {
   r2Key?: string;
 };
 
-export function isEmailTemplateId(value: string): value is EmailTemplateId {
-  return (EMAIL_TEMPLATE_IDS as readonly string[]).includes(value);
+export function isEmailTemplateId(value: string): boolean {
+  return isBuiltinTemplateId(value) || isCustomTemplateId(value);
 }
 
-export function attachmentsSettingKey(id: EmailTemplateId, locale: Locale): string {
+export function attachmentsSettingKey(id: string, locale: Locale): string {
   return locale === 'en' ? `email_${id}_attachments_en` : `email_${id}_attachments`;
 }
 
 export function isAttachmentsSettingKey(key: string): boolean {
-  return /^email_[a-z_]+_attachments(_en)?$/.test(key);
+  return /^email_[a-z0-9_]+_attachments(_en)?$/.test(key);
 }
 
 export function quoteTemplateId(type: LeadType): EmailTemplateId {
@@ -98,9 +99,9 @@ export function builtinBridalServicesRef(): TemplateAttachmentRef {
   };
 }
 
-export function defaultTemplateAttachments(id: EmailTemplateId): TemplateAttachmentRef[] {
+export function defaultTemplateAttachments(id: string): TemplateAttachmentRef[] {
   if (id === 'bridal_intro') return [builtinBridalServicesRef()];
-  if (id.endsWith('_terms')) return [builtinTermosRef()];
+  if (isBuiltinTemplateId(id) && id.endsWith('_terms')) return [builtinTermosRef()];
   return [];
 }
 
@@ -123,7 +124,7 @@ function hydrateStored(item: StoredAttachment): TemplateAttachmentRef | null {
   };
 }
 
-export function parseAttachmentList(raw: string | undefined, id: EmailTemplateId, configured: boolean): TemplateAttachmentRef[] {
+export function parseAttachmentList(raw: string | undefined, id: string, configured: boolean): TemplateAttachmentRef[] {
   if (!configured) return defaultTemplateAttachments(id);
   try {
     const parsed = JSON.parse(raw || '[]') as unknown;
@@ -153,7 +154,7 @@ export function serializeAttachmentList(items: TemplateAttachmentRef[]): string 
 
 export function listTemplateAttachmentsFromMap(
   map: Record<string, string>,
-  id: EmailTemplateId,
+  id: string,
   locale: Locale,
 ): TemplateAttachmentRef[] {
   const key = attachmentsSettingKey(id, locale);
@@ -162,7 +163,7 @@ export function listTemplateAttachmentsFromMap(
 
 export async function listTemplateAttachments(
   env: Env,
-  id: EmailTemplateId,
+  id: string,
   locale: Locale,
 ): Promise<TemplateAttachmentRef[]> {
   const map = await loadSettingsMap(env);
@@ -184,7 +185,7 @@ export function publicAttachmentList(items: TemplateAttachmentRef[]): TemplateAt
 
 async function writeAttachmentList(
   env: Env,
-  id: EmailTemplateId,
+  id: string,
   locale: Locale,
   items: TemplateAttachmentRef[],
 ): Promise<void> {
@@ -218,7 +219,7 @@ export function isSafeTemplateAttachmentKey(key: string): boolean {
 
 export async function addTemplateAttachment(
   env: Env,
-  id: EmailTemplateId,
+  id: string,
   locale: Locale,
   file: { filename: string; contentType: string; content: Uint8Array },
 ): Promise<{ ok: true; attachments: TemplateAttachmentRef[] } | { ok: false; error: string }> {
@@ -252,7 +253,7 @@ export async function addTemplateAttachment(
 
 export async function removeTemplateAttachment(
   env: Env,
-  id: EmailTemplateId,
+  id: string,
   locale: Locale,
   attachmentId: string,
 ): Promise<{ ok: true; attachments: TemplateAttachmentRef[] } | { ok: false; error: string }> {
@@ -302,7 +303,7 @@ export async function resolveTemplateAttachmentBytes(
 
 export async function resolveSelectedTemplateAttachments(
   env: Env,
-  id: EmailTemplateId,
+  id: string,
   locale: Locale,
   ids: string[],
 ): Promise<{ ok: true; attachments: EmailAttachment[] } | { ok: false; error: string }> {
@@ -320,6 +321,18 @@ export async function resolveSelectedTemplateAttachments(
     out.push(resolved);
   }
   return { ok: true, attachments: out };
+}
+
+export async function deleteAllTemplateAttachments(env: Env, id: string): Promise<void> {
+  if (!env.DIAG_PHOTOS || !isEmailTemplateId(id)) return;
+  const prefix = `${TEMPLATE_ATTACHMENTS_FOLDER}/${id}/`;
+  let cursor: string | undefined;
+  do {
+    const listed = await env.DIAG_PHOTOS.list({ prefix, cursor });
+    const keys = listed.objects.map((obj) => obj.key).filter(isSafeTemplateAttachmentKey);
+    await Promise.all(keys.map((key) => env.DIAG_PHOTOS!.delete(key)));
+    cursor = listed.truncated ? listed.cursor : undefined;
+  } while (cursor);
 }
 
 export function parseTemplateLocale(raw: string | null | undefined): Locale {

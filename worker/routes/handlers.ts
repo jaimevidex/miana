@@ -11,7 +11,8 @@ import { setSessionCookie, getSessionCookie, clearSessionCookie } from '../auth/
 import { verifyPassword } from '../auth/password';
 import { getPricing } from '../pricing';
 import { getCookieValue } from '../http';
-import { attachPersonFields, interpolate } from '../email-copy';
+import { attachSinalVars } from '../bridal-pricing';
+import { attachPersonFields, interpolate, EMAIL_CUSTOM_REGISTRY_KEY } from '../email-copy';
 import { isAttachmentsSettingKey } from '../template-attachments';
 import { generateQuoteHtml, generateQuoteSubject } from '../services/quotes';
 import { DEFAULT_LOCALE, parseLocale } from '../locale';
@@ -536,7 +537,10 @@ export async function handlePreviewQuote(request: Request, env: Env, id: string 
     const pricing = await getPricing(env);
     const locale = parseLocale(lead.locale);
     const html = await generateQuoteHtml(env, lead.type as LeadType, formData, pricing, undefined, locale);
-    const subject = interpolate(await generateQuoteSubject(env, lead.type as LeadType, locale), formData);
+    const subject = interpolate(
+      await generateQuoteSubject(env, lead.type as LeadType, locale),
+      { ...formData, ...attachSinalVars(lead.type as LeadType, formData, pricing) },
+    );
 
     return json({ success: true, subject, html });
   } catch (e) {
@@ -636,6 +640,7 @@ export async function handleUpdateSettings(request: Request, env: Env): Promise<
 
     for (const [key, value] of Object.entries(body)) {
       if (key === 'google_calendar_refresh_token') continue;
+      if (key === EMAIL_CUSTOM_REGISTRY_KEY) continue;
       if (isAttachmentsSettingKey(key)) continue;
       await db.insert(settingsTable).values({ key, value, updatedAt: now }).onConflictDoUpdate({
         target: settingsTable.key,

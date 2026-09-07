@@ -1,5 +1,6 @@
 // Template de orçamento - Beauty (Guests & Events).
 
+import { attachSinalVars } from '../bridal-pricing';
 import type { Pricing } from '../pricing';
 import { EMAIL_COPY_FALLBACKS, fillTemplateBody, templateVars, type EmailTemplateCopy, type EmailWrapFooter } from '../email-copy';
 import { wrapEmail } from './base';
@@ -15,7 +16,7 @@ export function beautyEmail(
   locale: Locale = DEFAULT_LOCALE,
 ): string {
   const block = beautyBlock(formData, pricing, notes, locale);
-  const body = fillTemplateBody(copy.body, block, templateVars(formData));
+  const body = fillTemplateBody(copy.body, block, templateVars(formData, attachSinalVars('beauty', formData, pricing)));
   return wrapEmail(body, footer);
 }
 

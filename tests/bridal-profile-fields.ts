@@ -77,7 +77,7 @@ assert(beauty.valor_deslocacao === '', 'beauty injects empty travel fee');
 assert(!('servicos_procurados' in beauty), 'beauty omits bride service');
 assert(!('addon_skin_call' in beauty), 'beauty omits addon plan');
 
-assert(Object.fromEntries(visibleFormEntries('skin-call', {})).valor_deslocacao === '', 'skin-call has travel fee');
+assert(!('valor_deslocacao' in Object.fromEntries(visibleFormEntries('skin-call', { valor_deslocacao: '40' }))), 'skin-call has no travel fee');
 assert(Object.fromEntries(visibleFormEntries('education', {})).valor_deslocacao === '', 'education has travel fee');
 assert(fieldKind('valor_deslocacao') === 'number', 'travel fee is a number');
 

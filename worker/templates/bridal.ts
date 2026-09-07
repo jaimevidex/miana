@@ -1,6 +1,7 @@
 // Template de orçamento - Bridal.
 
 import type { Pricing } from '../pricing';
+import { attachSinalVars } from '../bridal-pricing';
 import { EMAIL_COPY_FALLBACKS, fillTemplateBody, templateVars, type EmailTemplateCopy, type EmailWrapFooter } from '../email-copy';
 import { wrapEmail } from './base';
 import { bridalBlock } from './blocks';
@@ -15,7 +16,7 @@ export function bridalEmail(
   locale: Locale = DEFAULT_LOCALE,
 ): string {
   const block = bridalBlock(formData, pricing, notes, locale);
-  const body = fillTemplateBody(copy.body, block, templateVars(formData));
+  const body = fillTemplateBody(copy.body, block, templateVars(formData, attachSinalVars('bridal', formData, pricing)));
   return wrapEmail(body, footer);
 }
 
