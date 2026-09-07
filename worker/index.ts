@@ -13,10 +13,8 @@ import {
   handleUpdateStatus,
   handlePreviewQuote,
   handleSendQuote,
-  handleDiagnosticInvite,
   handleAcceptLead,
   handleEditLead,
-  handleClientDiagnosticInvite,
   handleCreateClient,
   handleEditClient,
   handleUpdateSettings,
@@ -112,17 +110,11 @@ export default {
       if (path.startsWith('/api/admin/lead/') && path.endsWith('/quote') && method === 'POST') {
         return handleSendQuote(request, env, path.split('/api/admin/lead/')[1]?.replace('/quote', ''), userId);
       }
-      if (path.startsWith('/api/admin/lead/') && path.endsWith('/diagnostic-invite') && method === 'POST') {
-        return handleDiagnosticInvite(request, env, path.split('/api/admin/lead/')[1]?.replace('/diagnostic-invite', ''));
-      }
       if (path.startsWith('/api/admin/lead/') && path.endsWith('/accept') && method === 'POST') {
         return handleAcceptLead(request, env, path.split('/api/admin/lead/')[1]?.replace('/accept', ''));
       }
       if (path.startsWith('/api/admin/lead/') && method === 'PUT') {
         return handleEditLead(request, env, path.split('/api/admin/lead/')[1]);
-      }
-      if (path.startsWith('/api/admin/client/') && path.endsWith('/diagnostic-invite') && method === 'POST') {
-        return handleClientDiagnosticInvite(request, env, path.split('/api/admin/client/')[1]?.replace('/diagnostic-invite', ''));
       }
       if (path === '/api/admin/client' && method === 'POST') return handleCreateClient(request, env);
       if (path.startsWith('/api/admin/client/') && method === 'PUT') {

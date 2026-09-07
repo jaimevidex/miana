@@ -1,7 +1,7 @@
-// Blocos gerados (preços, pagamento, botões) injectados em {{bloco}}.
+// Blocos gerados (preços, pagamento, botões) injectados em {{bloco}} ou tokens de botão.
 
 import type { Pricing } from '../pricing';
-import { beautyQuoteTotal, bridalQuoteTotal, parseTravelFee } from '../bridal-pricing';
+import { beautyQuoteTotal, bridalQuoteTotal, parseTravelFee, skinCallPlanPrice } from '../bridal-pricing';
 import { fieldRow, sectionTitle, priceRow } from './base';
 import { DEFAULT_LOCALE, type Locale } from '../locale';
 
@@ -12,6 +12,11 @@ const BLOCK = {
     investment: 'Valor',
     total: 'Valor total',
     travel: 'Deslocação',
+    pending: 'a calcular',
+    addon: 'Add-on Skin Call',
+    guestsMakeup: 'Guests makeup',
+    guestsHair: 'Guests hair',
+    guestsPack: 'Guests pack',
     notes: 'Notas',
     name: 'Nome',
     weddingDate: 'Data do casamento',
@@ -42,7 +47,7 @@ const BLOCK = {
     workshop: 'Workshop',
     payment: 'Dados de pagamento',
     accountHolder: 'Titular',
-    joinMeet: 'Entrar no Google Meet',
+    joinMeet: 'Entrar na Chamada',
     beforeCall: 'Antes da chamada, preenche por favor o formulário de avaliação de pele:',
     openForm: 'Abrir formulário',
     openDiag: 'Abrir avaliação de pele',
@@ -53,6 +58,11 @@ const BLOCK = {
     investment: 'Amount',
     total: 'Total amount',
     travel: 'Travel',
+    pending: 'to be calculated',
+    addon: 'Add-on Skin Call',
+    guestsMakeup: 'Guests makeup',
+    guestsHair: 'Guests hair',
+    guestsPack: 'Guests pack',
     notes: 'Notes',
     name: 'Name',
     weddingDate: 'Wedding date',
@@ -83,7 +93,7 @@ const BLOCK = {
     workshop: 'Workshop',
     payment: 'Payment details',
     accountHolder: 'Account holder',
-    joinMeet: 'Join Google Meet',
+    joinMeet: 'Join the Call',
     beforeCall: 'Before the call, please fill in the skin assessment form:',
     openForm: 'Open form',
     openDiag: 'Open skin assessment',
@@ -99,95 +109,86 @@ function notesHtml(notes: string | undefined, locale: Locale): string {
   return `<h3 style="font-size:16px;color:#8a2831;margin:24px 0 8px">${L(locale).notes}</h3><p>${notes}</p>`;
 }
 
-function isPlaceholder(value: string | undefined): boolean {
-  return !!value && /^\{\{\w+\}\}$/.test(value);
-}
-
-function showValue(raw: string | undefined, computed: string): string {
-  return isPlaceholder(raw) ? raw! : computed;
+function priceRowOpen(label: string, amount: number | string): string {
+  const value = typeof amount === 'number' ? `${amount}€` : amount;
+  return `<p style="margin:4px 0;display:flex;justify-content:space-between"><span>${label}</span><strong>${value}</strong></p>`;
 }
 
 function travelRow(formData: Record<string, string>, locale: Locale): string {
   const travel = parseTravelFee(formData);
-  return travel > 0 ? priceRow(L(locale).travel, travel) : '';
+  const t = L(locale);
+  return travel > 0 ? priceRow(t.travel, travel) : priceRowOpen(t.travel, t.pending);
 }
 
 function totalRow(label: string, amount: number): string {
   return `
-    <p style="margin:12px 0 0;font-size:16px;border-top:1px solid #e5ded7;padding-top:8px;display:flex;justify-content:space-between">
+    <p style="margin:12px 0 0;font-size:16px;padding-top:8px;display:flex;justify-content:space-between">
       <strong>${label}</strong>
       <strong>${amount}€</strong>
     </p>`;
 }
 
-export function bridalBlock(formData: Record<string, string>, pricing: Pricing, notes?: string, locale: Locale = DEFAULT_LOCALE): string {
+function guestPriceRows(
+  guests: { makeup: number; hair: number; pack: number },
+  pricing: Pricing,
+  locale: Locale,
+  preview: boolean,
+): string {
+  const t = L(locale);
+  const g = pricing.beauty;
+  const lines = [
+    { qty: guests.makeup, unit: g.makeup, label: t.guestsMakeup },
+    { qty: guests.hair, unit: g.hair, label: t.guestsHair },
+    { qty: guests.pack, unit: g.pack, label: t.guestsPack },
+  ];
+  return lines.map((line) => {
+    if (!preview && line.qty <= 0) return '';
+    return priceRow(`${line.label} × ${line.qty} × ${line.unit}€`, line.qty * line.unit);
+  }).join('');
+}
+
+export function bridalBlock(
+  formData: Record<string, string>,
+  pricing: Pricing,
+  notes?: string,
+  locale: Locale = DEFAULT_LOCALE,
+  preview = false,
+): string {
   const t = L(locale);
   const quote = bridalQuoteTotal(formData, pricing);
-  const g = pricing.beauty;
-  const { guests } = quote;
-  const guestRows = [
-    guests.makeup > 0
-      ? priceRow(`Guests makeup × ${guests.makeup} × ${g.makeup}€`, guests.makeup * g.makeup)
-      : '',
-    guests.hair > 0
-      ? priceRow(`Guests hair × ${guests.hair} × ${g.hair}€`, guests.hair * g.hair)
-      : '',
-    guests.pack > 0
-      ? priceRow(`Guests pack × ${guests.pack} × ${g.pack}€`, guests.pack * g.pack)
-      : '',
-  ].join('');
+  const addonRow = quote.addonPrice > 0
+    ? priceRow(`${t.addon} - ${quote.addonLabel}`, quote.addonPrice)
+    : preview
+      ? priceRowOpen(t.addon, '—')
+      : '';
 
   return `
-    ${sectionTitle(t.data)}
-    ${fieldRow(t.name, formData.nome || '')}
-    ${fieldRow(t.weddingDate, formData.data_casamento || '')}
-    ${fieldRow(t.readyTime, formData.hora_pronta || '')}
-    ${fieldRow(t.prepLocation, formData.local_preparacao || '')}
-    ${fieldRow(t.trialLocation, formData.local_prova || '')}
-    ${sectionTitle(t.services)}
-    ${fieldRow(t.bride, showValue(formData.servicos_procurados, quote.brideLabel))}
-    ${fieldRow('Guests makeup', showValue(formData.guests_makeup, guests.makeup > 0 ? String(guests.makeup) : '0'))}
-    ${fieldRow('Guests hair', showValue(formData.guests_hair, guests.hair > 0 ? String(guests.hair) : '0'))}
-    ${fieldRow('Guests pack', showValue(formData.guests_pack, guests.pack > 0 ? String(guests.pack) : '0'))}
-    ${formData.addon_skin_call ? fieldRow('Add-on Skin Call', formData.addon_skin_call) : ''}
     ${sectionTitle(t.investment)}
     ${priceRow('Bridal - ' + quote.brideLabel, quote.bridePrice)}
-    ${guestRows}
+    ${guestPriceRows(quote.guests, pricing, locale, preview)}
+    ${addonRow}
     ${travelRow(formData, locale)}
     ${totalRow(t.total, quote.total)}
     ${notesHtml(notes, locale)}
   `;
 }
 
-export function beautyBlock(formData: Record<string, string>, pricing: Pricing, notes?: string, locale: Locale = DEFAULT_LOCALE): string {
+export function beautyBlock(
+  formData: Record<string, string>,
+  pricing: Pricing,
+  notes?: string,
+  locale: Locale = DEFAULT_LOCALE,
+  preview = false,
+): string {
   const t = L(locale);
   const g = pricing.beauty;
   const quote = beautyQuoteTotal(formData, pricing);
-  const { guests } = quote;
-
-  const serviceRows = quote.legacy
-    ? `${fieldRow(t.service, showValue(formData.servicos_procurados_guests, quote.servicoLabel))}
-    ${fieldRow(t.people, showValue(formData.numero_pessoas, quote.pessoas > 0 ? String(quote.pessoas) : ''))}`
-    : `${fieldRow('Guests makeup', showValue(formData.guests_makeup, guests.makeup > 0 ? String(guests.makeup) : '0'))}
-    ${fieldRow('Guests hair', showValue(formData.guests_hair, guests.hair > 0 ? String(guests.hair) : '0'))}
-    ${fieldRow('Guests pack', showValue(formData.guests_pack, guests.pack > 0 ? String(guests.pack) : '0'))}`;
-
   const priceRows = quote.legacy
     ? `${priceRow('Beauty - ' + quote.servicoLabel, quote.base)}
-    ${quote.extras > 0 ? priceRow(`${t.extras} × ` + (quote.pessoas - 1) + ' × ' + g.hair + '€', quote.extras) : ''}`
-    : [
-        guests.makeup > 0 ? priceRow(`Guests makeup × ${guests.makeup} × ${g.makeup}€`, guests.makeup * g.makeup) : '',
-        guests.hair > 0 ? priceRow(`Guests hair × ${guests.hair} × ${g.hair}€`, guests.hair * g.hair) : '',
-        guests.pack > 0 ? priceRow(`Guests pack × ${guests.pack} × ${g.pack}€`, guests.pack * g.pack) : '',
-      ].join('');
+    ${quote.extras > 0 || preview ? priceRow(`${t.extras} × ` + Math.max(0, quote.pessoas - 1) + ' × ' + g.hair + '€', quote.extras) : ''}`
+    : guestPriceRows(quote.guests, pricing, locale, preview);
 
   return `
-    ${sectionTitle(t.data)}
-    ${fieldRow(t.eventDate, formData.data_evento || '')}
-    ${fieldRow(t.readyTime, formData.hora_pronta_evento || '')}
-    ${fieldRow(t.eventLocation, formData.local_evento || '')}
-    ${sectionTitle(t.services)}
-    ${serviceRows}
     ${sectionTitle(t.investment)}
     ${priceRows}
     ${travelRow(formData, locale)}
@@ -196,54 +197,46 @@ export function beautyBlock(formData: Record<string, string>, pricing: Pricing, 
   `;
 }
 
-export function skinCallBlock(formData: Record<string, string>, pricing: Pricing, notes?: string, locale: Locale = DEFAULT_LOCALE): string {
+export function skinCallBlock(
+  formData: Record<string, string>,
+  pricing: Pricing,
+  notes?: string,
+  locale: Locale = DEFAULT_LOCALE,
+  preview = false,
+): string {
   const t = L(locale);
-  const p = pricing.skin_call;
-  const plano = formData.plano || '';
-  let total = 0;
-  let planoLabel = plano;
-  if (plano.includes('Solo')) {
-    total = p.session1;
-    planoLabel = t.solo;
-  } else if (plano.includes('Duo')) {
-    total = p.session2;
-    planoLabel = t.duo;
-  } else if (plano.includes('Trio')) {
-    total = p.session3;
-    planoLabel = t.trio;
-  } else if (plano.includes('Quatro')) {
-    total = p.session4;
-    planoLabel = t.quatro;
-  }
-
+  const plan = skinCallPlanPrice(formData.plano, pricing);
   const travel = parseTravelFee(formData);
-  const showPrices = !isPlaceholder(formData.plano);
+  const planRow = plan
+    ? priceRow(plan.label, plan.price)
+    : preview
+      ? priceRowOpen(t.plan, '—')
+      : '';
+  const total = (plan?.price ?? 0) + travel;
+
   return `
-    ${sectionTitle(t.plan)}
-    ${fieldRow(t.chosenPlan, showValue(formData.plano, planoLabel))}
-    ${showPrices ? `${sectionTitle(t.investment)}${priceRow(planoLabel, total)}${travelRow(formData, locale)}${travel > 0 ? totalRow(t.total, total + travel) : ''}` : ''}
+    ${sectionTitle(t.investment)}
+    ${planRow}
+    ${travelRow(formData, locale)}
+    ${totalRow(t.total, total)}
     ${notesHtml(notes, locale)}
   `;
 }
 
-export function educationBlock(formData: Record<string, string>, pricing: Pricing, notes?: string, locale: Locale = DEFAULT_LOCALE): string {
+export function educationBlock(
+  formData: Record<string, string>,
+  pricing: Pricing,
+  notes?: string,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
   const t = L(locale);
   const travel = parseTravelFee(formData);
   const workshop = pricing.education.workshop;
   return `
-    ${sectionTitle(t.data)}
-    ${fieldRow(t.format, formData.formato || '')}
-    ${fieldRow(t.location, formData.local_workshop || '')}
-    ${fieldRow(t.datetime, formData.data_hora || '')}
-    ${fieldRow(t.type, formData.tipo || '')}
-    ${fieldRow(t.modality, formData.modalidade || '')}
-    ${fieldRow(t.participants, formData.numero_participantes || '')}
-    ${fieldRow(t.regime, formData.regime || '')}
-    ${fieldRow(t.message, formData.mensagem || '')}
     ${sectionTitle(t.investment)}
     ${priceRow(t.workshop, workshop)}
     ${travelRow(formData, locale)}
-    ${travel > 0 ? totalRow(t.total, workshop + travel) : ''}
+    ${totalRow(t.total, workshop + travel)}
     ${notesHtml(notes, locale)}
   `;
 }
@@ -259,27 +252,36 @@ export function termsBlock(opts: { iban: string; accountName: string; mbway: str
   `;
 }
 
-export function scheduleFormBlock(opts: { meetUrl: string; formUrl: string }, locale: Locale = DEFAULT_LOCALE): string {
+export function meetCallButton(opts: { meetUrl: string }, locale: Locale = DEFAULT_LOCALE): string {
   const t = L(locale);
   return `
-    <p style="text-align:center;margin:28px 0;">
-      <a href="${opts.meetUrl}" style="display:inline-block;background:#8a2831;color:#fbf5ef;text-decoration:none;padding:14px 28px;border-radius:999px;font-weight:600;">
+    <p style="text-align:center;margin:28px 0;" contenteditable="false">
+      <a href="${opts.meetUrl}" contenteditable="false" style="display:inline-block;background:#8a2831;color:#fbf5ef;text-decoration:none;padding:14px 28px;border-radius:999px;font-weight:600;">
         ${t.joinMeet}
       </a>
     </p>
-    <p>${t.beforeCall}</p>
-    <p style="text-align:center;margin:28px 0;">
-      <a href="${opts.formUrl}" style="display:inline-block;background:transparent;color:#8a2831;text-decoration:none;padding:14px 28px;border-radius:999px;font-weight:600;border:1.5px solid #8a2831;">
+  `;
+}
+
+export function formCallButton(opts: { formUrl: string }, locale: Locale = DEFAULT_LOCALE): string {
+  const t = L(locale);
+  return `
+    <p style="text-align:center;margin:28px 0;" contenteditable="false">
+      <a href="${opts.formUrl}" contenteditable="false" style="display:inline-block;background:transparent;color:#8a2831;text-decoration:none;padding:14px 28px;border-radius:999px;font-weight:600;border:1.5px solid #8a2831;">
         ${t.openForm}
       </a>
     </p>
   `;
 }
 
+export function scheduleFormBlock(opts: { meetUrl: string; formUrl: string }, locale: Locale = DEFAULT_LOCALE): string {
+  return `${meetCallButton({ meetUrl: opts.meetUrl }, locale)}${formCallButton({ formUrl: opts.formUrl }, locale)}`;
+}
+
 export function diagnosticBlock(url: string, locale: Locale = DEFAULT_LOCALE): string {
   return `
-    <p style="text-align:center; margin:32px 0;">
-      <a href="${url}" style="display:inline-block; background:#8a2831; color:#fbf5ef; text-decoration:none; padding:14px 28px; border-radius:999px; font-weight:600;">
+    <p style="text-align:center; margin:32px 0;" contenteditable="false">
+      <a href="${url}" contenteditable="false" style="display:inline-block; background:#8a2831; color:#fbf5ef; text-decoration:none; padding:14px 28px; border-radius:999px; font-weight:600;">
         ${L(locale).openDiag}
       </a>
     </p>
@@ -300,6 +302,7 @@ export const DEMO_FORM: Record<EmailDemoId, Record<string, string>> = {
     guests_hair: '{{guests_hair}}',
     guests_pack: '{{guests_pack}}',
     addon_skin_call: '{{addon_skin_call}}',
+    valor_deslocacao: '{{valor_deslocacao}}',
   },
   beauty: {
     nome: '{{nome}}',
@@ -309,10 +312,12 @@ export const DEMO_FORM: Record<EmailDemoId, Record<string, string>> = {
     guests_makeup: '{{guests_makeup}}',
     guests_hair: '{{guests_hair}}',
     guests_pack: '{{guests_pack}}',
+    valor_deslocacao: '{{valor_deslocacao}}',
   },
   skin_call: {
     nome: '{{nome}}',
     plano: '{{plano}}',
+    valor_deslocacao: '{{valor_deslocacao}}',
   },
   education: {
     nome: '{{nome}}',
@@ -324,5 +329,6 @@ export const DEMO_FORM: Record<EmailDemoId, Record<string, string>> = {
     numero_participantes: '{{numero_participantes}}',
     regime: '{{regime}}',
     mensagem: '{{mensagem}}',
+    valor_deslocacao: '{{valor_deslocacao}}',
   },
 };

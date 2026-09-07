@@ -21,7 +21,7 @@ import {
   parsePlusConversationId,
   splitReferences,
 } from './email-match';
-import { EMAIL_ATTACHMENTS_FOLDER, MAX_EMAIL_ATTACHMENT_BYTES } from './constants';
+import { EMAIL_ATTACHMENTS_FOLDER, MAX_CHAT_EXTRA_ATTACHMENTS, MAX_EMAIL_ATTACHMENT_BYTES } from './constants';
 import { termosPlaceholderPdf, TERMOS_PLACEHOLDER_FILENAME, TERMOS_PLACEHOLDER_TYPE } from './assets/termos-placeholder';
 import {
   bridalServicesPlaceholderPdf,
@@ -44,13 +44,64 @@ export type AttachmentRow = typeof emailAttachments.$inferSelect;
 
 export type MessageWithAttachments = MessageRow & { attachments: AttachmentRow[] };
 
-const ALLOWED_ATTACHMENT_TYPES = new Set([
+export const ALLOWED_ATTACHMENT_TYPES = new Set([
   'application/pdf',
   'image/jpeg',
   'image/png',
   'image/webp',
   'image/gif',
 ]);
+
+function isPdfBytes(bytes: Uint8Array): boolean {
+  return bytes.length >= 5
+    && bytes[0] === 0x25
+    && bytes[1] === 0x50
+    && bytes[2] === 0x44
+    && bytes[3] === 0x46
+    && bytes[4] === 0x2d;
+}
+
+function sniffedImageType(bytes: Uint8Array): string | null {
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'image/jpeg';
+  if (bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) {
+    return 'image/png';
+  }
+  if (bytes.length >= 12) {
+    const riff = String.fromCharCode(bytes[0], bytes[1], bytes[2], bytes[3]);
+    const webp = String.fromCharCode(bytes[8], bytes[9], bytes[10], bytes[11]);
+    if (riff === 'RIFF' && webp === 'WEBP') return 'image/webp';
+  }
+  if (bytes.length >= 6 && bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) return 'image/gif';
+  return null;
+}
+
+export function resolveOutgoingAttachmentType(
+  filename: string,
+  contentType: string,
+  bytes: Uint8Array,
+): string | null {
+  const name = filename.toLowerCase();
+  const declared = contentType.split(';')[0].trim().toLowerCase();
+  if (name.endsWith('.pdf') || declared === 'application/pdf') {
+    return isPdfBytes(bytes) ? 'application/pdf' : null;
+  }
+  const sniffed = sniffedImageType(bytes);
+  return sniffed && ALLOWED_ATTACHMENT_TYPES.has(sniffed) ? sniffed : null;
+}
+
+export function validateOutgoingAttachment(
+  filename: string,
+  contentType: string,
+  bytes: Uint8Array,
+): string | null {
+  const label = filename.trim() || 'anexo';
+  if (!bytes.byteLength) return `${label}: ficheiro vazio.`;
+  if (bytes.byteLength > MAX_EMAIL_ATTACHMENT_BYTES) return `${label}: demasiado grande (máx. 10 MB).`;
+  if (!resolveOutgoingAttachmentType(filename, contentType, bytes)) {
+    return `${label}: tipo não permitido (PDF, JPEG, PNG, WebP ou GIF).`;
+  }
+  return null;
+}
 
 export function isSafeAttachmentKey(key: string): boolean {
   let decoded = key;
@@ -237,8 +288,18 @@ export async function sendConversationMessage(
     userId: string;
     templateKind?: TemplateKind;
     attachTermsPdf?: boolean;
+    extraAttachments?: EmailAttachment[];
   },
 ): Promise<{ ok: boolean; error?: string; messageId?: string }> {
+  const extras = opts.extraAttachments || [];
+  if (extras.length > MAX_CHAT_EXTRA_ATTACHMENTS) {
+    return { ok: false, error: `Máximo de ${MAX_CHAT_EXTRA_ATTACHMENTS} anexos extra por envio.` };
+  }
+  for (const extra of extras) {
+    const invalid = validateOutgoingAttachment(extra.filename, extra.contentType, extra.content);
+    if (invalid) return { ok: false, error: invalid };
+  }
+
   const db = createDb(env);
   const convRows = await db.select().from(conversations).where(eq(conversations.id, opts.conversationId)).limit(1);
   const conv = convRows[0];
@@ -263,6 +324,18 @@ export async function sendConversationMessage(
       contentType: BRIDAL_SERVICES_PLACEHOLDER_TYPE,
       content: bridalServicesPlaceholderPdf(),
     });
+  }
+  for (const extra of extras) {
+    const type = resolveOutgoingAttachmentType(extra.filename, extra.contentType, extra.content);
+    attachments.push({
+      filename: extra.filename.slice(0, 180) || 'anexo',
+      contentType: type || extra.contentType,
+      content: extra.content,
+    });
+  }
+  const totalBytes = attachments.reduce((sum, att) => sum + att.content.byteLength, 0);
+  if (totalBytes > MAX_EMAIL_ATTACHMENT_BYTES * 4) {
+    return { ok: false, error: 'Total de anexos demasiado grande (máx. 40 MB).' };
   }
 
   const result = await sendEmail(env, {

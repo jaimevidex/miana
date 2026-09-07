@@ -25,7 +25,7 @@ Active engineering backlog. Client-facing asks live in [docs/CLIENT-TODO.md](doc
 2. Four statuses + three lead actions - verify UI parity
 3. [x] Editable quote templates per type (Settings → Emails)
 4. Manual client create - nullable `lead_id` done; verify UI
-5. Diagnostic invite from client (Skin Call)
+5. [x] Diagnostic invite standalone removido (link vai no email de confirmação Meet)
 6. Beauty (Guests & Events) form: alinhar qty por serviço como bridal (se pedido)
 7. Edit all lead/client fields
 8. Settings dashboard completeness

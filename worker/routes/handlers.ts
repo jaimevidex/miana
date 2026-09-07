@@ -4,19 +4,19 @@ import { eq, desc, like, or, gte, lte, and } from 'drizzle-orm';
 import { allowRequest, generateToken, isBot, isValidEmail, json, readForm, validateLead, type Env, type LeadType } from '../lib';
 import { createDb } from '../db';
 import { leads, diagnostics, users, clients, settings as settingsTable } from '../db/schema';
-import { sendLeadNotification, sendDiagnosticComplete, diagnosticInviteContent } from '../email';
+import { sendLeadNotification, sendDiagnosticComplete } from '../email';
 import { renderDiagnosticError, renderDiagnosticPage } from '../diagnostico';
 import { createSession, destroySession, generateCsrfToken } from '../auth/session';
 import { setSessionCookie, getSessionCookie, clearSessionCookie } from '../auth/cookies';
 import { verifyPassword } from '../auth/password';
 import { getPricing } from '../pricing';
 import { getCookieValue } from '../http';
+import { attachPersonFields, interpolate } from '../email-copy';
 import { generateQuoteHtml, generateQuoteSubject } from '../services/quotes';
 import { DEFAULT_LOCALE, parseLocale } from '../locale';
 import { isSafePhotoKey, isUploadedPhoto, MAX_PHOTOS, MAX_PHOTO_BYTES, prepareStoredPhoto, sniffImageType } from '../photos';
 import {
   getOrCreateConversationForLead,
-  getOrCreateConversationForClient,
   sendConversationMessage,
   linkConversationToClient,
 } from '../conversation';
@@ -531,12 +531,11 @@ export async function handlePreviewQuote(request: Request, env: Env, id: string 
     if (!lead) return json({ error: 'Lead não encontrada.' }, 404);
     if (isLeadLocked(lead.status)) return json({ error: LEAD_LOCKED_MSG }, 409);
 
-    const formData = lead.formData ? JSON.parse(lead.formData) : {};
-    if (!formData.nome) formData.nome = lead.nome;
+    const formData = attachPersonFields(lead.formData ? JSON.parse(lead.formData) : {}, lead);
     const pricing = await getPricing(env);
     const locale = parseLocale(lead.locale);
     const html = await generateQuoteHtml(env, lead.type as LeadType, formData, pricing, undefined, locale);
-    const subject = await generateQuoteSubject(env, lead.type as LeadType, locale);
+    const subject = interpolate(await generateQuoteSubject(env, lead.type as LeadType, locale), formData);
 
     return json({ success: true, subject, html });
   } catch (e) {
@@ -685,37 +684,6 @@ export async function handleSendQuote(request: Request, env: Env, id: string | u
   }
 }
 
-export async function handleDiagnosticInvite(request: Request, env: Env, id: string | undefined): Promise<Response> {
-  if (!id) return json({ error: 'ID inválido' }, 400);
-
-  try {
-    const db = createDb(env);
-    const leadResult = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
-    const lead = leadResult[0];
-
-    if (!lead) return json({ error: 'Lead não encontrada.' }, 404);
-    if (isLeadLocked(lead.status)) return json({ error: LEAD_LOCKED_MSG }, 409);
-    if (!lead.token) return json({ error: 'Esta lead não tem token de avaliação de pele.' }, 400);
-
-    const content = await diagnosticInviteContent(env, { nome: lead.nome, token: lead.token, locale: lead.locale });
-    const conv = await getOrCreateConversationForLead(env, lead.id);
-    const result = await sendConversationMessage(env, {
-      conversationId: conv.id,
-      to: lead.email,
-      subject: content.subject,
-      html: content.html,
-      userId: 'system',
-      templateKind: 'diagnostic_invite',
-    });
-    if (!result.ok) return json({ error: result.error || 'Erro ao enviar convite' }, 502);
-
-    return json({ success: true });
-  } catch (e) {
-    console.error('[api/admin/lead/diagnostic-invite] error:', e);
-    return json({ error: 'Erro ao enviar convite' }, 500);
-  }
-}
-
 export async function handleAcceptLead(request: Request, env: Env, id: string | undefined): Promise<Response> {
   if (!id) return json({ error: 'ID inválido' }, 400);
 
@@ -755,42 +723,6 @@ export async function handleAcceptLead(request: Request, env: Env, id: string | 
   } catch (e) {
     console.error('[api/admin/lead/accept] error:', e);
     return json({ error: 'Erro ao aceitar lead' }, 500);
-  }
-}
-
-export async function handleClientDiagnosticInvite(request: Request, env: Env, id: string | undefined): Promise<Response> {
-  if (!id) return json({ error: 'ID inválido' }, 400);
-
-  try {
-    const db = createDb(env);
-    const clientResult = await db.select().from(clients).where(eq(clients.id, id)).limit(1);
-    const client = clientResult[0];
-
-    if (!client) return json({ error: 'Cliente não encontrado.' }, 404);
-    if (!client.leadId) return json({ error: 'Cliente sem lead associada - sem token de avaliação de pele.' }, 400);
-
-    // Buscar a lead original para ter o token
-    const leadResult = await db.select().from(leads).where(eq(leads.id, client.leadId)).limit(1);
-    const lead = leadResult[0];
-
-    if (!lead || !lead.token) return json({ error: 'Lead original sem token de avaliação de pele.' }, 400);
-
-    const content = await diagnosticInviteContent(env, { nome: client.nome, token: lead.token, locale: client.locale });
-    const conv = await getOrCreateConversationForClient(env, client.id);
-    const result = await sendConversationMessage(env, {
-      conversationId: conv.id,
-      to: client.email,
-      subject: content.subject,
-      html: content.html,
-      userId: 'system',
-      templateKind: 'diagnostic_invite',
-    });
-    if (!result.ok) return json({ error: result.error || 'Erro ao enviar convite' }, 502);
-
-    return json({ success: true });
-  } catch (e) {
-    console.error('[api/admin/client/diagnostic-invite] error:', e);
-    return json({ error: 'Erro ao enviar convite' }, 500);
   }
 }
 

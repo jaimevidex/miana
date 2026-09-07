@@ -33,7 +33,7 @@ export function emailSignatureHtml(footer?: EmailWrapFooter): string {
       </tr>
       <tr>
         <td align="left" style="padding:10px 0 0;border:0">
-          <div style="border-top:1px solid #e5ded7;font-size:0;line-height:0;height:0">&nbsp;</div>
+          <div style="font-size:0;line-height:0;height:10px">&nbsp;</div>
         </td>
       </tr>
       <tr>
@@ -62,7 +62,7 @@ export function fieldRow(label: string, value: string | undefined): string {
 }
 
 export function sectionTitle(title: string): string {
-  return `<h3 style="font-size:16px;color:#8a2831;margin:24px 0 8px;border-bottom:1px solid #e5ded7;padding-bottom:6px">${title}</h3>`;
+  return `<h3 style="font-size:16px;color:#8a2831;margin:24px 0 8px">${title}</h3>`;
 }
 
 export function priceRow(label: string, price: number): string {

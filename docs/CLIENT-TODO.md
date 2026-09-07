@@ -13,7 +13,7 @@ Espelho da vista Notion `Tipo = cliente`. Actualizar em conjunto com a Notion DB
 
 ## Aberto
 
-- [ ] Confirmar textos finais dos emails (convite diagnóstico, orçamentos, notificações)
+- [ ] Confirmar textos finais dos emails (orçamentos, notificações)
 - [ ] Substituir placeholders: PDF de termos, PDF de serviços de noiva (anexo do email introdutório Bridal), copy de pagamento, marcar sessões, marcar e formulário
 - [ ] Dados reais de pagamento (IBAN / MB Way / titular) em Settings
 - [ ] Confirmar MX de marianapita.pt e activar Cloudflare Email Routing (hello@ → Worker + cópia na caixa)

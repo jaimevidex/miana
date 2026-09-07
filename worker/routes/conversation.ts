@@ -13,11 +13,15 @@ import {
   ingestParsedInbound,
   getConversationRecipient,
   isSafeAttachmentKey,
+  resolveOutgoingAttachmentType,
+  validateOutgoingAttachment,
   type TemplateKind,
 } from '../conversation';
+import { MAX_CHAT_EXTRA_ATTACHMENTS } from '../constants';
+import type { EmailAttachment } from '../email';
 import { generateQuoteHtml, generateQuoteSubject } from '../services/quotes';
 import { getPricing, getPaymentDetails } from '../pricing';
-import { getEmailCopy } from '../email-copy';
+import { attachPersonFields, getEmailCopy, interpolate, termsCopyForType } from '../email-copy';
 import { termsEmail, termsSubject } from '../templates/terms';
 import { scheduleEmail, scheduleSubject } from '../templates/schedule';
 import { scheduleFormEmail, scheduleFormSubject } from '../templates/schedule_form';
@@ -38,6 +42,58 @@ import { localeDateTag, parseLocale, type Locale } from '../locale';
 function templateLocale(request: Request, stored?: string | null): Locale {
   const url = new URL(request.url);
   return parseLocale(url.searchParams.get('locale') || stored);
+}
+
+function parseStoredData(raw: string | null | undefined): Record<string, string> {
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const out: Record<string, string> = {};
+    for (const [key, value] of Object.entries(parsed || {})) {
+      if (value != null) out[key] = String(value);
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+type TemplateContext = {
+  type: string;
+  nome: string;
+  locale: string;
+  formData: Record<string, string>;
+};
+
+async function loadTemplateContext(
+  env: Env,
+  leadId: string | null,
+  clientId: string | null,
+): Promise<TemplateContext | null> {
+  const db = createDb(env);
+  if (clientId) {
+    const rows = await db.select().from(clients).where(eq(clients.id, clientId)).limit(1);
+    const client = rows[0];
+    if (!client) return leadId ? loadTemplateContext(env, leadId, null) : null;
+    return {
+      type: client.type,
+      nome: client.nome,
+      locale: client.locale,
+      formData: attachPersonFields(parseStoredData(client.data), client),
+    };
+  }
+  if (leadId) {
+    const rows = await db.select().from(leads).where(eq(leads.id, leadId)).limit(1);
+    const lead = rows[0];
+    if (!lead) return null;
+    return {
+      type: lead.type,
+      nome: lead.nome,
+      locale: lead.locale,
+      formData: attachPersonFields(parseStoredData(lead.formData), lead),
+    };
+  }
+  return null;
 }
 
 function isLeadLocked(status: string): boolean {
@@ -97,6 +153,68 @@ export async function handleMarkConversationRead(env: Env, conversationId: strin
   return json({ success: true });
 }
 
+function isFormFile(value: FormDataEntryValue): value is File {
+  return typeof value === 'object' && value !== null && 'arrayBuffer' in value && 'name' in value;
+}
+
+function truthyFormFlag(value: FormDataEntryValue | null): boolean {
+  const raw = String(value || '').trim().toLowerCase();
+  return raw === 'true' || raw === '1' || raw === 'on';
+}
+
+async function parseOutgoingFiles(form: FormData): Promise<EmailAttachment[] | { error: string }> {
+  const raw = [...form.getAll('files'), ...form.getAll('files[]')].filter(isFormFile);
+  const files = raw.filter((file) => file.name || file.size > 0);
+  if (files.length > MAX_CHAT_EXTRA_ATTACHMENTS) {
+    return { error: `Máximo de ${MAX_CHAT_EXTRA_ATTACHMENTS} anexos extra por envio.` };
+  }
+  const extras: EmailAttachment[] = [];
+  for (const file of files) {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const invalid = validateOutgoingAttachment(file.name, file.type || '', bytes);
+    if (invalid) return { error: invalid };
+    const type = resolveOutgoingAttachmentType(file.name, file.type || '', bytes);
+    extras.push({
+      filename: file.name.slice(0, 180) || 'anexo',
+      contentType: type || file.type || 'application/octet-stream',
+      content: bytes,
+    });
+  }
+  return extras;
+}
+
+async function parseSendPayload(request: Request): Promise<
+  | { subject: string; html: string; templateKind: TemplateKind; attachTermsPdf: boolean; extraAttachments: EmailAttachment[] }
+  | { error: string; status: number }
+> {
+  const ct = request.headers.get('content-type') || '';
+  if (ct.includes('multipart/form-data')) {
+    const form = await request.formData();
+    const files = await parseOutgoingFiles(form);
+    if ('error' in files) return { error: files.error, status: 400 };
+    return {
+      subject: String(form.get('subject') || '').trim(),
+      html: String(form.get('html') || '').trim(),
+      templateKind: (String(form.get('templateKind') || 'free') as TemplateKind) || 'free',
+      attachTermsPdf: truthyFormFlag(form.get('attachTermsPdf')),
+      extraAttachments: files,
+    };
+  }
+  const body = await request.json() as {
+    subject?: string;
+    html?: string;
+    templateKind?: TemplateKind;
+    attachTermsPdf?: boolean;
+  };
+  return {
+    subject: (body.subject || '').trim(),
+    html: (body.html || '').trim(),
+    templateKind: body.templateKind || 'free',
+    attachTermsPdf: !!body.attachTermsPdf,
+    extraAttachments: [],
+  };
+}
+
 export async function handleSendConversationMessage(
   request: Request,
   env: Env,
@@ -105,14 +223,9 @@ export async function handleSendConversationMessage(
 ): Promise<Response> {
   if (!conversationId) return json({ error: 'ID inválido' }, 400);
   try {
-    const body = await request.json() as {
-      subject?: string;
-      html?: string;
-      templateKind?: TemplateKind;
-      attachTermsPdf?: boolean;
-    };
-    const subject = (body.subject || '').trim();
-    const html = (body.html || '').trim();
+    const parsed = await parseSendPayload(request);
+    if ('error' in parsed) return json({ error: parsed.error }, parsed.status);
+    const { subject, html, templateKind, attachTermsPdf, extraAttachments } = parsed;
     if (!subject || !html) return json({ error: 'Assunto e corpo do email são obrigatórios.' }, 400);
 
     const db = createDb(env);
@@ -136,8 +249,9 @@ export async function handleSendConversationMessage(
       subject,
       html,
       userId,
-      templateKind: body.templateKind || 'free',
-      attachTermsPdf: body.attachTermsPdf,
+      templateKind,
+      attachTermsPdf,
+      extraAttachments,
     });
     if (!result.ok) return json({ error: result.error || 'Falha ao enviar.' }, 502);
     return json({ success: true, messageId: result.messageId });
@@ -152,39 +266,16 @@ export async function handleQuoteTemplate(env: Env, request: Request): Promise<R
   const leadId = url.searchParams.get('leadId');
   const clientId = url.searchParams.get('clientId');
   try {
-    const db = createDb(env);
-    let type: LeadType | null = null;
-    let formData: Record<string, string> = {};
-    let nome = '';
-    let storedLocale = 'pt';
+    if (!leadId && !clientId) return json({ error: 'Indica leadId ou clientId.' }, 400);
+    const ctx = await loadTemplateContext(env, leadId, clientId);
+    if (!ctx) return json({ error: leadId ? 'Lead não encontrada.' : 'Cliente não encontrado.' }, 404);
+    const type = ctx.type as LeadType;
 
-    if (leadId) {
-      const rows = await db.select().from(leads).where(eq(leads.id, leadId)).limit(1);
-      const lead = rows[0];
-      if (!lead) return json({ error: 'Lead não encontrada.' }, 404);
-      type = lead.type as LeadType;
-      formData = lead.formData ? JSON.parse(lead.formData) : {};
-      nome = lead.nome;
-      storedLocale = lead.locale;
-      if (!formData.nome) formData.nome = nome;
-    } else if (clientId) {
-      const rows = await db.select().from(clients).where(eq(clients.id, clientId)).limit(1);
-      const client = rows[0];
-      if (!client) return json({ error: 'Cliente não encontrado.' }, 404);
-      type = client.type as LeadType;
-      formData = client.data ? JSON.parse(client.data) : {};
-      nome = client.nome;
-      storedLocale = client.locale;
-      if (!formData.nome) formData.nome = nome;
-    } else {
-      return json({ error: 'Indica leadId ou clientId.' }, 400);
-    }
-
-    const locale = templateLocale(request, storedLocale);
+    const locale = templateLocale(request, ctx.locale);
     const pricing = await getPricing(env);
-    const html = await generateQuoteHtml(env, type, formData, pricing, undefined, locale);
-    const subject = await generateQuoteSubject(env, type, locale);
-    return json({ success: true, subject, html, nome, templateKind: 'quote' });
+    const html = await generateQuoteHtml(env, type, ctx.formData, pricing, undefined, locale);
+    const subject = interpolate(await generateQuoteSubject(env, type, locale), ctx.formData);
+    return json({ success: true, subject, html, nome: ctx.nome, templateKind: 'quote' });
   } catch (e) {
     console.error('[api/admin/templates/quote]', e);
     return json({ error: 'Erro ao gerar orçamento.' }, 500);
@@ -195,41 +286,20 @@ export async function handleBridalIntroTemplate(env: Env, request: Request): Pro
   const url = new URL(request.url);
   const leadId = url.searchParams.get('leadId');
   const clientId = url.searchParams.get('clientId');
-  const db = createDb(env);
-  let type = '';
-  let formData: Record<string, string> = {};
-  let nome = 'olá';
-  let storedLocale = 'pt';
+  if (!leadId && !clientId) return json({ error: 'Indica leadId ou clientId.' }, 400);
+  const ctx = await loadTemplateContext(env, leadId, clientId);
+  if (!ctx) return json({ error: leadId ? 'Lead não encontrada.' : 'Cliente não encontrado.' }, 404);
 
-  if (leadId) {
-    const rows = await db.select().from(leads).where(eq(leads.id, leadId)).limit(1);
-    if (!rows[0]) return json({ error: 'Lead não encontrada.' }, 404);
-    nome = rows[0].nome;
-    type = rows[0].type;
-    formData = rows[0].formData ? JSON.parse(rows[0].formData) : {};
-    storedLocale = rows[0].locale;
-  } else if (clientId) {
-    const rows = await db.select().from(clients).where(eq(clients.id, clientId)).limit(1);
-    if (!rows[0]) return json({ error: 'Cliente não encontrado.' }, 404);
-    nome = rows[0].nome;
-    type = rows[0].type;
-    formData = rows[0].data ? JSON.parse(rows[0].data) : {};
-    storedLocale = rows[0].locale;
-  } else {
-    return json({ error: 'Indica leadId ou clientId.' }, 400);
-  }
-
-  if (type && type !== 'bridal') {
+  if (ctx.type && ctx.type !== 'bridal') {
     return json({ error: 'O introdutório só está disponível para Bridal.' }, 400);
   }
-  if (!formData.nome) formData.nome = nome;
 
-  const locale = templateLocale(request, storedLocale);
+  const locale = templateLocale(request, ctx.locale);
   const copy = await getEmailCopy(env, locale);
   return json({
     success: true,
-    subject: bridalIntroSubject(copy.bridal_intro),
-    html: bridalIntroEmail(formData, copy.bridal_intro, copy.wrapFooter),
+    subject: interpolate(bridalIntroSubject(copy.bridal_intro), ctx.formData),
+    html: bridalIntroEmail(ctx.formData, copy.bridal_intro, copy.wrapFooter),
     templateKind: 'bridal_intro',
   });
 }
@@ -238,36 +308,28 @@ export async function handleTermsTemplate(env: Env, request: Request): Promise<R
   const url = new URL(request.url);
   const leadId = url.searchParams.get('leadId');
   const clientId = url.searchParams.get('clientId');
-  const db = createDb(env);
-  let nome = 'olá';
-  let storedLocale = 'pt';
-  if (leadId) {
-    const rows = await db.select({ nome: leads.nome, locale: leads.locale }).from(leads).where(eq(leads.id, leadId)).limit(1);
-    if (rows[0]) {
-      nome = rows[0].nome;
-      storedLocale = rows[0].locale;
-    }
-  } else if (clientId) {
-    const rows = await db.select({ nome: clients.nome, locale: clients.locale }).from(clients).where(eq(clients.id, clientId)).limit(1);
-    if (rows[0]) {
-      nome = rows[0].nome;
-      storedLocale = rows[0].locale;
-    }
-  }
+  const ctx = await loadTemplateContext(env, leadId, clientId);
+  const nome = ctx?.nome || 'olá';
+  const storedLocale = ctx?.locale || 'pt';
+  const type = (ctx?.type || null) as LeadType | null;
+  const formData = ctx?.formData || { nome };
   const locale = templateLocale(request, storedLocale);
   const pay = await getPaymentDetails(env);
   const copy = await getEmailCopy(env, locale);
+  const termsCopy = type ? termsCopyForType(copy, type) : copy.bridal_terms;
+  const vars = { ...formData, titular: pay.accountName, iban: pay.iban, mbway: pay.mbway };
   return json({
     success: true,
-    subject: termsSubject(copy.terms),
+    subject: interpolate(termsSubject(termsCopy), vars),
     html: termsEmail({
       nome,
       iban: escapeHtml(pay.iban),
       accountName: escapeHtml(pay.accountName),
       mbway: escapeHtml(pay.mbway),
-      copy: copy.terms,
+      copy: termsCopy,
       footer: copy.wrapFooter,
       locale,
+      formData,
     }),
     templateKind: 'terms',
     attachTermsPdf: true,
@@ -278,34 +340,19 @@ export async function handleScheduleTemplate(env: Env, request: Request): Promis
   const url = new URL(request.url);
   const leadId = url.searchParams.get('leadId');
   const clientId = url.searchParams.get('clientId');
-  const db = createDb(env);
-  let nome = 'olá';
-  let type = '';
-  let storedLocale = 'pt';
-  if (leadId) {
-    const rows = await db.select().from(leads).where(eq(leads.id, leadId)).limit(1);
-    if (rows[0]) {
-      nome = rows[0].nome;
-      type = rows[0].type;
-      storedLocale = rows[0].locale;
-    }
-  } else if (clientId) {
-    const rows = await db.select().from(clients).where(eq(clients.id, clientId)).limit(1);
-    if (rows[0]) {
-      nome = rows[0].nome;
-      type = rows[0].type;
-      storedLocale = rows[0].locale;
-    }
-  }
+  const ctx = await loadTemplateContext(env, leadId, clientId);
+  const nome = ctx?.nome || 'olá';
+  const type = ctx?.type || '';
+  const formData = ctx?.formData || { nome };
   if (type && type !== 'skin-call') {
     return json({ error: 'Marcar sessões só está disponível para Skin Call.' }, 400);
   }
-  const locale = templateLocale(request, storedLocale);
+  const locale = templateLocale(request, ctx?.locale);
   const copy = await getEmailCopy(env, locale);
   return json({
     success: true,
-    subject: scheduleSubject(copy.schedule),
-    html: scheduleEmail(nome, copy.schedule, copy.wrapFooter),
+    subject: interpolate(scheduleSubject(copy.schedule), formData),
+    html: scheduleEmail(formData, copy.schedule, copy.wrapFooter),
     templateKind: 'schedule',
   });
 }
@@ -352,9 +399,12 @@ export async function handleScheduleFormTemplate(
     });
     const formUrl = `${siteUrl(env)}/diagnostico?token=${encodeURIComponent(recipient.token)}`;
     const copy = await getEmailCopy(env, locale);
+    const ctx = await loadTemplateContext(env, conv.leadId, conv.clientId);
+    const formData = ctx?.formData || { nome: recipient.nome, email: recipient.email, locale: recipient.locale };
+    const vars = { ...formData, quando: whenLabel };
     return json({
       success: true,
-      subject: scheduleFormSubject(copy.schedule_form),
+      subject: interpolate(scheduleFormSubject(copy.schedule_form), vars),
       html: scheduleFormEmail({
         nome: recipient.nome,
         whenLabel,
@@ -363,6 +413,7 @@ export async function handleScheduleFormTemplate(
         copy: copy.schedule_form,
         footer: copy.wrapFooter,
         locale,
+        formData,
       }),
       meetUrl: meet.meetUrl,
       templateKind: 'schedule_form',

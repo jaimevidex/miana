@@ -31,7 +31,7 @@ Env vars: `EMAIL_ENABLED`, `OWNER_EMAIL`, `SITE_URL`, `FROM_EMAIL` (hello@), `FR
 - **Conversation** - email thread per lead (continues on the client after accept).
 - **Email messages / attachments** - outbound and inbound, stored in D1 + R2.
 - **Diagnostic** - Skin Call questionnaire; photos in R2; linked to lead and/or client.
-- **Settings** - key/value prices, timing, contacts, payment placeholders, Google refresh token, and editable client-email copy (subject + constructed body with `{{bloco}}` for generated tables/buttons). PT keys stay `email_*_subject` / `email_*_body`; EN keys are `*_en`. Settings → Emails has a PT | EN toggle. A fixed logo signature (email / Instagram / site icons) is appended by `wrapEmail`, not stored in the body.
+- **Settings** - key/value prices, timing, contacts, payment placeholders, Google refresh token, and editable client-email copy (subject + constructed body with `{{bloco}}` for generated tables and `{{botao_chamada}}` / `{{botao_formulario}}` for Skin Call confirmation buttons). PT keys stay `email_*_subject` / `email_*_body`; EN keys are `*_en`. Settings → Emails has a PT | EN toggle. A fixed logo signature (email / Instagram / site icons) is appended by `wrapEmail`, not stored in the body.
 - **Sessions / rate_limits** - auth and abuse control in D1 (not KV).
 
 Timestamps are **milliseconds** since epoch (`Date.now()`).
@@ -67,8 +67,8 @@ Timestamps are **milliseconds** since epoch (`Date.now()`).
 ## Lead lifecycle
 
 1. Form → `POST /api/lead` → D1 + owner notification (not in chat). No automatic client email.  
-2. Bridal chat: introdutório (+ PDF serviços) → resposta da noiva → orçamento → termos → aceitar  
-3. Beauty / Education / Skin Call chat: orçamento → termos → aceitar  
+2. Bridal chat: introdutório (+ PDF serviços) → resposta da noiva → orçamento → termos do flow → aceitar  
+3. Beauty / Education / Skin Call chat: orçamento → termos do flow → aceitar  
 4. Skin Call (client page): marcar sessões → Meet + link `/diagnostico?token=`  
 5. Diagnostic complete → owner notification  
 

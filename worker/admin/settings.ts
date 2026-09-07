@@ -7,15 +7,18 @@ import { getGoogleStatus } from '../google-calendar';
 import {
   EMAIL_COPY_SETTING_KEYS,
   EMAIL_FLOW_GROUPS,
+  EMAIL_TEMPLATE_FIELDS,
+  emailFieldLabel,
   getEmailCopy,
+  isQuoteTemplate,
   previewTemplateBody,
+  wrapPreviewBlock,
   settingsEmailEntries,
   settingsPanelId,
   toEditorHtml,
   type EmailTemplateCopy,
   type EmailTemplateId,
 } from '../email-copy';
-import { emailSignatureHtml } from '../templates/base';
 import { siteUrl } from '../config';
 import {
   getPaymentDetails,
@@ -29,12 +32,14 @@ import {
   beautyBlock,
   bridalBlock,
   DEMO_FORM,
-  diagnosticBlock,
   educationBlock,
+  formCallButton,
+  meetCallButton,
   scheduleFormBlock,
   skinCallBlock,
   termsBlock,
 } from '../templates/blocks';
+import { rteFormatBindJs, rteFormatButtons } from './rte';
 
 const SECTIONS: { id: string; label: string }[] = [
   { id: 'precos', label: 'Preços' },
@@ -45,33 +50,15 @@ const SECTIONS: { id: string; label: string }[] = [
   { id: 'emails', label: 'Emails' },
 ];
 
-const EMAIL_HINTS: Record<string, string> = {
-  bridal_intro:
-    'Campos da lead: {{nome}}, {{data_casamento}}, {{local_preparacao}}, {{hora_pronta}}. Envia o PDF dos serviços de noiva em anexo (placeholder até teres o ficheiro real). Sem tabela de preços.',
-  bridal:
-    'Campos da lead: {{nome}}, {{data_casamento}}, {{hora_pronta}}, {{local_preparacao}}, {{local_prova}}, {{servicos_procurados}}, {{guests_makeup}}, {{guests_hair}}, {{guests_pack}}, {{addon_skin_call}}, {{valor_deslocacao}}. A tabela de preços actualiza-se sozinha.',
-  beauty:
-    'Campos da lead: {{nome}}, {{data_evento}}, {{hora_pronta_evento}}, {{local_evento}}, {{guests_makeup}}, {{guests_hair}}, {{guests_pack}}, {{valor_deslocacao}}. A tabela de preços actualiza-se sozinha.',
-  skin_call: 'Campos da lead: {{nome}}, {{plano}}, {{valor_deslocacao}}. A tabela de preços actualiza-se sozinha.',
-  education:
-    'Campos da lead: {{nome}}, {{formato}}, {{local_workshop}}, {{data_hora}}, {{tipo}}, {{modalidade}}, {{numero_participantes}}, {{regime}}, {{mensagem}}, {{valor_deslocacao}}. A tabela de preços actualiza-se sozinha.',
-  terms: 'Campos: {{nome}}, {{titular}}, {{iban}}, {{mbway}}. IBAN e MB Way no bloco vêm da secção Pagamento.',
-  schedule: 'Campo: {{nome}}.',
-  schedule_form: 'Campos: {{nome}}, {{quando}}. Os botões actualizam-se sozinhos.',
-  diagnostic_invite: 'Campo: {{nome}}. O botão actualiza-se sozinho.',
-  footer: 'Fundo de todos os emails às clientes.',
-};
+type EmailPanelId = EmailTemplateId;
 
-type EmailPanelId = 'footer' | EmailTemplateId;
-
-function emailSettingsPanels(): { id: EmailPanelId; flow: string; label: string; hint: string }[] {
+function emailSettingsPanels(): { id: EmailPanelId; flow: string; label: string }[] {
   return settingsEmailEntries().map((entry) => {
     const id = settingsPanelId(entry.id) as EmailPanelId;
     return {
       id,
       flow: entry.flow,
       label: entry.label,
-      hint: EMAIL_HINTS[id] || '',
     };
   });
 }
@@ -96,6 +83,7 @@ function renderRteField(id: string, label: string, html: string, placeholder: st
           <span class="rte-sep"></span>
           <button type="button" class="rte-btn" data-cmd="insertUnorderedList" title="Lista">• Lista</button>
           <button type="button" class="rte-btn" data-cmd="insertOrderedList" title="Lista numerada">1. Lista</button>
+          ${rteFormatButtons()}
         </div>
         <div class="rte-editor email-rte" contenteditable="true" role="textbox" aria-multiline="true" data-rte-for="${id}" data-placeholder="${htmlEscape(placeholder)}">${initial}</div>
       </div>
@@ -114,22 +102,58 @@ function demoBlockFor(
     case 'bridal_intro':
       return '';
     case 'bridal':
-      return bridalBlock(DEMO_FORM.bridal, pricing, undefined, locale);
+      return bridalBlock(DEMO_FORM.bridal, pricing, undefined, locale, true);
     case 'beauty':
-      return beautyBlock(DEMO_FORM.beauty, pricing, undefined, locale);
+      return beautyBlock(DEMO_FORM.beauty, pricing, undefined, locale, true);
     case 'skin_call':
-      return skinCallBlock(DEMO_FORM.skin_call, pricing, undefined, locale);
+      return skinCallBlock(DEMO_FORM.skin_call, pricing, undefined, locale, true);
     case 'education':
       return educationBlock(DEMO_FORM.education, pricing, undefined, locale);
-    case 'terms':
+    case 'bridal_terms':
+    case 'beauty_terms':
+    case 'skin_call_terms':
+    case 'education_terms':
       return termsBlock(pay, locale);
     case 'schedule':
       return '';
     case 'schedule_form':
       return scheduleFormBlock({ meetUrl: '#', formUrl: `${site}/diagnostico` }, locale);
-    case 'diagnostic_invite':
-      return diagnosticBlock(`${site}/diagnostico`, locale);
   }
+}
+
+function liveChip(rteId: string, token: string, label: string, title: string, html: string): string {
+  return `<button type="button" class="field-chip" data-insert-live data-live-token="${htmlEscape(token)}" data-rte-target="${htmlEscape(rteId)}" title="${htmlEscape(title)}">${htmlEscape(label)}</button>
+       <template data-live-for="${htmlEscape(rteId)}:${htmlEscape(token)}">${wrapPreviewBlock(html, token)}</template>`;
+}
+
+function demoExtrasFor(id: EmailTemplateId, site: string, locale: 'pt' | 'en'): Record<string, string> {
+  if (id !== 'schedule_form') return {};
+  return {
+    botao_chamada: meetCallButton({ meetUrl: '#' }, locale),
+    botao_formulario: formCallButton({ formUrl: `${site}/diagnostico` }, locale),
+  };
+}
+
+function renderFieldPicker(
+  id: EmailTemplateId,
+  rteId: string,
+  demoBlock: string,
+  extras: Record<string, string>,
+): string {
+  const chips = EMAIL_TEMPLATE_FIELDS[id].map((token) => {
+    const label = emailFieldLabel(token);
+    return `<button type="button" class="field-chip" data-insert-field="${htmlEscape(token)}" data-rte-target="${htmlEscape(rteId)}" title="${htmlEscape(`{{${token}}}`)}">${htmlEscape(label)}</button>`;
+  }).join('');
+  const liveChips = [
+    isQuoteTemplate(id) ? liveChip(rteId, 'bloco', 'Tabela de Preço', 'Tabela de preços com as contas', demoBlock) : '',
+    extras.botao_chamada ? liveChip(rteId, 'botao_chamada', 'Botão da chamada', 'Link do Meet gerado no envio', extras.botao_chamada) : '',
+    extras.botao_formulario ? liveChip(rteId, 'botao_formulario', 'Botão do formulário', 'Link do formulário gerado no envio', extras.botao_formulario) : '',
+  ].join('');
+  return `
+    <details class="field-picker">
+      <summary>Inserir campo da lead</summary>
+      <div class="field-picker-list">${chips}${liveChips}</div>
+    </details>`;
 }
 
 function emailTemplateFields(
@@ -137,16 +161,19 @@ function emailTemplateFields(
   fallback: EmailTemplateCopy,
   demoBlock: string,
   locale: 'pt' | 'en' = 'pt',
+  extras: Record<string, string> = {},
 ): string {
   const suffix = locale === 'en' ? '_en' : '';
   const prefix = `email_${id}`;
-  const preview = previewTemplateBody(fallback.body, demoBlock);
+  const rteId = `${prefix}_body${suffix}`;
+  const preview = previewTemplateBody(fallback.body, demoBlock, extras);
   return `
     <div class="field-group">
       <label class="lbl" for="${prefix}_subject${suffix}">Assunto</label>
       <input id="${prefix}_subject${suffix}" class="in" value="${htmlEscape(fallback.subject)}" />
     </div>
-    ${renderRteField(`${prefix}_body${suffix}`, 'Corpo', preview, 'Corpo do email…')}`;
+    ${renderFieldPicker(id, rteId, demoBlock, extras)}
+    ${renderRteField(rteId, 'Corpo', preview, 'Corpo do email…')}`;
 }
 
 export async function buildSettingsPage(env: Env): Promise<{ content: string; script: string }> {
@@ -206,20 +233,11 @@ export async function buildSettingsPage(env: Env): Promise<{ content: string; sc
   const assetBase = siteUrl(env).replace(/\/$/, '');
   const emailPanels = emailPanelsMeta.map((p, i) => {
     const active = i === 0 ? ' active' : '';
-    if (p.id === 'footer') {
-      return `
-        <div class="settings-email-panel${active}" data-email="footer" data-email-flow="${p.flow}">
-          <h3>${htmlEscape(p.label)}</h3>
-          <p class="settings-hint">${p.hint}</p>
-          <div class="sig-preview">${emailSignatureHtml(emailCopyPt.wrapFooter)}</div>
-        </div>`;
-    }
     return `
         <div class="settings-email-panel${active}" data-email="${p.id}" data-email-flow="${p.flow}">
           <h3>${htmlEscape(p.label)}</h3>
-          <p class="settings-hint">${p.hint}</p>
-          <div data-email-locale="pt">${emailTemplateFields(p.id, emailCopyPt[p.id], demoBlockFor(p.id, pricing, pay, assetBase, 'pt'), 'pt')}</div>
-          <div data-email-locale="en" hidden>${emailTemplateFields(p.id, emailCopyEn[p.id], demoBlockFor(p.id, pricing, pay, assetBase, 'en'), 'en')}</div>
+          <div data-email-locale="pt">${emailTemplateFields(p.id, emailCopyPt[p.id], demoBlockFor(p.id, pricing, pay, assetBase, 'pt'), 'pt', demoExtrasFor(p.id, assetBase, 'pt'))}</div>
+          <div data-email-locale="en" hidden>${emailTemplateFields(p.id, emailCopyEn[p.id], demoBlockFor(p.id, pricing, pay, assetBase, 'en'), 'en', demoExtrasFor(p.id, assetBase, 'en'))}</div>
         </div>`;
   }).join('');
 
@@ -362,6 +380,7 @@ export async function buildSettingsPage(env: Env): Promise<{ content: string; sc
 
   const script = `
     (function () {
+      ${rteFormatBindJs()}
       var sections = ${JSON.stringify(SECTIONS.map((s) => s.id))};
       function showSection(id) {
         if (sections.indexOf(id) === -1) id = 'precos';
@@ -435,6 +454,29 @@ export async function buildSettingsPage(env: Env): Promise<{ content: string; sc
             document.execCommand(btn.getAttribute('data-cmd'), false, null);
           });
         });
+        mianaBindRteFormat(box, editor);
+      });
+      document.querySelectorAll('[data-insert-field]').forEach(function (btn) {
+        btn.addEventListener('mousedown', function (ev) { ev.preventDefault(); });
+        btn.addEventListener('click', function () {
+          var targetId = btn.getAttribute('data-rte-target');
+          var editor = document.querySelector('[data-rte-for="' + targetId + '"]');
+          if (!editor) return;
+          editor.focus();
+          document.execCommand('insertText', false, '{{' + btn.getAttribute('data-insert-field') + '}}');
+        });
+      });
+      document.querySelectorAll('[data-insert-live]').forEach(function (btn) {
+        btn.addEventListener('mousedown', function (ev) { ev.preventDefault(); });
+        btn.addEventListener('click', function () {
+          var targetId = btn.getAttribute('data-rte-target');
+          var token = btn.getAttribute('data-live-token');
+          var editor = document.querySelector('[data-rte-for="' + targetId + '"]');
+          var tpl = document.querySelector('template[data-live-for="' + targetId + ':' + token + '"]');
+          if (!editor || !tpl) return;
+          editor.focus();
+          document.execCommand('insertHTML', false, tpl.innerHTML);
+        });
       });
     })();
 
@@ -450,8 +492,14 @@ export async function buildSettingsPage(env: Env): Promise<{ content: string; sc
       });
       document.querySelectorAll('input[id$="_body"], input[id$="_body_en"]').forEach(function (hid) {
         hid.value = hid.value
-          .replace(/<!--miana-block-start-->[\\s\\S]*?<!--miana-block-end-->/g, '{{bloco}}')
-          .replace(/<div[^>]*data-miana-block="1"[^>]*>[\\s\\S]*?<\\/div>/gi, '{{bloco}}');
+          .replace(/<!--miana-block-start(?::([a-z_]+))?-->[\\s\\S]*?<!--miana-block-end(?::[a-z_]+)?-->/g, function (_, name) {
+            return name ? '{{' + name + '}}' : '{{bloco}}';
+          })
+          .replace(/<div[^>]*data-miana-block="([^"]+)"[^>]*>[\\s\\S]*?<\\/div>/gi, function (_, name) {
+            return name === '1' ? '{{bloco}}' : '{{' + name + '}}';
+          })
+          .replace(/<p>(<br\\s*\\/?>|&nbsp;|\\s)*<\\/p>\\s*\\{\\{bloco\\}\\}/gi, '{{bloco}}')
+          .replace(/\\{\\{bloco\\}\\}\\s*<p>(<br\\s*\\/?>|&nbsp;|\\s)*<\\/p>/gi, '{{bloco}}');
       });
 
       const keys = [

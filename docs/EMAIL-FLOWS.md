@@ -8,7 +8,7 @@ O cliente **não recebe email** ao submeter um formulário. Mariana recebe a not
 
 - A lead/cliente tem `locale` (`pt` | `en`), gravado no formulário público e editável em Dados Pessoais.
 - Templates no chat usam esse locale por defeito. O toggle PT | EN no composer é override só daquele insert (`?locale=`), não grava na lead.
-- Copy editável: chaves PT `email_{id}_subject` / `email_{id}_body`; EN `email_{id}_subject_en` / `email_{id}_body_en`. Fallbacks EN em `worker/email-copy-en.ts`.
+- Copy editável: chaves PT `email_{id}_subject` / `email_{id}_body`; EN `email_{id}_subject_en` / `email_{id}_body_en`. Fallbacks no código estão vazios (orçamentos, termos e confirmação só com `{{bloco}}`). Texto já gravado nas Settings mantém-se.
 - Blocos gerados (`{{bloco}}`) e o diagnóstico seguem o mesmo locale.
 - Emails internos (novo pedido, diagnóstico preenchido) e PDFs anexos ficam em PT.
 
@@ -35,31 +35,24 @@ flowchart TD
 
 ## Catálogo
 
-**Partilhados**
+**Sistema (fora das Settings)**
 
-- `lead_notification` - sistema - Mariana - `handleLead`
-- `terms` - cliente - chat + PDF termos
-- `signature` - rodapé via `wrapEmail`
+- `lead_notification` - Mariana - `handleLead`
+- `diagnostic_complete` - Mariana - ao submeter a avaliação de pele
+- `signature` - rodapé automático via `wrapEmail` (não se edita nas Settings)
 
-**Por flow (orçamento)**
+**Por flow**
 
-- `bridal` / `beauty` / `skin_call` / `education` - chat "Orçamento"
-
-**Só Bridal (antes do orçamento)**
-
-- `bridal_intro` - chat "Introdutório" + PDF placeholder `servicos-de-noiva.pdf`
-- Resposta da noiva: inbound no thread (não é template). Mariana actualiza campos da lead e depois envia o orçamento.
-
-**Só Skin Call (depois de aceitar, página cliente)**
-
-- `schedule` / `schedule_form` / `diagnostic_invite`
-- `diagnostic_complete` - sistema - Mariana
+- Bridal: `bridal_intro`, `bridal` (orçamento), `bridal_terms`
+- Beauty: `beauty`, `beauty_terms`
+- Skin Call: `skin_call`, `schedule`, `schedule_form`, `skin_call_terms`
+- Education: `education`, `education_terms`
 
 Não são templates: inbound, mensagens `free`, os PDFs em si.
 
 ## Flow Bridal
 
-O formulário já traz `{{nome}}`, `{{data_casamento}}`, `{{local_preparacao}}`, `{{hora_pronta}}`. O intro confirma makeup e pede hairstyling + estimativa de convidadas. O orçamento (serviço da noiva, guests, add-on Skin Call) só depois desta resposta.
+O formulário já traz `{{nome}}`, `{{data_casamento}}`, `{{local_preparacao}}`, `{{hora_pronta}}`. O intro confirma makeup e pede hairstyling + estimativa de convidadas. O orçamento só depois desta resposta.
 
 ```mermaid
 flowchart TD
@@ -70,7 +63,7 @@ flowchart TD
   reply --> enrich[Mariana_actualiza_campos_da_lead]
   enrich --> quote["3. bridal orcamento"]
   quote --> pendente[status_pendente]
-  pendente --> terms["4. terms partilhado + PDF"]
+  pendente --> terms["4. bridal_terms + PDF"]
   terms --> accept[Aceitar_cria_cliente]
   accept --> chat[Chat_livre_na_pagina_cliente]
 ```
@@ -87,20 +80,18 @@ flowchart TD
   submit --> notif["1. lead_notification sistema"]
   notif --> quote["2. skin_call orcamento chat"]
   quote --> pendente[status_pendente]
-  pendente --> terms["3. terms partilhado + PDF"]
+  pendente --> terms["3. skin_call_terms + PDF"]
   terms --> accept[Aceitar_cria_cliente]
   accept --> aceite[status_aceite]
   aceite --> sched["4. schedule marcar sessoes"]
   sched --> meet["5. schedule_form Meet + diagnostico"]
-  aceite --> invite["6. diagnostic_invite opcional"]
   meet --> diagPage["/diagnostico?token="]
-  invite --> diagPage
-  diagPage --> done["7. diagnostic_complete sistema"]
+  diagPage --> done["6. diagnostic_complete sistema"]
 ```
 
 ## Flows Beauty e Education
 
-Sem intro. Orçamento → termos → aceitar.
+Sem intro. Orçamento → termos do próprio flow → aceitar.
 
 ```mermaid
 flowchart TD
@@ -109,17 +100,25 @@ flowchart TD
   notif --> quote{"2. Orcamento"}
   quote -->|beauty| beautyTpl[beauty]
   quote -->|education| educationTpl[education]
-  beautyTpl --> terms["3. terms partilhado + PDF"]
-  educationTpl --> terms
-  terms --> accept[Aceitar_cria_cliente]
+  beautyTpl --> termsB["3. beauty_terms + PDF"]
+  educationTpl --> termsE["3. education_terms + PDF"]
+  termsB --> accept[Aceitar_cria_cliente]
+  termsE --> accept
 ```
 
 ## Árvore Settings → Emails
 
-Settings agrupa os templates editáveis por flow (notificações de sistema ficam fora da UI):
+Sem grupo Partilhados. Assinatura não aparece na UI. Termos no fim de cada flow:
 
-- Partilhados: Termos, Assinatura
-- Bridal: Introdutório, Orçamento
-- Beauty: Orçamento
-- Skin Call: Orçamento, Marcar sessões, Confirmação, Diagnóstico
-- Education: Orçamento
+- Bridal: Introdutório, Orçamento, Termos
+- Beauty: Orçamento, Termos
+- Skin Call: Orçamento, Marcar sessões, Confirmação, Termos
+- Education: Orçamento, Termos
+
+Copy de termos PT/EN começa igual em todos; se ainda não houver `email_{flow}_terms_*`, lê-se o legado `email_terms_*`.
+
+A tabela de preços (Bridal, Beauty, Skin Call, Education) já vem no preview do orçamento e gera-se outra vez ao enviar. O botão **Tabela de Preço** volta a inseri-la se a apagares. Alterações dentro da tabela não gravam. Números vêm de Preços / Pagamento. A lista de campos tem todos os dados da lead/cliente (pessoais + formulário). Termos também incluem titular, IBAN e MB Way. Na confirmação da Skin Call, **Botão da chamada** e **Botão do formulário** inserem os dois botões; o Meet e o link do diagnóstico geram-se outra vez ao enviar.
+
+No editor (Settings e chat) podes mudar tamanho e cor do texto.
+
+No chat podes anexar até 5 PDF/imagens extra (10 MB cada). Termos e o introdutório Bridal continuam a juntar o PDF automático.

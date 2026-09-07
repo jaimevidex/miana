@@ -6,6 +6,10 @@ const ALLOWED_TAGS = new Set([
   'img', 'hr', 'pre', 'code',
 ]);
 
+export function stripEditorLocks(html: string): string {
+  return (html || '').replace(/\scontenteditable(?:="[^"]*")?/gi, '');
+}
+
 export function escapeHtml(s: string): string {
   return s
     .replace(/&/g, '&amp;')

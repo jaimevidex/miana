@@ -11,6 +11,7 @@ export const KV_KEYS = {
 export const R2_FOLDER = 'diagnostics';
 export const EMAIL_ATTACHMENTS_FOLDER = 'email-attachments';
 export const MAX_EMAIL_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+export const MAX_CHAT_EXTRA_ATTACHMENTS = 5;
 
 export const LEAD_TTL = 60 * 60 * 24 * 60; // 2 months (seconds) - informational
 export const RATE_WINDOW = 60 * 60; // 1 hour

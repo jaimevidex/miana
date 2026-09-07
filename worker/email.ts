@@ -2,12 +2,9 @@
 
 import type { Env, LeadType } from './lib';
 import { TYPE_LABELS } from './lib';
-import { siteUrl, fromEmail, fromName, ownerEmail, adminLeadUrl, adminClientUrl } from './config';
+import { fromEmail, fromName, ownerEmail, adminLeadUrl, adminClientUrl } from './config';
 import { getContacts } from './pricing';
-import { getEmailCopy, fillTemplateBody } from './email-copy';
-import { wrapEmail } from './templates/base';
-import { diagnosticBlock } from './templates/blocks';
-import { parseLocale } from './locale';
+import { stripEditorLocks } from './email-sanitize';
 
 export type EmailAttachment = {
   filename: string;
@@ -164,7 +161,7 @@ async function sendMailpit(env: Env, payload: SendEmailInput, messageId: string)
 
 export async function sendEmail(env: Env, payload: SendEmailInput): Promise<SendEmailResult> {
   const messageId = payload.messageId || newRfcMessageId(env, crypto.randomUUID());
-  const withId = { ...payload, messageId };
+  const withId = { ...payload, messageId, html: stripEditorLocks(payload.html) };
   if (isLocal(env)) {
     return sendMailpit(env, withId, messageId);
   }
@@ -223,39 +220,6 @@ export async function sendDiagnosticComplete(
   const text = `Avaliação de pele preenchida por ${data.nome} - ${data.email} - ${data.telefone}\n\nVer avaliação de pele: ${adminLink}`;
   const contacts = await getContacts(env);
   await sendEmail(env, { to: contacts.email || ownerEmail(env), subject, html, text });
-}
-
-export type DiagnosticInviteContent = {
-  subject: string;
-  html: string;
-  text: string;
-};
-
-export async function diagnosticInviteContent(
-  env: Env,
-  lead: { nome: string; token: string; locale?: string }
-): Promise<DiagnosticInviteContent> {
-  const locale = parseLocale(lead.locale);
-  const url = `${siteUrl(env)}/diagnostico?token=${encodeURIComponent(lead.token)}`;
-  const copy = await getEmailCopy(env, locale);
-  const tpl = copy.diagnostic_invite;
-  const vars = { nome: lead.nome };
-  const html = wrapEmail(
-    fillTemplateBody(tpl.body, diagnosticBlock(url, locale), vars),
-    copy.wrapFooter,
-  );
-  const text = htmlToText(html) + `\n\n${url}`;
-  return { subject: tpl.subject, html, text };
-}
-
-// ─── Link de diagnóstico enviado ao cliente ─────────────────────────────────
-
-export async function sendDiagnosticInvite(
-  env: Env,
-  lead: { nome: string; email: string; token: string }
-): Promise<SendEmailResult> {
-  const content = await diagnosticInviteContent(env, lead);
-  return sendEmail(env, { to: lead.email, ...content });
 }
 
 // ─── Email de orçamento enviado ao cliente ──────────────────────────────────

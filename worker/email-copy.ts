@@ -1,6 +1,6 @@
 // Copy editável dos emails para clientes (settings DB + fallbacks no código).
 
-import { htmlEscape, type Env, type LeadType } from './lib';
+import { FIELD_LABELS, htmlEscape, type Env, type LeadType } from './lib';
 import { CONTACT_FALLBACKS, loadSettingsMap } from './pricing';
 import { siteUrl } from './config';
 import { sanitizeEmailHtml } from './email-sanitize';
@@ -9,25 +9,134 @@ import { DEFAULT_LOCALE, parseLocale, type Locale } from './locale';
 export type EmailTemplateId =
   | 'bridal_intro'
   | 'bridal'
+  | 'bridal_terms'
   | 'beauty'
+  | 'beauty_terms'
   | 'skin_call'
+  | 'skin_call_terms'
   | 'education'
-  | 'terms'
+  | 'education_terms'
   | 'schedule'
-  | 'schedule_form'
-  | 'diagnostic_invite';
+  | 'schedule_form';
 
 export const EMAIL_TEMPLATE_IDS: EmailTemplateId[] = [
   'bridal_intro',
   'bridal',
+  'bridal_terms',
   'beauty',
+  'beauty_terms',
   'skin_call',
-  'education',
-  'terms',
   'schedule',
   'schedule_form',
-  'diagnostic_invite',
+  'skin_call_terms',
+  'education',
+  'education_terms',
 ];
+
+const CONTACT_FIELDS = ['nome', 'email', 'telefone', 'locale'] as const;
+
+const BRIDAL_FORM_FIELDS = [
+  'opcao_servico',
+  'data_casamento',
+  'hora_pronta',
+  'local_preparacao',
+  'local_prova',
+  'servicos_procurados',
+  'guests_makeup',
+  'guests_hair',
+  'guests_pack',
+  'addon_skin_call',
+  'mensagem',
+  'valor_deslocacao',
+] as const;
+
+const BEAUTY_FORM_FIELDS = [
+  'opcao_servico',
+  'data_evento',
+  'hora_pronta_evento',
+  'local_evento',
+  'guests_makeup',
+  'guests_hair',
+  'guests_pack',
+  'servicos_procurados_guests',
+  'numero_pessoas',
+  'mensagem',
+  'valor_deslocacao',
+] as const;
+
+const SKIN_CALL_FORM_FIELDS = [
+  'plano',
+  'rotina',
+  'rotina_frequencia',
+  'pele_tipo',
+  'preocupacoes',
+  'preocupacoes_outro',
+  'valor_deslocacao',
+] as const;
+
+const EDUCATION_FORM_FIELDS = [
+  'formato',
+  'local_workshop',
+  'data_hora',
+  'tipo',
+  'modalidade',
+  'numero_participantes',
+  'regime',
+  'mensagem',
+  'valor_deslocacao',
+] as const;
+
+const PAYMENT_FIELDS = ['titular', 'iban', 'mbway'] as const;
+
+const BRIDAL_FIELDS = [...CONTACT_FIELDS, ...BRIDAL_FORM_FIELDS];
+const BEAUTY_FIELDS = [...CONTACT_FIELDS, ...BEAUTY_FORM_FIELDS];
+const SKIN_CALL_FIELDS = [...CONTACT_FIELDS, ...SKIN_CALL_FORM_FIELDS];
+const EDUCATION_FIELDS = [...CONTACT_FIELDS, ...EDUCATION_FORM_FIELDS];
+
+/** Campos da lead/cliente inseríveis no texto. A tabela gerada não é um campo. */
+export const EMAIL_TEMPLATE_FIELDS: Record<EmailTemplateId, readonly string[]> = {
+  bridal_intro: BRIDAL_FIELDS,
+  bridal: BRIDAL_FIELDS,
+  beauty: BEAUTY_FIELDS,
+  skin_call: SKIN_CALL_FIELDS,
+  education: EDUCATION_FIELDS,
+  bridal_terms: [...BRIDAL_FIELDS, ...PAYMENT_FIELDS],
+  beauty_terms: [...BEAUTY_FIELDS, ...PAYMENT_FIELDS],
+  skin_call_terms: [...SKIN_CALL_FIELDS, ...PAYMENT_FIELDS],
+  education_terms: [...EDUCATION_FIELDS, ...PAYMENT_FIELDS],
+  schedule: SKIN_CALL_FIELDS,
+  schedule_form: [...SKIN_CALL_FIELDS, 'quando'],
+};
+
+export const EMAIL_FIELD_LABELS: Record<string, string> = {
+  nome: 'Nome',
+  email: 'Email',
+  telefone: 'Telefone',
+  locale: 'Idioma',
+  titular: 'Titular',
+  iban: 'IBAN',
+  mbway: 'MB Way',
+  quando: 'Data e hora da sessão',
+};
+
+export function emailFieldLabel(token: string): string {
+  return EMAIL_FIELD_LABELS[token] || FIELD_LABELS[token] || token;
+}
+
+export function attachPersonFields(
+  formData: Record<string, string> = {},
+  person: { nome?: string; email?: string; telefone?: string; locale?: string } = {},
+): Record<string, string> {
+  return {
+    ...formData,
+    nome: formData.nome || person.nome || '',
+    email: formData.email || person.email || '',
+    telefone: formData.telefone || person.telefone || '',
+    locale: formData.locale || person.locale || '',
+  };
+}
+
+const TERMS_TEMPLATE_IDS = ['bridal_terms', 'beauty_terms', 'skin_call_terms', 'education_terms'] as const;
 
 export type EmailFlowId = 'shared' | 'skin-call' | 'bridal' | 'beauty' | 'education';
 export type EmailAudience = 'client' | 'footer' | 'system';
@@ -44,31 +153,32 @@ export interface EmailFlowEntry {
 /** Hierarquia canónica: settings e docs devem seguir estes flows. */
 export const EMAIL_FLOW_REGISTRY: EmailFlowEntry[] = [
   { id: 'lead_notification', flow: 'shared', step: 'submit', audience: 'system', label: 'Novo Pedido' },
-  { id: 'terms', flow: 'shared', step: 'terms', audience: 'client', label: 'Termos' },
   { id: 'signature', flow: 'shared', step: 'footer', audience: 'footer', label: 'Assinatura' },
   { id: 'bridal_intro', flow: 'bridal', step: 'intro', audience: 'client', label: 'Introdutório' },
   { id: 'bridal', flow: 'bridal', step: 'quote', audience: 'client', label: 'Orçamento' },
+  { id: 'bridal_terms', flow: 'bridal', step: 'terms', audience: 'client', label: 'Termos' },
   { id: 'beauty', flow: 'beauty', step: 'quote', audience: 'client', label: 'Orçamento' },
+  { id: 'beauty_terms', flow: 'beauty', step: 'terms', audience: 'client', label: 'Termos' },
   { id: 'skin_call', flow: 'skin-call', step: 'quote', audience: 'client', label: 'Orçamento' },
   { id: 'schedule', flow: 'skin-call', step: 'schedule', audience: 'client', label: 'Marcar sessões' },
   { id: 'schedule_form', flow: 'skin-call', step: 'schedule_form', audience: 'client', label: 'Confirmação' },
-  { id: 'diagnostic_invite', flow: 'skin-call', step: 'diagnostic_invite', audience: 'client', label: 'Avaliação de pele' },
+  { id: 'skin_call_terms', flow: 'skin-call', step: 'terms', audience: 'client', label: 'Termos' },
   { id: 'diagnostic_complete', flow: 'skin-call', step: 'diagnostic_complete', audience: 'system', label: 'Avaliação de pele preenchida' },
   { id: 'education', flow: 'education', step: 'quote', audience: 'client', label: 'Orçamento' },
+  { id: 'education_terms', flow: 'education', step: 'terms', audience: 'client', label: 'Termos' },
 ];
 
 export const SYSTEM_EMAIL_IDS = ['lead_notification', 'diagnostic_complete'] as const;
 
 export const EMAIL_FLOW_GROUPS: { id: EmailFlowId; label: string; hint: string }[] = [
-  { id: 'shared', label: 'Partilhados', hint: 'Termos e assinatura comuns a todos os pedidos.' },
-  { id: 'bridal', label: 'Bridal', hint: 'Introdutório primeiro; orçamento depois da resposta da noiva.' },
-  { id: 'beauty', label: 'Beauty', hint: 'Orçamento para Guests & Events.' },
-  { id: 'skin-call', label: 'Skin Call', hint: 'Orçamento, e depois de aceitar: marcar sessões, confirmação Meet e avaliação de pele.' },
-  { id: 'education', label: 'Education', hint: 'Orçamento para workshops.' },
+  { id: 'bridal', label: 'Bridal', hint: 'Introdutório, orçamento e termos no fim.' },
+  { id: 'beauty', label: 'Beauty', hint: 'Orçamento e termos no fim.' },
+  { id: 'skin-call', label: 'Skin Call', hint: 'Orçamento, marcação e termos no fim.' },
+  { id: 'education', label: 'Education', hint: 'Orçamento e termos no fim.' },
 ];
 
 export function settingsEmailEntries(): EmailFlowEntry[] {
-  return EMAIL_FLOW_REGISTRY.filter((e) => e.audience !== 'system');
+  return EMAIL_FLOW_REGISTRY.filter((e) => e.audience === 'client');
 }
 
 export function settingsPanelId(id: EmailFlowEntryId): string {
@@ -81,12 +191,30 @@ export interface EmailTemplateCopy {
 }
 
 export const EMAIL_BLOCO = '{{bloco}}';
+export const EMAIL_BOTAO_CHAMADA = '{{botao_chamada}}';
+export const EMAIL_BOTAO_FORMULARIO = '{{botao_formulario}}';
 const BLOCO_START = '<!--miana-block-start-->';
 const BLOCO_END = '<!--miana-block-end-->';
+
+export const EMAIL_QUOTE_TEMPLATE_IDS: EmailTemplateId[] = ['bridal', 'beauty', 'skin_call', 'education'];
+
+export function isQuoteTemplate(id: EmailTemplateId): boolean {
+  return (EMAIL_QUOTE_TEMPLATE_IDS as readonly string[]).includes(id);
+}
 
 function styledHeading(title: string): string {
   if (!title.trim()) return '';
   return `<h2 style="font-size:20px;color:#8a2831;margin:0 0 16px">${title}</h2>`;
+}
+
+const EMPTY_COPY: EmailTemplateCopy = { subject: '', body: '' };
+
+function blockOnly(subject: string): EmailTemplateCopy {
+  return { subject, body: EMAIL_BLOCO };
+}
+
+function p(text: string): string {
+  return `<p>${text}</p>`;
 }
 
 export interface EmailWrapFooter {
@@ -100,13 +228,15 @@ export interface EmailCopy {
   wrapFooter: EmailWrapFooter;
   bridal_intro: EmailTemplateCopy;
   bridal: EmailTemplateCopy;
+  bridal_terms: EmailTemplateCopy;
   beauty: EmailTemplateCopy;
+  beauty_terms: EmailTemplateCopy;
   skin_call: EmailTemplateCopy;
+  skin_call_terms: EmailTemplateCopy;
   education: EmailTemplateCopy;
-  terms: EmailTemplateCopy;
+  education_terms: EmailTemplateCopy;
   schedule: EmailTemplateCopy;
   schedule_form: EmailTemplateCopy;
-  diagnostic_invite: EmailTemplateCopy;
 }
 
 export const SIG_INSTAGRAM_FALLBACK = 'https://instagram.com/bymarianapita';
@@ -122,60 +252,66 @@ export const EMAIL_COPY_FALLBACKS: EmailCopy = {
   bridal_intro: {
     subject: 'Serviço de noiva - Mariana Pita',
     body:
-      '<p>Alô Noiva {{nome}}!!!</p>' +
-      '<p>Antes de mais, os nossos parabéns pelo noivado! Estamos muito felizes por fazer parte deste momento tão especial.</p>' +
-      '<p>Confirmo que eu tenho disponibilidade de agenda para o serviço de makeup no dia {{data_casamento}}, em {{local_preparacao}}, para que esteja pronta às {{hora_pronta}}.</p>' +
-      '<p>Envio, em anexo, o pdf com todos os detalhes do nosso serviço de noiva. Caso pretenda também o serviço de hairstyling peço que me indique, para que consiga confirmar disponibilidade com a equipa ASAP.</p>' +
-      '<p>Como sabemos que o dia é mais feliz se for partilhado com as madrinhas e família, também elas podem preparar-se connosco. Por isso, para já, também é importante termos uma estimativa de quantas convidadas o vão querer fazer e que serviço/s pretendem! Este número é apenas uma estimativa, para termos noção do número de profissionais necessário e só terá de ser confirmado mais perto da data.</p>' +
-      '<p>Por todos estes motivos, só conseguimos calcular o valor da deslocação assim que soubermos os serviços contratados e o número de profissionais que necessitam de ser alocados.</p>' +
-      '<p>Estou aqui para esclarecer qualquer dúvida que surja :)</p>' +
-      '<p>Com amor,</p>',
+      p('Alô Noiva {{nome}}!!!') +
+      p('Antes de mais, os nossos parabéns pelo noivado! Estamos muito felizes por fazer parte deste momento tão especial.') +
+      p('Confirmo que eu tenho disponibilidade de agenda para o serviço de makeup no dia {{data_casamento}}, em {{local_preparacao}}, para que esteja pronta às {{hora_pronta}}.') +
+      p('Envio, em anexo, o pdf com todos os detalhes do nosso serviço de noiva. Caso pretenda também o serviço de hairstyling peço que me indique, para que consiga confirmar disponibilidade com a equipa ASAP.') +
+      p('Como sabemos que o dia é mais feliz se for partilhado com as madrinhas e família, também elas podem preparar-se connosco. Por isso, para já, também é importante termos uma estimativa de quantas convidadas o vão querer fazer e que serviço/s pretendem! Este número é apenas uma estimativa, para termos noção do número de profissionais necessário e só terá de ser confirmado mais perto da data.') +
+      p('Por todos estes motivos, só conseguimos calcular o valor da deslocação assim que soubermos os serviços contratados e o número de profissionais que necessitam de ser alocados.') +
+      p('Estou aqui para esclarecer qualquer dúvida que surja :)') +
+      p('Com amor,'),
   },
-  bridal: {
-    subject: 'Orçamento Bridal by Mariana Pita',
-    body: `${styledHeading('Orçamento - Bridal')}<p>Olá {{nome}},</p>${EMAIL_BLOCO}`,
-  },
+  bridal: blockOnly('Orçamento - Bridal'),
   beauty: {
     subject: 'Orçamento - Beauty',
-    body: `${styledHeading('Orçamento - Beauty')}<p>Olá {{nome}},</p>${EMAIL_BLOCO}`,
+    body:
+      p('Alô {{nome}},') +
+      p('Confirmo que tenho disponibilidade para o teu glam! Aqui estão todas as informações e orçamento.') +
+      p('Verifica todos os detalhes para garantir que estão corretos.') +
+      EMAIL_BLOCO +
+      p('Para terminarmos às (hora), temos de começar o glam às [hora].') +
+      p('Para agendar, peço sempre o pagamento de 50% do valor total por mbway ou transferência bancária. Diz-me qual dos métodos preferes que envio todos os detalhes.') +
+      p('Estou disponível para esclarecer qualquer dúvida que surja.') +
+      p('Beijinhos,'),
   },
   skin_call: {
     subject: 'Orçamento - Skin Call',
-    body: `${styledHeading('Orçamento - Skin Call')}<p>Olá {{nome}},</p>${EMAIL_BLOCO}`,
-  },
-  education: {
-    subject: 'Orçamento - Education',
-    body: `${styledHeading('Orçamento - Education')}<p>Olá {{nome}},</p>${EMAIL_BLOCO}`,
-  },
-  terms: {
-    subject: 'Termos e condições e dados de pagamento',
     body:
-      `${styledHeading('Termos e condições')}` +
-      '<p>Olá {{nome}},</p><p>Para avançarmos, envio os <strong>termos e condições</strong> em anexo e os dados de pagamento.</p><p>Quando o pagamento estiver feito, responde a este email com o <strong>comprovativo</strong> e a frase:</p><p><em>«Declaro que li e aceito os termos e condições.»</em></p>' +
+      p('Alô {{nome}},') +
+      p('Tudo bem?') +
+      p('Está na altura de cuidar da tua pele! Porque uma pele cuidada e saudável é o primeiro passo para que ela esteja bonita.') +
+      p('De acordo com as tuas respostas no formulário, o plano que considero mais indicado para ti é {{plano}}.') +
+      p('[Inserir breve explicação].') +
       EMAIL_BLOCO +
-      '<p>Este texto é provisório e será substituído pela copy final.</p>',
+      p('Vamos cuidar da tua pele, de forma descomplicada, com base em ciência?') +
+      p('Beijinhos,'),
   },
+  education: blockOnly('Orçamento - Education'),
+  bridal_terms: blockOnly('Termos - Bridal'),
+  beauty_terms: blockOnly('Termos - Beauty'),
+  skin_call_terms: blockOnly('Termos - Skin Call'),
+  education_terms: blockOnly('Termos - Education'),
   schedule: {
     subject: 'Marcar sessões - Skin Call',
     body:
-      `${styledHeading('Marcar sessões')}` +
-      '<p>Olá {{nome}},</p><p>Para marcarmos a sessão, envia-me por favor algumas <strong>sugestões de datas e horas</strong>.</p><p>Prefiro durante a <strong>semana</strong> (segunda a sexta). Pode ser a qualquer hora.</p><p>Assim que alinharmos, envio o convite com o link da videochamada e o formulário.</p>' +
-      '<p>Este texto é provisório e será substituído pela copy final.</p>',
+      p('Alô {{nome}},') +
+      p('A compra do plano {{plano}} foi concluída com sucesso.') +
+      p('Vamos começar a cuidar da tua pele?') +
+      p('Para marcarmos a (primeira) sessão envia-me, por favor, pelo menos 3 sugestões de datas e horas.') +
+      p('Temos disponibilidade maioritariamente durante a semana (segunda a sexta) e podes escolher a hora que te for mais conveniente, até mesmo pós laboral.') +
+      p('Assim que alinharmos a data e hora, envio o convite com o link da videochamada e o formulário para preencheres.') +
+      p('Beijinhos,'),
   },
   schedule_form: {
     subject: 'Marcação confirmada - Skin Call',
     body:
-      `${styledHeading('Marcação confirmada')}` +
-      '<p>Olá {{nome}},</p><p>A sessão ficou marcada para <strong>{{quando}}</strong>.</p>' +
-      EMAIL_BLOCO +
-      '<p>Este texto é provisório e será substituído pela copy final.</p>',
-  },
-  diagnostic_invite: {
-    subject: 'Estás quase lá! Avaliação de pele Skin Call',
-    body:
-      '<p>Olá {{nome}},</p><p>Estamos quase lá! Para eu perceber o plano mais indicado para ti, preciso que preenchas esta breve avaliação de pele.</p>' +
-      EMAIL_BLOCO +
-      '<p>Este link é pessoal e de uso único.</p>',
+      p('Alô {{nome}},') +
+      p('A (primeira) sessão ficou marcada para {{quando}}. Clica abaixo em «Entrar na Chamada» no [dia] às [hora] para iniciarmos a chamada!') +
+      EMAIL_BOTAO_CHAMADA +
+      EMAIL_BOTAO_FORMULARIO +
+      p('Vais demorar cerca de 10 minutos a respondê-lo. Ele é propositadamente super detalhado e é importante que o preenchas de forma sincera e mais completa possível, porque são estas respostas que me permitem aconselhar-te de forma personalizada e correta. Relembro que precisas de o preencher, pelo menos, até 48h antes da nossa sessão.') +
+      p('Se não entenderes ou não conseguires responder a alguma questão, podes enviar-me mensagem pelo whatsapp ou esperar pela sessão para esclarecermos essa dúvida. Seja como for, é mesmo importante que não fiques com dúvidas e me contes tudo o que consideres relevante para um acompanhamento correto! Temos de trabalhar em conjunto para garantir o sucesso da Skin Call.') +
+      p('Beijinhos,'),
   },
 };
 
@@ -217,6 +353,23 @@ export function templateFromMap(
   locale: Locale = DEFAULT_LOCALE,
 ): EmailTemplateCopy {
   const suffix = localeKeySuffix(locale);
+  if ((TERMS_TEMPLATE_IDS as readonly string[]).includes(id)) {
+    const subjectKey = `email_${id}_subject${suffix}`;
+    const bodyKey = `email_${id}_body${suffix}`;
+    const legacySubject = `email_terms_subject${suffix}`;
+    const legacyBodyKey = `email_terms_body${suffix}`;
+    const subject = Object.prototype.hasOwnProperty.call(map, subjectKey)
+      ? map[subjectKey]
+      : pick(map, legacySubject, fallback.subject);
+    if (Object.prototype.hasOwnProperty.call(map, bodyKey)) {
+      return { subject, body: map[bodyKey] };
+    }
+    if (Object.prototype.hasOwnProperty.call(map, legacyBodyKey)) {
+      return { subject, body: map[legacyBodyKey] };
+    }
+    if (locale === 'en') return { subject, body: fallback.body };
+    return { subject, body: legacyBody(map, id, fallback) };
+  }
   return {
     subject: pick(map, `email_${id}_subject${suffix}`, fallback.subject),
     body: locale === 'en'
@@ -237,31 +390,66 @@ export function templateVars(
   return { ...vars, ...extra };
 }
 
-export function fillTemplateBody(body: string, block: string, vars: Record<string, string> = {}): string {
+export function fillTemplateBody(
+  body: string,
+  block: string,
+  vars: Record<string, string> = {},
+  extras: Record<string, string> = {},
+): string {
   let html = (body || '').trim();
-  if (!html) html = block;
-  else if (html.includes(EMAIL_BLOCO)) html = html.split(EMAIL_BLOCO).join(block);
-  else if (block) html += block;
+  if (html.includes(EMAIL_BLOCO)) html = html.split(EMAIL_BLOCO).join(block);
+  for (const [token, htmlBlock] of Object.entries(extras)) {
+    const needle = `{{${token}}}`;
+    if (html.includes(needle)) html = html.split(needle).join(htmlBlock);
+  }
   return interpolateHtml(html, vars);
 }
 
-function wrapPreviewBlock(block: string): string {
+export function wrapPreviewBlock(block: string, token = 'bloco'): string {
   if (!block) return '';
-  return `${BLOCO_START}<div data-miana-block="1" contenteditable="false">${block}</div>${BLOCO_END}`;
+  if (token === 'bloco') {
+    return `${BLOCO_START}<div data-miana-block="1">${block}</div>${BLOCO_END}`;
+  }
+  return `<!--miana-block-start:${token}--><div data-miana-block="${token}" contenteditable="false">${block}</div><!--miana-block-end:${token}-->`;
 }
 
-export function previewTemplateBody(body: string, block: string): string {
-  const wrapped = wrapPreviewBlock(block);
+const EMPTY_P = '<p><br></p>';
+
+export function previewTemplateBody(
+  body: string,
+  block: string,
+  extras: Record<string, string> = {},
+): string {
   let html = (body || '').trim();
-  if (!html) return wrapped;
-  if (html.includes(EMAIL_BLOCO)) return html.split(EMAIL_BLOCO).join(wrapped);
-  return wrapped ? html + wrapped : html;
+  const wrappedBloco = wrapPreviewBlock(block);
+  if (!html) return wrappedBloco ? EMPTY_P + wrappedBloco + EMPTY_P : '';
+  if (html.includes(EMAIL_BLOCO)) html = html.split(EMAIL_BLOCO).join(wrappedBloco);
+  for (const [token, htmlBlock] of Object.entries(extras)) {
+    const needle = `{{${token}}}`;
+    if (html.includes(needle)) html = html.split(needle).join(wrapPreviewBlock(htmlBlock, token));
+  }
+  if (wrappedBloco && html.includes(BLOCO_END)) {
+    const after = html.split(BLOCO_END).pop() || '';
+    if (!after.trim()) html = html.replace(BLOCO_END, BLOCO_END + EMPTY_P);
+    const before = html.split(BLOCO_START)[0] || '';
+    if (!before.trim()) html = EMPTY_P + html;
+  }
+  return html;
 }
+
+const EMPTY_P_RE = '<p>(<br\\s*/?>|&nbsp;|\\s)*</p>';
 
 export function bodyFromEditor(html: string): string {
-  return html
-    .replace(new RegExp(`${BLOCO_START}[\\s\\S]*?${BLOCO_END}`, 'g'), EMAIL_BLOCO)
-    .replace(/<div[^>]*data-miana-block="1"[^>]*>[\s\S]*?<\/div>/gi, EMAIL_BLOCO);
+  let out = html
+    .replace(/<!--miana-block-start(?::([a-z_]+))?-->[\s\S]*?<!--miana-block-end(?::[a-z_]+)?-->/g, (_, name) => (
+      name ? `{{${name}}}` : EMAIL_BLOCO
+    ))
+    .replace(/<div[^>]*data-miana-block="([^"]+)"[^>]*>[\s\S]*?<\/div>/gi, (_, name) => (
+      name === '1' ? EMAIL_BLOCO : `{{${name}}}`
+    ));
+  out = out.replace(new RegExp(`${EMPTY_P_RE}\\s*\\{\\{bloco\\}\\}`, 'gi'), EMAIL_BLOCO);
+  out = out.replace(new RegExp(`\\{\\{bloco\\}\\}\\s*${EMPTY_P_RE}`, 'gi'), EMAIL_BLOCO);
+  return out;
 }
 
 export async function getEmailCopy(env: Env, locale: Locale = DEFAULT_LOCALE): Promise<EmailCopy> {
@@ -278,13 +466,15 @@ export async function getEmailCopy(env: Env, locale: Locale = DEFAULT_LOCALE): P
     },
     bridal_intro: templateFromMap(map, 'bridal_intro', F.bridal_intro, resolved),
     bridal: templateFromMap(map, 'bridal', F.bridal, resolved),
+    bridal_terms: templateFromMap(map, 'bridal_terms', F.bridal_terms, resolved),
     beauty: templateFromMap(map, 'beauty', F.beauty, resolved),
+    beauty_terms: templateFromMap(map, 'beauty_terms', F.beauty_terms, resolved),
     skin_call: templateFromMap(map, 'skin_call', F.skin_call, resolved),
+    skin_call_terms: templateFromMap(map, 'skin_call_terms', F.skin_call_terms, resolved),
     education: templateFromMap(map, 'education', F.education, resolved),
-    terms: templateFromMap(map, 'terms', F.terms, resolved),
+    education_terms: templateFromMap(map, 'education_terms', F.education_terms, resolved),
     schedule: templateFromMap(map, 'schedule', F.schedule, resolved),
     schedule_form: templateFromMap(map, 'schedule_form', F.schedule_form, resolved),
-    diagnostic_invite: templateFromMap(map, 'diagnostic_invite', F.diagnostic_invite, resolved),
   };
 }
 
@@ -298,6 +488,19 @@ export function quoteCopyForType(copy: EmailCopy, type: LeadType): EmailTemplate
       return copy.skin_call;
     case 'education':
       return copy.education;
+  }
+}
+
+export function termsCopyForType(copy: EmailCopy, type: LeadType): EmailTemplateCopy {
+  switch (type) {
+    case 'bridal':
+      return copy.bridal_terms;
+    case 'beauty':
+      return copy.beauty_terms;
+    case 'skin-call':
+      return copy.skin_call_terms;
+    case 'education':
+      return copy.education_terms;
   }
 }
 

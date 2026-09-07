@@ -78,6 +78,21 @@ export function parseTravelFee(formData: Record<string, string>): number {
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
+/** Plano Skin Call (formulário ou addon Bridal) → preço Settings. Vazio / "-" → null. */
+export function skinCallPlanPrice(
+  plano: string | undefined,
+  pricing: Pricing,
+): { label: string; price: number } | null {
+  const raw = (plano || '').trim();
+  if (!raw || raw === '-' || /^\{\{\w+\}\}$/.test(raw)) return null;
+  const p = pricing.skin_call;
+  if (/full year|12m|quatro/i.test(raw)) return { label: raw, price: p.session4 };
+  if (/triple|trio|9m/i.test(raw)) return { label: raw, price: p.session3 };
+  if (/duo|6m/i.test(raw)) return { label: raw, price: p.session2 };
+  if (/one time|solo|3m/i.test(raw)) return { label: raw, price: p.session1 };
+  return null;
+}
+
 export function beautyQuoteTotal(formData: Record<string, string>, pricing: Pricing): {
   guests: { makeup: number; hair: number; pack: number };
   guestTotal: number;
@@ -136,6 +151,8 @@ export function bridalQuoteTotal(formData: Record<string, string>, pricing: Pric
   bridePrice: number;
   guestTotal: number;
   travel: number;
+  addonPrice: number;
+  addonLabel: string;
   total: number;
   guests: { makeup: number; hair: number; pack: number };
   brideLabel: string;
@@ -144,11 +161,15 @@ export function bridalQuoteTotal(formData: Record<string, string>, pricing: Pric
   const bridePrice = bridalBridePrice(formData.servicos_procurados || '', pricing);
   const guestTotal = bridalGuestTotal(guests, pricing);
   const travel = parseTravelFee(formData);
+  const addon = skinCallPlanPrice(formData.addon_skin_call, pricing);
+  const addonPrice = addon?.price ?? 0;
   return {
     bridePrice,
     guestTotal,
     travel,
-    total: bridePrice + guestTotal + travel,
+    addonPrice,
+    addonLabel: addon?.label || '',
+    total: bridePrice + guestTotal + travel + addonPrice,
     guests,
     brideLabel: brideServiceLabel(formData.servicos_procurados || ''),
   };

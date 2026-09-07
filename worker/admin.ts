@@ -10,6 +10,7 @@ import { beautyHeadcount } from './bridal-pricing';
 import { getTiming } from './pricing';
 import { photoAdminUrl } from './photos';
 import { CHAT_CSS, renderChatPanel, chatScript } from './admin/chat';
+import { RTE_FORMAT_CSS } from './admin/rte';
 import {
   INLINE_EDIT_CSS,
   renderEditableCard,
@@ -90,9 +91,13 @@ tr.lead-row-eliminado:hover td{background:rgba(183,28,28,.14)}
 .settings-hint{color:#8a7a74;font-size:13px;margin-bottom:16px}
 textarea.in.email-area{min-height:110px}
 .rte-editor.email-rte{min-height:280px;max-height:56vh}
-.rte-editor.email-rte h2{font-size:20px;color:#8a2831;margin:0 0 16px}
-.rte-editor.email-rte h3{font-size:16px;color:#8a2831;margin:24px 0 8px;border-bottom:1px solid #e5ded7;padding-bottom:6px}
-.rte-editor.email-rte [data-miana-block]{user-select:none}
+.rte-editor h2,.rte-editor.email-rte h2{font-size:20px;color:#8a2831;margin:0 0 16px;border:none;padding-bottom:0}
+.rte-editor h3,.rte-editor.email-rte h3{font-size:16px;color:#8a2831;margin:24px 0 8px;border:none;padding-bottom:0}
+.field-picker{margin:0 0 12px;border:1px solid #e5ded7;border-radius:10px;padding:8px 12px;background:#fff}
+.field-picker summary{cursor:pointer;font-size:13px;font-weight:600;color:#3b2a2a}
+.field-picker-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.field-chip{font-size:12px;font-weight:600;padding:4px 10px;border:1px solid #e5ded7;background:#fbf5ef;color:#8a2831;border-radius:8px;cursor:pointer}
+.field-chip:hover{border-color:#8a2831}
 .sig-preview{padding:8px 0;margin:0 0 8px}
 .sig-preview table{width:200px;border-collapse:collapse}
 .sig-preview td{padding:0;border:none}
@@ -125,6 +130,8 @@ textarea.in.email-area{min-height:110px}
 .rte-editor ul,.rte-editor ol{padding-left:1.4em;margin:8px 0}
 .rte-editor li{margin:2px 0}
 .rte-editor blockquote{margin:8px 0;padding-left:12px;border-left:3px solid #e5ded7;color:#5c4a4a}
+.rte-editor [contenteditable="false"]{user-select:none;-webkit-user-select:none;cursor:default}
+${RTE_FORMAT_CSS}
 ${CHAT_CSS}
 ${INLINE_EDIT_CSS}
 `;
@@ -1038,10 +1045,7 @@ export async function renderClientDetail(env: Env, id: string, csrfToken: string
     } else {
       diagHtml = `
         <p style="color:#8a7a74">Avaliação de pele ainda não preenchida.</p>
-        ${hasToken
-          ? '<button class="btn btn-outline btn-sm" onclick="sendDiagnosticInvite()" style="margin-top:8px">Enviar link de avaliação de pele</button>'
-          : '<p style="color:#8a7a74;font-size:13px;margin-top:8px">Cliente criado manualmente - sem lead associada para enviar avaliação de pele.</p>'
-        }
+        ${hasToken ? '' : '<p style="color:#8a7a74;font-size:13px;margin-top:8px">Cliente criado manualmente - sem lead associada.</p>'}
       `;
     }
 
@@ -1193,26 +1197,6 @@ export async function renderClientDetail(env: Env, id: string, csrfToken: string
         }
       }
     })();
-
-    async function sendDiagnosticInvite() {
-      const msg = document.getElementById('action-msg');
-      msg.textContent = 'A enviar link...';
-      msg.className = 'status';
-      try {
-        const res = await fetch('/api/admin/client/${client.id}/diagnostic-invite', { method: 'POST', credentials: 'same-origin' });
-        const data = await res.json();
-        if (data.success) {
-          msg.textContent = 'Link de avaliação de pele enviado!';
-          msg.className = 'status';
-        } else {
-          msg.textContent = data.error || 'Erro ao enviar.';
-          msg.className = 'status err';
-        }
-      } catch {
-        msg.textContent = 'Erro ao enviar.';
-        msg.className = 'status err';
-      }
-    }
 
     ${inlineEditScript()}
     ${chatScript()}`;

@@ -2,6 +2,7 @@
 
 import { escapeHtml, sanitizeEmailHtml } from '../email-sanitize';
 import type { MessageWithAttachments } from '../conversation';
+import { rteFormatBindJs, rteFormatButtons } from './rte';
 
 export const CHAT_CSS = `
 .chat-panel{display:flex;flex-direction:column;min-height:420px}
@@ -23,6 +24,10 @@ export const CHAT_CSS = `
 .lang-toggle{display:inline-flex;align-items:center;gap:2px;margin-right:6px}
 .lang-toggle button{font-size:11px;font-weight:700;letter-spacing:.04em;padding:4px 8px;border:1px solid #e5ded7;background:#fff;color:#8a7a74;border-radius:8px;cursor:pointer}
 .lang-toggle button.active{background:#8a2831;color:#fbf5ef;border-color:#8a2831}
+.chat-attach{margin-top:12px}
+.chat-file-list{list-style:none;padding:0;margin:8px 0 0;display:flex;flex-direction:column;gap:6px}
+.chat-file-list li{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;color:#3b2a2a;background:rgba(138,40,49,.06);padding:6px 10px;border-radius:8px}
+.chat-file-list button{font-size:12px;background:none;border:none;color:#8a2831;cursor:pointer;font-weight:600}
 `;
 
 function formatChatDate(ts: number): string {
@@ -89,6 +94,7 @@ export function renderChatPanel(opts: {
           <span class="rte-sep"></span>
           <button type="button" class="rte-btn" data-cmd="insertUnorderedList" title="Lista">• Lista</button>
           <button type="button" class="rte-btn" data-cmd="insertOrderedList" title="Lista numerada">1. Lista</button>
+          ${rteFormatButtons()}
           <span class="rte-sep"></span>
           <span class="lang-toggle" role="group" aria-label="Idioma do template">
             <button type="button" id="tpl-lang-pt" class="${locale === 'pt' ? 'active' : ''}" data-tpl-lang="pt">PT</button>
@@ -101,6 +107,11 @@ export function renderChatPanel(opts: {
           <button type="button" class="rte-btn rte-tpl" id="tpl-schedule-form" title="Meet + formulário">Marcar e formulário</button>` : ''}
         </div>
         <div id="chat-body-editor" class="rte-editor" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Escreve a mensagem…"></div>
+      </div>
+      <div class="chat-attach">
+        <label class="lbl" for="chat-files">Anexos</label>
+        <input id="chat-files" type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,application/pdf,image/jpeg,image/png,image/webp,image/gif" />
+        <ul id="chat-file-list" class="chat-file-list"></ul>
       </div>
       <div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap">
         <button type="button" class="btn" id="chat-send">Enviar</button>
@@ -138,6 +149,7 @@ export function renderChatPanel(opts: {
 export function chatScript(): string {
   return `
     (function(){
+      ${rteFormatBindJs()}
       const panel = document.querySelector('.chat-panel');
       if (!panel) return;
       const convId = panel.getAttribute('data-conversation-id');
@@ -149,6 +161,55 @@ export function chatScript(): string {
       let pendingKind = 'free';
       let attachTerms = false;
       let tplLocale = panel.getAttribute('data-locale') || 'pt';
+      let pendingFiles = [];
+      const MAX_EXTRA = 5;
+      const MAX_BYTES = 10 * 1024 * 1024;
+      const ALLOWED_EXT = { pdf:1, jpg:1, jpeg:1, png:1, webp:1, gif:1 };
+      const ALLOWED_TYPE = { 'application/pdf':1, 'image/jpeg':1, 'image/png':1, 'image/webp':1, 'image/gif':1 };
+      const fileInput = document.getElementById('chat-files');
+      const fileList = document.getElementById('chat-file-list');
+
+      function fileAllowed(file) {
+        const ext = (file.name.split('.').pop() || '').toLowerCase();
+        return !!ALLOWED_TYPE[file.type] || !!ALLOWED_EXT[ext];
+      }
+
+      function renderPendingFiles() {
+        if (!fileList) return;
+        fileList.innerHTML = pendingFiles.map(function(file, i){
+          const name = String(file.name).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+          return '<li><span>' + name + '</span><button type="button" data-remove-file="' + i + '">Remover</button></li>';
+        }).join('');
+      }
+
+      if (fileList) fileList.addEventListener('click', function(e){
+        const btn = e.target.closest('[data-remove-file]');
+        if (!btn) return;
+        pendingFiles.splice(Number(btn.getAttribute('data-remove-file')), 1);
+        renderPendingFiles();
+      });
+      if (fileInput) fileInput.addEventListener('change', function(){
+        const msg = document.getElementById('chat-status');
+        const added = Array.prototype.slice.call(fileInput.files || []);
+        for (var i = 0; i < added.length; i++) {
+          const file = added[i];
+          if (pendingFiles.length >= MAX_EXTRA) {
+            if (msg) { msg.textContent = 'Máximo de 5 anexos extra por envio.'; msg.className = 'status err'; }
+            break;
+          }
+          if (!fileAllowed(file)) {
+            if (msg) { msg.textContent = file.name + ': tipo não permitido (PDF, JPEG, PNG, WebP ou GIF).'; msg.className = 'status err'; }
+            continue;
+          }
+          if (file.size > MAX_BYTES) {
+            if (msg) { msg.textContent = file.name + ': demasiado grande (máx. 10 MB).'; msg.className = 'status err'; }
+            continue;
+          }
+          pendingFiles.push(file);
+        }
+        fileInput.value = '';
+        renderPendingFiles();
+      });
 
       fetch('/api/admin/conversation/' + convId + '/read', { method: 'POST', credentials: 'same-origin' }).catch(function(){});
 
@@ -190,6 +251,8 @@ export function chatScript(): string {
             document.execCommand(btn.getAttribute('data-cmd'), false, null);
           });
         });
+        const box = panel.querySelector('.rte');
+        if (box) mianaBindRteFormat(box, editor);
       }
 
       async function loadTpl(path, kind, extra) {
@@ -275,12 +338,27 @@ export function chatScript(): string {
         msg.textContent = 'A enviar...';
         msg.className = 'status';
         try {
-          const res = await fetch('/api/admin/conversation/' + convId + '/messages', {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ subject, html, templateKind: pendingKind, attachTermsPdf: attachTerms }),
-          });
+          let res;
+          if (pendingFiles.length) {
+            const fd = new FormData();
+            fd.append('subject', subject);
+            fd.append('html', html);
+            fd.append('templateKind', pendingKind);
+            fd.append('attachTermsPdf', attachTerms ? 'true' : 'false');
+            pendingFiles.forEach(function(file){ fd.append('files', file); });
+            res = await fetch('/api/admin/conversation/' + convId + '/messages', {
+              method: 'POST',
+              credentials: 'same-origin',
+              body: fd,
+            });
+          } else {
+            res = await fetch('/api/admin/conversation/' + convId + '/messages', {
+              method: 'POST',
+              credentials: 'same-origin',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ subject, html, templateKind: pendingKind, attachTermsPdf: attachTerms }),
+            });
+          }
           const data = await res.json();
           if (data.success) {
             msg.textContent = 'Enviado!';

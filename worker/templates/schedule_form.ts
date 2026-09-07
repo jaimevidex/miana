@@ -1,8 +1,8 @@
 // Template placeholder - marcação confirmada + Meet + formulário (Skin Call).
 
-import { EMAIL_COPY_FALLBACKS, fillTemplateBody, type EmailTemplateCopy, type EmailWrapFooter } from '../email-copy';
+import { EMAIL_COPY_FALLBACKS, fillTemplateBody, templateVars, type EmailTemplateCopy, type EmailWrapFooter } from '../email-copy';
 import { wrapEmail } from './base';
-import { scheduleFormBlock } from './blocks';
+import { formCallButton, meetCallButton, scheduleFormBlock } from './blocks';
 import { DEFAULT_LOCALE, type Locale } from '../locale';
 
 export function scheduleFormSubject(copy: EmailTemplateCopy = EMAIL_COPY_FALLBACKS.schedule_form): string {
@@ -17,9 +17,17 @@ export function scheduleFormEmail(opts: {
   copy?: EmailTemplateCopy;
   footer?: EmailWrapFooter;
   locale?: Locale;
+  formData?: Record<string, string>;
 }): string {
   const copy = opts.copy ?? EMAIL_COPY_FALLBACKS.schedule_form;
-  const block = scheduleFormBlock({ meetUrl: opts.meetUrl, formUrl: opts.formUrl }, opts.locale ?? DEFAULT_LOCALE);
-  const body = fillTemplateBody(copy.body, block, { nome: opts.nome, quando: opts.whenLabel });
+  const locale = opts.locale ?? DEFAULT_LOCALE;
+  const block = scheduleFormBlock({ meetUrl: opts.meetUrl, formUrl: opts.formUrl }, locale);
+  const body = fillTemplateBody(copy.body, block, templateVars(opts.formData, {
+    nome: opts.nome,
+    quando: opts.whenLabel,
+  }), {
+    botao_chamada: meetCallButton({ meetUrl: opts.meetUrl }, locale),
+    botao_formulario: formCallButton({ formUrl: opts.formUrl }, locale),
+  });
   return wrapEmail(body, opts.footer);
 }
