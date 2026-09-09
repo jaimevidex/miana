@@ -1,4 +1,5 @@
 import { CONTACT_FALLBACKS } from './pricing';
+import { EMAIL_STYLE } from './email-style';
 import {
   EMAIL_BLOCO,
   EMAIL_BOTAO_CHAMADA,
@@ -13,12 +14,13 @@ function blockOnly(subject: string) {
 }
 
 function p(text: string): string {
-  return `<p>${text}</p>`;
+  return `<p style="${EMAIL_STYLE.p}">${text}</p>`;
 }
 
 export const EMAIL_COPY_FALLBACKS_EN: EmailCopy = {
   wrapFooter: {
     email: CONTACT_FALLBACKS.email,
+    phone: CONTACT_FALLBACKS.phone,
     instagram: SIG_INSTAGRAM_FALLBACK,
     website: SIG_WEBSITE_FALLBACK,
     assetBase: SIG_WEBSITE_FALLBACK,

@@ -16,7 +16,7 @@ export function educationEmail(
   locale: Locale = DEFAULT_LOCALE,
 ): string {
   const block = educationBlock(formData, pricing, notes, locale);
-  const body = fillTemplateBody(copy.body, block, templateVars(formData, attachSinalVars('education', formData, pricing)));
+  const body = fillTemplateBody(copy.body, block, templateVars(formData, attachSinalVars('education', formData, pricing, locale)));
   return wrapEmail(body, footer);
 }
 

@@ -75,7 +75,7 @@ function optionLabel(opt: SelectOption): string {
 }
 
 const BRIDAL_ONLY = [
-  'data_casamento', 'hora_pronta', 'local_preparacao', 'local_prova',
+  'data_casamento', 'hora_pronta', 'local_preparacao', 'local_prova', 'data_prova',
   'servicos_procurados', 'numero_guests', 'addon_skin_call',
 ];
 
@@ -160,6 +160,15 @@ function withKeys(entries: [string, string][], keys: readonly string[]): [string
   return [...rest, ...extra];
 }
 
+function withKeyAfter(entries: [string, string][], key: string, afterKey: string): [string, string][] {
+  const values = new Map(entries);
+  const rest = entries.filter(([item]) => item !== key);
+  const item: [string, string] = [key, values.get(key) ?? ''];
+  const idx = rest.findIndex(([itemKey]) => itemKey === afterKey);
+  if (idx === -1) return [item, ...rest];
+  return [...rest.slice(0, idx + 1), item, ...rest.slice(idx + 1)];
+}
+
 export function visibleFormEntries(type: string, data: Record<string, unknown>): [string, string][] {
   let entries = toEntries(data, (key) => {
     if (type === 'bridal') return !BEAUTY_ONLY.includes(key);
@@ -167,7 +176,10 @@ export function visibleFormEntries(type: string, data: Record<string, unknown>):
     if (type === 'skin-call') return key !== 'valor_deslocacao';
     return true;
   });
-  if (type === 'bridal') entries = withKeys(entries, BRIDAL_PROFILE_KEYS);
+  if (type === 'bridal') {
+    entries = withKeyAfter(entries, 'data_prova', 'local_prova');
+    entries = withKeys(entries, BRIDAL_PROFILE_KEYS);
+  }
   if (type === 'beauty') entries = withKeys(entries, BEAUTY_PROFILE_KEYS);
   if (type === 'skin-call') return entries;
   return withKeys(entries, COMMON_PROFILE_KEYS);
@@ -195,7 +207,8 @@ function renderEditControl(field: EditableField, kind: FieldKind): string {
     return `<select class="in field-edit" name="${name}"${req}>${opts}</select>`;
   }
 
-  return `<input class="in field-edit" type="${kind}" name="${name}" value="${value}"${req} />`;
+  const step = kind === 'number' && field.key.startsWith('valor_') ? ' step="0.01"' : '';
+  return `<input class="in field-edit" type="${kind}" name="${name}" value="${value}"${step}${req} />`;
 }
 
 function renderField(field: EditableField): string {

@@ -56,7 +56,7 @@ echo -e "  ${GREEN}✓${NC} Login OK"
 echo -e "\n${YELLOW}═══ Step 1: Criar lead Skin Call ═══${NC}"
 
 RESP=$(curl -s -X POST "$BASE/api/lead" \
-  -d "form_type=skin-call&nome=Flow+Test&telefone=919999999&email=flow@teste.com&plano=Full+Year+Call+(Plano+12M)&rotina=Diaria&rotina_frequencia=Quase+todos+os+dias&pele_tipo=Oleosa&preocupacoes=Borbulhas" \
+  -d "form_type=skin-call&nome=Flow+Test&telefone=%2B351919999999&email=flow@teste.com&plano=Full+Year+Call+(Plano+12M)&rotina=Diaria&rotina_frequencia=Quase+todos+os+dias&pele_tipo=Oleosa&preocupacoes=Borbulhas" \
   -w "\n%{http_code}")
 BODY=$(echo "$RESP" | head -n -1)
 STATUS=$(echo "$RESP" | tail -n 1)

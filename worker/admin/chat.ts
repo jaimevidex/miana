@@ -1,6 +1,6 @@
 // Chat de email na dashboard admin (SSR HTML + JS).
 
-import { escapeHtml, sanitizeEmailHtml } from '../email-sanitize';
+import { escapeHtml, sanitizeEmailHtml, htmlToPlain, splitQuotedReply } from '../email-sanitize';
 import type { MessageWithAttachments } from '../conversation';
 import { rteFormatBindJs, rteFormatButtons } from './rte';
 import { threadReplySubject } from '../email-match';
@@ -15,12 +15,20 @@ export const CHAT_CSS = `
 .chat-meta{font-size:11px;opacity:.75;margin-bottom:6px}
 .chat-bubble.out .chat-html a{color:#8a2831;text-decoration:underline}
 .chat-bubble.in .chat-html a{color:#8a2831}
-.chat-html p{margin:0 0 8px}
+.chat-html p{margin:0 0 12px}
 .chat-html p:last-child{margin:0}
 .chat-atts{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
 .chat-atts a{font-size:12px;color:inherit;opacity:.9}
+.chat-bubble.is-collapsed{max-width:100%;align-self:stretch;padding:8px 12px;border-radius:10px}
+.chat-toggle{display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;color:inherit;font:inherit;padding:0}
+.chat-snip{display:none;margin-top:4px;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;font-weight:400}
+.chat-bubble.is-collapsed .chat-snip{display:block}
+.chat-bubble.is-collapsed .chat-body{display:none}
+.chat-quote{margin-top:10px;border-top:1px solid rgba(138,40,49,.15);padding-top:8px}
+.chat-quote summary{cursor:pointer;color:#8a7a74;font-size:12px;font-weight:600}
+.chat-quote .chat-html{margin-top:8px}
 .unread-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#8a2831;margin-left:6px;vertical-align:middle}
-.chat-composer .rte-editor{min-height:160px;max-height:36vh}
+.chat-composer .rte-editor{min-height:160px;max-height:36vh;max-width:720px}
 .rte-tpl{font-size:12px;font-weight:600}
 .lang-toggle{display:inline-flex;align-items:center;gap:2px;margin-right:6px}
 .lang-toggle button{font-size:11px;font-weight:700;letter-spacing:.04em;padding:4px 8px;border:1px solid #e5ded7;background:#fff;color:#8a7a74;border-radius:8px;cursor:pointer}
@@ -42,20 +50,41 @@ function formatChatDate(ts: number): string {
   });
 }
 
-function renderBubble(m: MessageWithAttachments): string {
+function messageSnippet(html: string, text: string): string {
+  const plain = (htmlToPlain(html) || text || '').replace(/\s+/g, ' ').trim();
+  if (plain.length <= 140) return plain;
+  return `${plain.slice(0, 137)}...`;
+}
+
+function renderBubble(m: MessageWithAttachments, collapsed: boolean): string {
   const side = m.direction === 'outbound' ? 'out' : 'in';
   const who = m.direction === 'outbound' ? 'Tu' : escapeHtml(m.fromAddress);
-  const html = m.direction === 'inbound' ? sanitizeEmailHtml(m.html || '') : (m.html || '');
-  const body = html || `<p>${escapeHtml(m.text || '')}</p>`;
+  const raw = m.html || '';
+  const split = splitQuotedReply(raw);
+  const main = m.direction === 'inbound' ? sanitizeEmailHtml(split.main) : split.main;
+  const quoted = split.quoted
+    ? (m.direction === 'inbound' ? sanitizeEmailHtml(split.quoted) : split.quoted)
+    : '';
+  const body = main || `<p>${escapeHtml(m.text || '')}</p>`;
+  const snippet = escapeHtml(messageSnippet(main || body, m.text || ''));
   const atts = (m.attachments || []).map((a) => {
     const href = `/api/admin/email-attachment?key=${encodeURIComponent(a.r2Key)}`;
     return `<a href="${href}" target="_blank" rel="noopener">${escapeHtml(a.filename)}</a>`;
   }).join('');
+  const quoteBlock = quoted
+    ? `<details class="chat-quote"><summary>Ver mensagem anterior</summary><div class="chat-html">${quoted}</div></details>`
+    : '';
   return `
-    <div class="chat-bubble ${side}" data-id="${escapeHtml(m.id)}">
-      <div class="chat-meta">${who} · ${formatChatDate(m.sentAt)}${m.subject ? ` · ${escapeHtml(m.subject)}` : ''}</div>
-      <div class="chat-html">${body}</div>
-      ${atts ? `<div class="chat-atts">${atts}</div>` : ''}
+    <div class="chat-bubble ${side}${collapsed ? ' is-collapsed' : ''}" data-id="${escapeHtml(m.id)}">
+      <button type="button" class="chat-toggle" aria-expanded="${collapsed ? 'false' : 'true'}">
+        <span class="chat-meta">${who} · ${formatChatDate(m.sentAt)}${m.subject ? ` · ${escapeHtml(m.subject)}` : ''}</span>
+        <span class="chat-snip">${snippet || 'Email'}</span>
+      </button>
+      <div class="chat-body">
+        <div class="chat-html">${body}</div>
+        ${quoteBlock}
+        ${atts ? `<div class="chat-atts">${atts}</div>` : ''}
+      </div>
     </div>`;
 }
 
@@ -77,7 +106,7 @@ export function renderChatPanel(opts: {
     ? 'Ainda não há emails nesta conversa. Envia o introdutório para começar.'
     : 'Ainda não há emails nesta conversa. Envia o orçamento para começar.';
   const bubbles = opts.messages.length
-    ? opts.messages.map(renderBubble).join('')
+    ? opts.messages.map((m, i) => renderBubble(m, i < opts.messages.length - 1)).join('')
     : `<p class="chat-empty">${emptyHint}</p>`;
 
   const continueNote = opts.continueOnClientId
@@ -91,7 +120,7 @@ export function renderChatPanel(opts: {
   const replySubject = firstSubject ? threadReplySubject(firstSubject) : '';
   const subjectLocked = !!replySubject;
   const subjectField = subjectLocked
-    ? `<div class="chat-thread-subject"><span>A responder no mesmo fio</span>${escapeHtml(replySubject)}</div>
+    ? `<div class="chat-thread-subject"><span>A responder na mesma conversa</span>${escapeHtml(replySubject)}</div>
       <input type="hidden" id="chat-subject" value="${escapeHtml(replySubject)}" data-locked="1" />`
     : `<label class="lbl" for="chat-subject">Assunto</label>
       <input id="chat-subject" class="in" style="margin-bottom:12px" placeholder="Assunto do email" />`;
@@ -242,6 +271,15 @@ export function chatScript(): string {
         if (thread) thread.scrollTop = thread.scrollHeight;
       }
       scrollChat();
+
+      if (thread) thread.addEventListener('click', function(e){
+        const btn = e.target.closest('.chat-toggle');
+        if (!btn) return;
+        const bubble = btn.closest('.chat-bubble');
+        if (!bubble) return;
+        const collapsed = bubble.classList.toggle('is-collapsed');
+        btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      });
 
       function qs() {
         const p = new URLSearchParams();

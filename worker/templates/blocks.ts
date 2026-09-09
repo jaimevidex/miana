@@ -1,15 +1,17 @@
 // Blocos gerados (preços, pagamento, botões) injectados em {{bloco}} ou tokens de botão.
 
 import type { Pricing } from '../pricing';
-import { beautyQuoteTotal, bridalQuoteTotal, educationQuoteTotal, parseTravelFee, reservationDeposit, skinCallPlanPrice } from '../bridal-pricing';
-import { fieldRow, sectionTitle, priceRow } from './base';
+import { beautyQuoteTotal, bridalQuoteTotal, educationQuoteTotal, formatEuro, parseTravelFee, reservationDeposit, skinCallPlanPrice } from '../bridal-pricing';
+import { EMAIL_STYLE } from '../email-style';
+import { priceRow, priceRowOpen, priceTable, sectionTitle, totalRow } from './base';
 import { DEFAULT_LOCALE, type Locale } from '../locale';
 
 const BLOCK = {
   pt: {
     data: 'Dados',
     services: 'Serviços',
-    investment: 'Valor',
+    investment: 'Orçamento',
+    amount: 'Valor',
     total: 'Valor total',
     deposit: 'Valor sinal',
     travel: 'Deslocação',
@@ -24,6 +26,7 @@ const BLOCK = {
     readyTime: 'Hora de estar pronta',
     prepLocation: 'Local da preparação',
     trialLocation: 'Local da prova',
+    trialDate: 'Data da prova',
     bride: 'Noiva',
     eventDate: 'Data do evento',
     eventLocation: 'Local do evento',
@@ -56,7 +59,8 @@ const BLOCK = {
   en: {
     data: 'Details',
     services: 'Services',
-    investment: 'Amount',
+    investment: 'Quote',
+    amount: 'Amount',
     total: 'Total amount',
     deposit: 'Deposit amount',
     travel: 'Travel',
@@ -71,6 +75,7 @@ const BLOCK = {
     readyTime: 'Ready-by time',
     prepLocation: 'Getting-ready location',
     trialLocation: 'Trial location',
+    trialDate: 'Trial date',
     bride: 'Bride',
     eventDate: 'Event date',
     eventLocation: 'Event location',
@@ -108,32 +113,19 @@ function L(locale: Locale = DEFAULT_LOCALE) {
 
 function notesHtml(notes: string | undefined, locale: Locale): string {
   if (!notes) return '';
-  return `<h3 style="font-size:16px;color:#8a2831;margin:24px 0 8px">${L(locale).notes}</h3><p>${notes}</p>`;
-}
-
-function priceRowOpen(label: string, amount: number | string): string {
-  const value = typeof amount === 'number' ? `${amount}€` : amount;
-  return `<p style="margin:4px 0;display:flex;justify-content:space-between"><span>${label}</span><strong>${value}</strong></p>`;
+  return `${sectionTitle(L(locale).notes)}<p style="${EMAIL_STYLE.p}">${notes}</p>`;
 }
 
 function travelRow(formData: Record<string, string>, locale: Locale): string {
   const travel = parseTravelFee(formData);
   const t = L(locale);
-  return travel > 0 ? priceRow(t.travel, travel) : priceRowOpen(t.travel, t.pending);
-}
-
-function totalRow(label: string, amount: number): string {
-  return `
-    <p style="margin:12px 0 0;font-size:16px;padding-top:8px;display:flex;justify-content:space-between">
-      <strong>${label}</strong>
-      <strong>${amount}€</strong>
-    </p>`;
+  return travel > 0 ? priceRow(t.travel, travel, locale) : priceRowOpen(t.travel, t.pending);
 }
 
 function sinalRow(type: 'bridal' | 'beauty' | 'education', formData: Record<string, string>, pricing: Pricing, locale: Locale): string {
   const amount = reservationDeposit(type, formData, pricing);
   if (amount == null) return '';
-  return totalRow(L(locale).deposit, amount);
+  return totalRow(L(locale).deposit, amount, locale);
 }
 
 function guestPriceRows(
@@ -151,7 +143,7 @@ function guestPriceRows(
   ];
   return lines.map((line) => {
     if (!preview && line.qty <= 0) return '';
-    return priceRow(`${line.label} × ${line.qty} × ${line.unit}€`, line.qty * line.unit);
+    return priceRow(`${line.label} × ${line.qty} × ${formatEuro(line.unit, locale)}`, line.qty * line.unit, locale);
   }).join('');
 }
 
@@ -165,19 +157,21 @@ export function bridalBlock(
   const t = L(locale);
   const quote = bridalQuoteTotal(formData, pricing);
   const addonRow = quote.addonPrice > 0
-    ? priceRow(`${t.addon} - ${quote.addonLabel}`, quote.addonPrice)
+    ? priceRow(`${t.addon} - ${quote.addonLabel}`, quote.addonPrice, locale)
     : preview
       ? priceRowOpen(t.addon, '—')
       : '';
 
   return `
-    ${sectionTitle(t.investment)}
-    ${priceRow('Bridal - ' + quote.brideLabel, quote.bridePrice)}
+    ${sectionTitle(t.investment, 'title')}
+    ${priceTable(`
+    ${priceRow('Bridal - ' + quote.brideLabel, quote.bridePrice, locale)}
     ${guestPriceRows(quote.guests, pricing, locale, preview)}
     ${addonRow}
     ${travelRow(formData, locale)}
-    ${totalRow(t.total, quote.total)}
+    ${totalRow(t.total, quote.total, locale)}
     ${sinalRow('bridal', formData, pricing, locale)}
+    `)}
     ${notesHtml(notes, locale)}
   `;
 }
@@ -193,16 +187,18 @@ export function beautyBlock(
   const g = pricing.beauty;
   const quote = beautyQuoteTotal(formData, pricing);
   const priceRows = quote.legacy
-    ? `${priceRow('Beauty - ' + quote.servicoLabel, quote.base)}
-    ${quote.extras > 0 || preview ? priceRow(`${t.extras} × ` + Math.max(0, quote.pessoas - 1) + ' × ' + g.hair + '€', quote.extras) : ''}`
+    ? `${priceRow('Beauty - ' + quote.servicoLabel, quote.base, locale)}
+    ${quote.extras > 0 || preview ? priceRow(`${t.extras} × ` + Math.max(0, quote.pessoas - 1) + ' × ' + formatEuro(g.hair, locale), quote.extras, locale) : ''}`
     : guestPriceRows(quote.guests, pricing, locale, preview);
 
   return `
-    ${sectionTitle(t.investment)}
+    ${sectionTitle(t.investment, 'title')}
+    ${priceTable(`
     ${priceRows}
     ${travelRow(formData, locale)}
-    ${totalRow(t.total, quote.total)}
+    ${totalRow(t.total, quote.total, locale)}
     ${sinalRow('beauty', formData, pricing, locale)}
+    `)}
     ${notesHtml(notes, locale)}
   `;
 }
@@ -216,15 +212,16 @@ export function skinCallBlock(
 ): string {
   const t = L(locale);
   const plan = skinCallPlanPrice(formData.plano, pricing);
-  const planRow = plan
-    ? priceRow(plan.label, plan.price)
+  const rows = plan
+    ? `${priceRowOpen(`<strong>${t.plan}</strong>`, `<strong>${plan.label}</strong>`)}
+    ${priceRowOpen(`<strong>${t.amount}</strong>`, `<strong>${formatEuro(plan.price, locale)}</strong>`)}`
     : preview
-      ? priceRowOpen(t.plan, '—')
+      ? `${priceRowOpen(`<strong>${t.plan}</strong>`, '<strong>-</strong>')}
+    ${priceRowOpen(`<strong>${t.amount}</strong>`, '<strong>-</strong>')}`
       : '';
 
   return `
-    ${sectionTitle(t.investment)}
-    ${planRow}
+    ${priceTable(rows)}
     ${notesHtml(notes, locale)}
   `;
 }
@@ -238,11 +235,13 @@ export function educationBlock(
   const t = L(locale);
   const quote = educationQuoteTotal(formData, pricing);
   return `
-    ${sectionTitle(t.investment)}
-    ${priceRow(t.workshop, quote.workshop)}
+    ${sectionTitle(t.investment, 'title')}
+    ${priceTable(`
+    ${priceRow(t.workshop, quote.workshop, locale)}
     ${travelRow(formData, locale)}
-    ${totalRow(t.total, quote.total)}
+    ${totalRow(t.total, quote.total, locale)}
     ${sinalRow('education', formData, pricing, locale)}
+    `)}
     ${notesHtml(notes, locale)}
   `;
 }
@@ -250,11 +249,11 @@ export function educationBlock(
 export function termsBlock(opts: { iban: string; accountName: string; mbway: string; notes?: string }, locale: Locale = DEFAULT_LOCALE): string {
   const t = L(locale);
   return `
-    <h3 style="font-size:16px;color:#8a2831;margin:24px 0 8px">${t.payment}</h3>
-    <p style="margin:4px 0"><strong>${t.accountHolder}:</strong> ${opts.accountName}</p>
-    <p style="margin:4px 0"><strong>IBAN:</strong> ${opts.iban}</p>
-    <p style="margin:4px 0"><strong>MB Way:</strong> ${opts.mbway}</p>
-    ${opts.notes ? `<p>${opts.notes}</p>` : ''}
+    ${sectionTitle(t.payment)}
+    <p style="${EMAIL_STYLE.p}"><strong>${t.accountHolder}:</strong> ${opts.accountName}</p>
+    <p style="${EMAIL_STYLE.p}"><strong>IBAN:</strong> ${opts.iban}</p>
+    <p style="${EMAIL_STYLE.p}"><strong>MB Way:</strong> ${opts.mbway}</p>
+    ${opts.notes ? `<p style="${EMAIL_STYLE.p}">${opts.notes}</p>` : ''}
   `;
 }
 
@@ -262,7 +261,7 @@ export function meetCallButton(opts: { meetUrl: string }, locale: Locale = DEFAU
   const t = L(locale);
   return `
     <p style="text-align:center;margin:28px 0;" contenteditable="false">
-      <a href="${opts.meetUrl}" contenteditable="false" style="display:inline-block;background:#8a2831;color:#fbf5ef;text-decoration:none;padding:14px 28px;border-radius:999px;font-weight:600;">
+      <a href="${opts.meetUrl}" contenteditable="false" style="${EMAIL_STYLE.button}">
         ${t.joinMeet}
       </a>
     </p>
@@ -273,7 +272,7 @@ export function formCallButton(opts: { formUrl: string }, locale: Locale = DEFAU
   const t = L(locale);
   return `
     <p style="text-align:center;margin:28px 0;" contenteditable="false">
-      <a href="${opts.formUrl}" contenteditable="false" style="display:inline-block;background:transparent;color:#8a2831;text-decoration:none;padding:14px 28px;border-radius:999px;font-weight:600;border:1.5px solid #8a2831;">
+      <a href="${opts.formUrl}" contenteditable="false" style="${EMAIL_STYLE.buttonOutline}">
         ${t.openForm}
       </a>
     </p>
@@ -286,8 +285,8 @@ export function scheduleFormBlock(opts: { meetUrl: string; formUrl: string }, lo
 
 export function diagnosticBlock(url: string, locale: Locale = DEFAULT_LOCALE): string {
   return `
-    <p style="text-align:center; margin:32px 0;" contenteditable="false">
-      <a href="${url}" contenteditable="false" style="display:inline-block; background:#8a2831; color:#fbf5ef; text-decoration:none; padding:14px 28px; border-radius:999px; font-weight:600;">
+    <p style="text-align:center;margin:32px 0;" contenteditable="false">
+      <a href="${url}" contenteditable="false" style="${EMAIL_STYLE.button}">
         ${L(locale).openDiag}
       </a>
     </p>
@@ -303,6 +302,7 @@ export const DEMO_FORM: Record<EmailDemoId, Record<string, string>> = {
     hora_pronta: '{{hora_pronta}}',
     local_preparacao: '{{local_preparacao}}',
     local_prova: '{{local_prova}}',
+    data_prova: '{{data_prova}}',
     servicos_procurados: '{{servicos_procurados}}',
     guests_makeup: '{{guests_makeup}}',
     guests_hair: '{{guests_hair}}',

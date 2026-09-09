@@ -10,6 +10,7 @@ import {
   type EmailWrapFooter,
 } from '../email-copy';
 import { wrapEmail } from './base';
+import { DEFAULT_LOCALE, type Locale } from '../locale';
 
 export function bridalIntroSubject(copy: EmailTemplateCopy = EMAIL_COPY_FALLBACKS.bridal_intro): string {
   return copy.subject;
@@ -20,7 +21,8 @@ export function bridalIntroEmail(
   copy: EmailTemplateCopy = EMAIL_COPY_FALLBACKS.bridal_intro,
   footer?: EmailWrapFooter,
   pricing: Pricing = PRICING_FALLBACKS,
+  locale: Locale = DEFAULT_LOCALE,
 ): string {
-  const body = fillTemplateBody(copy.body, '', templateVars(formData, attachSinalVars('bridal', formData, pricing)));
+  const body = fillTemplateBody(copy.body, '', templateVars(formData, attachSinalVars('bridal', formData, pricing, locale)));
   return wrapEmail(body, footer);
 }

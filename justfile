@@ -72,6 +72,26 @@ push:
 worker-check:
     npx tsc --noEmit -p worker/tsconfig.json
 
+# Apagar leads, clients e dados relacionados na D1 local
+db-clean:
+    ./scripts/clean-leads-clients.sh
+
+# Idem em produção (pede confirmação CLEAN PRODUCTION)
+db-clean-remote:
+    ./scripts/clean-leads-clients.sh --remote
+
+# Copiar settings de produção para a D1 local
+db-pull-settings:
+    ./scripts/pull-settings.sh
+
+# Enviar templates (email_*) da D1 local para produção
+db-push-settings:
+    ./scripts/push-settings.sh
+
+# Enviar todas as settings locais para produção (exceto Google Calendar)
+db-push-settings-all:
+    ./scripts/push-settings.sh --all
+
 # Deploy para a Cloudflare: build + deploy + verificação (rebuild sempre evita o bug de assets não subirem)
 deploy:
     npm run build

@@ -377,10 +377,22 @@ export const pt = {
   forms: {
     sending: 'A enviar...',
     success:
-      'Obrigada! O teu pedido foi registado. Responderei assim que possível, num prazo de até 48h com todas as informações.',
+      'Obrigada! O teu pedido foi registado. Responderei assim que possível com todas as informações.',
     skinCallSuccess: 'Pedido enviado! Vou analisar e entrar em contacto com um orçamento.',
     error: 'Algo correu mal. Tenta novamente ou escreve para {email}.',
     requiredNote: 'Campos obrigatórios',
+    validation: {
+      required: 'Preenche este campo.',
+      name: 'O nome deve ter pelo menos 2 caracteres.',
+      email: 'Escreve um e-mail válido, por exemplo nome@email.com.',
+      phoneEmpty: 'Indica o número, só com dígitos.',
+      phonePt: 'O número português tem 9 dígitos, sem espaços.',
+      phoneOther: 'O número deve ter pelo menos 6 dígitos, sem espaços.',
+      dialCode: 'Escolhe o indicativo do país.',
+      chooseOne: 'Escolhe pelo menos uma opção.',
+      guests: 'Indica pelo menos 1 pessoa num dos serviços.',
+      dialSearch: 'Pesquisar país ou indicativo',
+    },
     submit: 'Pedir Orçamento',
     fullName: 'Nome completo',
     phone: 'Contacto telefónico',

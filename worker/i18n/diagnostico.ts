@@ -74,7 +74,7 @@ const pt: DiagChrome = {
   sending: 'A enviar avaliação de pele...',
   saveError: 'Erro ao guardar. Tenta de novo.',
   sendError: 'Algo correu mal. Tenta de novo.',
-  successBody: 'Obrigada! Recebi a tua avaliação de pele. Entrarei em contacto dentro de 48h.',
+  successBody: 'Obrigada! Recebi a tua avaliação de pele. Entrarei em contacto assim que possível',
   photosLabel: 'Upload de Fotos da Pele',
   photosHint:
     'Por favor, anexa 3 fotos da tua pele sem qualquer maquilhagem, creme ou filtro, tiradas com luz natural de janela (sem luz direta):<br/>1. Frente | 2. Perfil Esquerdo | 3. Perfil Direito<br/>Formatos: JPG, PNG ou HEIC (iPhone) - HEIC é convertido automaticamente.',

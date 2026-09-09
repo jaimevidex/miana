@@ -16,7 +16,7 @@ export function bridalEmail(
   locale: Locale = DEFAULT_LOCALE,
 ): string {
   const block = bridalBlock(formData, pricing, notes, locale);
-  const body = fillTemplateBody(copy.body, block, templateVars(formData, attachSinalVars('bridal', formData, pricing)));
+  const body = fillTemplateBody(copy.body, block, templateVars(formData, attachSinalVars('bridal', formData, pricing, locale)));
   return wrapEmail(body, footer);
 }
 

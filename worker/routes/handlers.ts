@@ -13,6 +13,7 @@ import { getPricing } from '../pricing';
 import { getCookieValue } from '../http';
 import { attachSinalVars } from '../bridal-pricing';
 import { attachPersonFields, interpolate, EMAIL_CUSTOM_REGISTRY_KEY } from '../email-copy';
+import { normalizeEmailBodyHtml } from '../email-sanitize';
 import { isAttachmentsSettingKey } from '../template-attachments';
 import { generateQuoteHtml, generateQuoteSubject } from '../services/quotes';
 import { DEFAULT_LOCALE, parseLocale } from '../locale';
@@ -94,8 +95,9 @@ export async function handleLead(request: Request, env: Env): Promise<Response> 
     const nome = ((form.get('nome') || '') as string).trim();
     const telefone = ((form.get('telefone') || '') as string).trim();
     const email = ((form.get('email') || '') as string).trim().toLowerCase();
+    const locale = parseLocale(String(form.get('locale') || ''));
 
-    const err = validateLead({ nome, telefone, email, type });
+    const err = validateLead({ nome, telefone, email, type }, locale);
     if (err) return json({ success: false, error: err }, 400);
 
     const allowed = await allowRequest(env, clientIP, email);
@@ -107,7 +109,6 @@ export async function handleLead(request: Request, env: Env): Promise<Response> 
     const token = generateToken();
 
     // Recolher todos os campos do formulário (exclui os básicos e honeypot)
-    const locale = parseLocale(String(form.get('locale') || ''));
     const skip = new Set(['botcheck', 'form_type', 'nome', 'telefone', 'email', 'locale']);
     const formData: Record<string, string> = {};
     form.forEach((value, key) => {
@@ -403,7 +404,7 @@ export async function handleDiagnostico(request: Request, env: Env): Promise<Res
 
     return json({
       success: true,
-      message: 'Obrigada! Recebi a tua avaliação de pele. Entrarei em contacto dentro de 48h.',
+      message: 'Obrigada! Recebi a tua avaliação de pele. Entrarei em contac dentro de .',
     });
   } catch (e) {
     console.error('[api/diagnostico] error:', e);
@@ -539,7 +540,7 @@ export async function handlePreviewQuote(request: Request, env: Env, id: string 
     const html = await generateQuoteHtml(env, lead.type as LeadType, formData, pricing, undefined, locale);
     const subject = interpolate(
       await generateQuoteSubject(env, lead.type as LeadType, locale),
-      { ...formData, ...attachSinalVars(lead.type as LeadType, formData, pricing) },
+      { ...formData, ...attachSinalVars(lead.type as LeadType, formData, pricing, locale) },
     );
 
     return json({ success: true, subject, html });
@@ -638,10 +639,11 @@ export async function handleUpdateSettings(request: Request, env: Env): Promise<
     const db = createDb(env);
     const now = Date.now();
 
-    for (const [key, value] of Object.entries(body)) {
+    for (const [key, raw] of Object.entries(body)) {
       if (key === 'google_calendar_refresh_token') continue;
       if (key === EMAIL_CUSTOM_REGISTRY_KEY) continue;
       if (isAttachmentsSettingKey(key)) continue;
+      const value = /^email_.+_body(_en)?$/.test(key) ? normalizeEmailBodyHtml(raw) : raw;
       await db.insert(settingsTable).values({ key, value, updatedAt: now }).onConflictDoUpdate({
         target: settingsTable.key,
         set: { value, updatedAt: now },

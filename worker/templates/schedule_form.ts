@@ -2,7 +2,7 @@
 
 import { EMAIL_COPY_FALLBACKS, fillTemplateBody, templateVars, type EmailTemplateCopy, type EmailWrapFooter } from '../email-copy';
 import { wrapEmail } from './base';
-import { formCallButton, meetCallButton, scheduleFormBlock } from './blocks';
+import { formCallButton, meetCallButton } from './blocks';
 import { DEFAULT_LOCALE, type Locale } from '../locale';
 
 export function scheduleFormSubject(copy: EmailTemplateCopy = EMAIL_COPY_FALLBACKS.schedule_form): string {
@@ -21,8 +21,7 @@ export function scheduleFormEmail(opts: {
 }): string {
   const copy = opts.copy ?? EMAIL_COPY_FALLBACKS.schedule_form;
   const locale = opts.locale ?? DEFAULT_LOCALE;
-  const block = scheduleFormBlock({ meetUrl: opts.meetUrl, formUrl: opts.formUrl }, locale);
-  const body = fillTemplateBody(copy.body, block, templateVars(opts.formData, {
+  const body = fillTemplateBody(copy.body, '', templateVars(opts.formData, {
     nome: opts.nome,
     quando: opts.whenLabel,
   }), {

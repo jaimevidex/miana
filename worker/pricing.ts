@@ -59,28 +59,35 @@ function num(map: Record<string, string>, key: string, fallback: number): number
   return v ? parseInt(v, 10) || fallback : fallback;
 }
 
+function money(map: Record<string, string>, key: string, fallback: number): number {
+  const v = map[key];
+  if (!v) return fallback;
+  const n = parseFloat(String(v).replace(',', '.'));
+  return Number.isFinite(n) ? n : fallback;
+}
+
 export async function getPricing(env: Env): Promise<Pricing> {
   const map = await loadSettingsMap(env);
   const F = PRICING_FALLBACKS;
   return {
     bridal: {
-      hair: num(map, 'price_bridal_hair', F.bridal.hair),
-      makeup: num(map, 'price_bridal_makeup', F.bridal.makeup),
-      pack: num(map, 'price_bridal_pack', F.bridal.pack),
+      hair: money(map, 'price_bridal_hair', F.bridal.hair),
+      makeup: money(map, 'price_bridal_makeup', F.bridal.makeup),
+      pack: money(map, 'price_bridal_pack', F.bridal.pack),
     },
     beauty: {
-      hair: num(map, 'price_beauty_hair', F.beauty.hair),
-      makeup: num(map, 'price_beauty_makeup', F.beauty.makeup),
-      pack: num(map, 'price_beauty_pack', F.beauty.pack),
+      hair: money(map, 'price_beauty_hair', F.beauty.hair),
+      makeup: money(map, 'price_beauty_makeup', F.beauty.makeup),
+      pack: money(map, 'price_beauty_pack', F.beauty.pack),
     },
     skin_call: {
-      session1: num(map, 'price_skin_session1', F.skin_call.session1),
-      session2: num(map, 'price_skin_session2', F.skin_call.session2),
-      session3: num(map, 'price_skin_session3', F.skin_call.session3),
-      session4: num(map, 'price_skin_session4', F.skin_call.session4),
+      session1: money(map, 'price_skin_session1', F.skin_call.session1),
+      session2: money(map, 'price_skin_session2', F.skin_call.session2),
+      session3: money(map, 'price_skin_session3', F.skin_call.session3),
+      session4: money(map, 'price_skin_session4', F.skin_call.session4),
     },
     education: {
-      workshop: num(map, 'price_education_workshop', F.education.workshop),
+      workshop: money(map, 'price_education_workshop', F.education.workshop),
     },
   };
 }

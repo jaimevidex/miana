@@ -1,5 +1,6 @@
 ---
 import { copy, localeFromPath, type Locale } from '../../i18n';
+import PhoneField from './PhoneField.astro';
 
 interface Props {
   locale?: Locale;
@@ -24,6 +25,7 @@ const radioCls = 'accent-burgundy';
   data-msg-sending={f.sending}
   data-msg-success={f.skinCallSuccess}
   data-msg-error={f.error}
+  data-validation={JSON.stringify(f.validation)}
 >
   <input type="hidden" name="form_type" value="skin-call" />
   <input type="hidden" name="locale" value={locale} />
@@ -36,10 +38,7 @@ const radioCls = 'accent-burgundy';
           <label class={labelCls} for="sc-name">{f.fullName} <span class="text-burgundy">*</span></label>
           <input id="sc-name" name="nome" type="text" required class={inputCls} />
         </div>
-        <div>
-          <label class={labelCls} for="sc-phone">{f.phone} <span class="text-burgundy">*</span></label>
-          <input id="sc-phone" name="telefone" type="tel" required class={inputCls} />
-        </div>
+        <PhoneField id="sc-phone" locale={locale} label={f.phone} />
       </div>
 
       <div>
@@ -78,7 +77,7 @@ const radioCls = 'accent-burgundy';
     </div>
 
     <div class="flex flex-col gap-6">
-      <fieldset>
+      <fieldset data-require-one="pele_tipo">
         <legend class={labelCls}>{s.skinFeel} <span class="text-burgundy">*</span></legend>
         <div class="grid gap-2 mt-3">
           {s.skinTypes.map((o) => (
@@ -90,7 +89,7 @@ const radioCls = 'accent-burgundy';
         </div>
       </fieldset>
 
-      <fieldset>
+      <fieldset data-require-one="preocupacoes">
         <legend class={labelCls}>{s.concerns} <span class="text-burgundy">*</span></legend>
         <div class="grid gap-2 mt-3">
           {s.concernOptions.map((o) => (
@@ -101,7 +100,13 @@ const radioCls = 'accent-burgundy';
           ))}
         </div>
         <div id="preocupacoes-outro-wrap" class="hidden mt-2">
-          <input type="text" name="preocupacoes_outro" placeholder={s.otherPlaceholder} class={inputCls} />
+          <input
+            type="text"
+            name="preocupacoes_outro"
+            placeholder={s.otherPlaceholder}
+            class={inputCls}
+            data-required-if-checked="preocupacoes:Outra"
+          />
         </div>
       </fieldset>
     </div>
@@ -118,7 +123,7 @@ const radioCls = 'accent-burgundy';
 </form>
 
 <script>
-  import { submitForm, validateRequiredFields, scrollFormIntoView } from '../../lib/form-utils';
+  import { submitForm, validateForm, scrollToFirstError } from '../../lib/form-utils';
 
   const form = document.getElementById('form-skin-call') as HTMLFormElement | null;
   const status = document.getElementById('form-skin-call-status');
@@ -137,8 +142,8 @@ const radioCls = 'accent-burgundy';
 
   form?.addEventListener('submit', (e) => {
     e.preventDefault();
-    if (!validateRequiredFields(form)) {
-      scrollFormIntoView(form);
+    if (!validateForm(form)) {
+      scrollToFirstError(form);
       return;
     }
     void submitForm(form, status);

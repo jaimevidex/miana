@@ -105,9 +105,8 @@ tr.lead-row-eliminado:hover td{background:rgba(183,28,28,.14)}
 .settings-email-panel-head h3{margin:0}
 .settings-hint{color:#8a7a74;font-size:13px;margin-bottom:16px}
 textarea.in.email-area{min-height:110px}
-.rte-editor.email-rte{min-height:280px;max-height:56vh}
-.rte-editor h2,.rte-editor.email-rte h2{font-size:20px;color:#8a2831;margin:0 0 16px;border:none;padding-bottom:0}
-.rte-editor h3,.rte-editor.email-rte h3{font-size:16px;color:#8a2831;margin:24px 0 8px;border:none;padding-bottom:0}
+.rte-editor.email-rte{min-height:280px;max-height:56vh;max-width:720px}
+.rte-editor h2,.rte-editor.email-rte h2,.rte-editor h3,.rte-editor.email-rte h3{font-size:16px;font-weight:700;color:#8a2831;margin:24px 0 8px;border:none;padding-bottom:0}
 .field-picker{margin:0 0 12px;border:1px solid #e5ded7;border-radius:10px;padding:8px 12px;background:#fff}
 .field-picker summary{cursor:pointer;font-size:13px;font-weight:600;color:#3b2a2a}
 .field-picker-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
@@ -149,8 +148,10 @@ textarea.in.email-area{min-height:110px}
 .rte-btn:focus-visible{outline:2px solid #8a2831;outline-offset:1px}
 .rte-sep{width:1px;height:22px;background:#e5ded7;margin:0 4px}
 .rte-select{height:34px;border:1px solid #e5ded7;border-radius:8px;background:#fff;color:#3b2a2a;font-size:13px;padding:0 8px;cursor:pointer}
-.rte-editor{min-height:280px;max-height:50vh;overflow-y:auto;padding:16px 18px;font-size:15px;line-height:1.6;color:#3b2a2a;outline:none}
+.rte-editor{min-height:280px;max-height:50vh;overflow-y:auto;padding:16px 18px;font-size:16px;line-height:1.6;color:#3b2a2a;outline:none;font-family:Arial,Helvetica,sans-serif}
 .rte-editor:empty:before{content:attr(data-placeholder);color:#b4a8a1;pointer-events:none}
+.rte-editor p{margin:0 0 12px}
+.rte-editor p:last-child{margin-bottom:0}
 .rte-editor ul,.rte-editor ol{padding-left:1.4em;margin:8px 0}
 .rte-editor li{margin:2px 0}
 .rte-editor blockquote{margin:8px 0;padding-left:12px;border-left:3px solid #e5ded7;color:#5c4a4a}

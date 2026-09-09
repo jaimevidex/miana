@@ -23,6 +23,7 @@ const BRIDAL_KEYS = [
 ];
 
 const emptyBridal = Object.fromEntries(visibleFormEntries('bridal', {}));
+assert(emptyBridal.data_prova === '', 'bridal empty profile has data_prova');
 for (const key of BRIDAL_KEYS) {
   assert(emptyBridal[key] === '', `bridal empty profile has ${key}`);
 }
@@ -38,6 +39,11 @@ const fromForm = Object.fromEntries(
   })
 );
 assert(fromForm.data_casamento === '2026-10-15', 'keeps submitted bridal fields');
+assert(fromForm.data_prova === '', 'injects empty data_prova');
+assert(
+  Object.keys(fromForm).indexOf('data_prova') === Object.keys(fromForm).indexOf('local_prova') + 1,
+  'data_prova sits after local_prova',
+);
 assert(fromForm.servicos_procurados === '', 'injects empty servicos_procurados');
 assert(fromForm.guests_makeup === '', 'injects empty guests_makeup');
 assert(fromForm.guests_hair === '', 'injects empty guests_hair');
@@ -76,6 +82,7 @@ assert(beauty.guests_pack === '', 'beauty injects empty guests_pack');
 assert(beauty.valor_deslocacao === '', 'beauty injects empty travel fee');
 assert(!('servicos_procurados' in beauty), 'beauty omits bride service');
 assert(!('addon_skin_call' in beauty), 'beauty omits addon plan');
+assert(!('data_prova' in beauty), 'beauty omits trial date');
 
 assert(!('valor_deslocacao' in Object.fromEntries(visibleFormEntries('skin-call', { valor_deslocacao: '40' }))), 'skin-call has no travel fee');
 assert(Object.fromEntries(visibleFormEntries('education', {})).valor_deslocacao === '', 'education has travel fee');
@@ -96,6 +103,7 @@ const card = renderEditableCard({
   saveKind: 'form-lead',
   originalJson: {},
 });
+assert(card.includes('name="data_prova"'), 'card has trial date');
 assert(card.includes('name="servicos_procurados"'), 'card has bride service control');
 assert(card.includes('name="guests_makeup"'), 'card has guests makeup');
 assert(card.includes('name="addon_skin_call"'), 'card has addon plan');

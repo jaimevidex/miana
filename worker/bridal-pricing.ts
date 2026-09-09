@@ -1,6 +1,7 @@
 // Bridal quote pricing helpers (shared by email template).
 
 import type { LeadType } from './lib';
+import { DEFAULT_LOCALE, parseLocale, type Locale } from './locale';
 import type { Pricing } from './pricing';
 
 export type BrideService = 'Makeup' | 'Hair' | 'Pack' | string;
@@ -75,8 +76,15 @@ export function beautyHeadcount(formData: Record<string, string>): number {
 }
 
 export function parseTravelFee(formData: Record<string, string>): number {
-  const n = parseInt(formData.valor_deslocacao || '', 10);
+  const n = parseFloat((formData.valor_deslocacao || '').replace(',', '.'));
   return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+/** Inteiro: `250€`. Com cêntimos: `237,50€` (pt) / `237.50€` (en). Sem arredondar o valor. */
+export function formatEuro(amount: number, locale: Locale = DEFAULT_LOCALE): string {
+  if (Number.isInteger(amount)) return `${amount}€`;
+  const [whole, frac] = amount.toFixed(2).split('.');
+  return `${whole}${locale === 'en' ? '.' : ','}${frac}€`;
 }
 
 /** Plano Skin Call (formulário ou addon Bridal) → preço Settings. Vazio / "-" → null. */
@@ -186,7 +194,7 @@ export function educationQuoteTotal(formData: Record<string, string>, pricing: P
   return { workshop, travel, total: workshop + travel };
 }
 
-/** Sinal de reserva. Skin Call não tem. Valores em euros inteiros. */
+/** Sinal de reserva. Skin Call não tem. Metade exacta, sem arredondar. */
 export function reservationDeposit(
   type: LeadType,
   formData: Record<string, string>,
@@ -195,23 +203,28 @@ export function reservationDeposit(
   if (type === 'skin-call') return null;
   if (type === 'bridal') {
     const quote = bridalQuoteTotal(formData, pricing);
-    return quote.travel + quote.addonPrice + Math.round(quote.bridePrice / 2);
+    return quote.travel + quote.addonPrice + quote.bridePrice / 2;
   }
   if (type === 'beauty') {
-    return Math.round(beautyQuoteTotal(formData, pricing).total / 2);
+    return beautyQuoteTotal(formData, pricing).total / 2;
   }
-  return Math.round(educationQuoteTotal(formData, pricing).total / 2);
+  return educationQuoteTotal(formData, pricing).total / 2;
 }
 
-export function formatSinalReserva(amount: number | null): string {
-  return amount == null ? '' : `${amount}€`;
+export function formatSinalReserva(
+  amount: number | null,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  return amount == null ? '' : formatEuro(amount, locale);
 }
 
 export function attachSinalVars(
   type: LeadType,
   formData: Record<string, string>,
   pricing: Pricing,
+  locale?: Locale,
 ): Record<string, string> {
-  const value = formatSinalReserva(reservationDeposit(type, formData, pricing));
+  const loc = locale ?? parseLocale(formData.locale);
+  const value = formatSinalReserva(reservationDeposit(type, formData, pricing), loc);
   return value ? { sinal_reserva: value } : {};
 }

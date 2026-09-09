@@ -12,6 +12,7 @@ import {
   EMAIL_TEMPLATE_IDS,
   CUSTOM_TEMPLATE_ID_RE,
   MAX_CUSTOM_TEMPLATES,
+  collapseDuplicatePlaceholders,
   attachPersonFields,
   customAttachmentSettingKeys,
   customCopySettingKeys,
@@ -38,8 +39,9 @@ import {
   textToHtml,
 } from '../worker/email-copy.ts';
 import { EMAIL_COPY_FALLBACKS_EN } from '../worker/email-copy-en.ts';
+import { EMAIL_STYLE, EMAIL_WIDTH, snapColor, snapFontSize } from '../worker/email-style.ts';
 import { beautyBlock, bridalBlock, diagnosticBlock, educationBlock, skinCallBlock } from '../worker/templates/blocks.ts';
-import { beautyQuoteTotal, bridalQuoteTotal, reservationDeposit } from '../worker/bridal-pricing.ts';
+import { beautyQuoteTotal, bridalQuoteTotal, formatEuro, parseTravelFee, reservationDeposit } from '../worker/bridal-pricing.ts';
 import { parseLocale } from '../worker/locale.ts';
 import { bridalEmail } from '../worker/templates/bridal.ts';
 import { bridalIntroEmail } from '../worker/templates/bridal_intro.ts';
@@ -48,7 +50,7 @@ import { emailSignatureHtml, wrapEmail } from '../worker/templates/base.ts';
 import { bridalServicesPlaceholderPdf, BRIDAL_SERVICES_PLACEHOLDER_FILENAME } from '../worker/assets/bridal-services-placeholder.ts';
 import { PRICING_FALLBACKS } from '../worker/pricing.ts';
 import { resolveOutgoingAttachmentType, validateOutgoingAttachment } from '../worker/conversation.ts';
-import { stripEditorLocks } from '../worker/email-sanitize.ts';
+import { normalizeEmailBodyHtml, stripEditorLocks } from '../worker/email-sanitize.ts';
 
 function assert(cond: boolean, msg: string) {
   if (!cond) {
@@ -58,6 +60,9 @@ function assert(cond: boolean, msg: string) {
     console.log('ok', msg);
   }
 }
+
+const styledP = (text: string) => `<p style="${EMAIL_STYLE.p}">${text}</p>`;
+const styledH3 = (text: string) => `<h3 style="${EMAIL_STYLE.h3}">${text}</h3>`;
 
 assert(interpolate('Olá {{nome}}', { nome: 'Ana' }) === 'Olá Ana', 'interpolate nome');
 assert(interpolate('{{quando}} já', { quando: 'terça' }) === 'terça já', 'interpolate quando');
@@ -80,15 +85,15 @@ assert(preview.includes('data-miana-block="1"'), 'preview marks generated block'
 assert(!preview.includes('contenteditable="false"'), 'preview block is editable');
 assert(preview.includes('TABELA'), 'preview shows generated table');
 assert(preview.includes('<p>Fecho</p>'), 'preview keeps closing copy');
-assert(bodyFromEditor(preview) === '<h2>Orçamento</h2>{{bloco}}<p>Fecho</p>', 'editor save restores placeholder');
+assert(bodyFromEditor(preview) === `${styledH3('Orçamento')}{{bloco}}${styledP('Fecho')}`, 'editor save restores placeholder');
 
 const previewEnd = previewTemplateBody('<h2>Orçamento</h2><p>Olá {{nome}}</p>{{bloco}}', '<p>TABELA</p>');
 assert(previewEnd.includes('<!--miana-block-end--><p><br></p>'), 'preview adds editable paragraph after block');
-assert(bodyFromEditor(previewEnd) === '<h2>Orçamento</h2><p>Olá {{nome}}</p>{{bloco}}', 'editor save strips empty paragraph after block');
+assert(bodyFromEditor(previewEnd) === `${styledH3('Orçamento')}${styledP('Olá {{nome}}')}{{bloco}}`, 'editor save strips empty paragraph after block');
 
 const previewStart = previewTemplateBody('{{bloco}}<p>Fecho</p>', '<p>TABELA</p>');
 assert(previewStart.startsWith('<p><br></p><!--miana-block-start-->'), 'preview adds editable paragraph before block');
-assert(bodyFromEditor(previewStart) === '{{bloco}}<p>Fecho</p>', 'editor save strips empty paragraph before block');
+assert(bodyFromEditor(previewStart) === `{{bloco}}${styledP('Fecho')}`, 'editor save strips empty paragraph before block');
 
 assert(!fillTemplateBody('<p>Só texto</p>', '<p>TABELA</p>').includes('TABELA'), 'fill does not append block without {{bloco}}');
 
@@ -107,7 +112,7 @@ assert(btnPreview.includes('data-miana-block="botao_formulario"'), 'preview mark
 assert(btnPreview.includes('contenteditable="false"'), 'preview locks button labels');
 assert(btnPreview.includes('MEET') && btnPreview.includes('FORM'), 'preview shows both buttons');
 assert(
-  bodyFromEditor(btnPreview) === `<p>Olá</p>${EMAIL_BOTAO_CHAMADA}${EMAIL_BOTAO_FORMULARIO}<p>Fecho</p>`,
+  bodyFromEditor(btnPreview) === `${styledP('Olá')}${EMAIL_BOTAO_CHAMADA}${EMAIL_BOTAO_FORMULARIO}${styledP('Fecho')}`,
   'editor save restores button tokens',
 );
 const filledButtons = fillTemplateBody(
@@ -143,7 +148,7 @@ assert(quoteHtml.includes('mailto:hello@test.pt'), 'signature email icon');
 assert(quoteHtml.includes('/email/assinatura.png'), 'signature logo');
 assert(quoteHtml.includes('/email/icon-instagram.png'), 'signature instagram icon');
 assert((quoteHtml.match(/\/email\/assinatura\.png/g) || []).length === 1, 'quote wraps signature once');
-assert(quoteHtml.includes('Valor'), 'generated price block stays');
+assert(quoteHtml.includes('Orçamento'), 'generated price block stays');
 assert(!quoteHtml.includes('<script>'), 'no raw script from copy');
 assert(!quoteHtml.includes('{{bloco}}'), 'sent email has no placeholder');
 
@@ -214,15 +219,32 @@ assert((introHtml.match(/\/email\/assinatura\.png/g) || []).length === 1, 'intro
 
 const footer = {
   email: 'hello@test.pt',
+  phone: '+351 912 345 678',
   instagram: 'https://instagram.com/bymarianapita',
   website: 'https://marianapita.pt',
   assetBase: 'https://marianapita.pt',
 };
 const sig = emailSignatureHtml(footer);
 assert(sig.includes('align="left"'), 'signature logo stays left aligned');
+assert(sig.includes('valign="middle"'), 'signature columns sit side by side');
 assert(sig.includes('align="center"'), 'signature icons are centered');
+assert(sig.includes('tel:+351912345678'), 'signature phone is a tel link');
+assert(sig.includes('+351 912 345 678'), 'signature shows phone under icons');
 assert(!sig.includes('margin:16px auto'), 'signature block is not centered');
 assert((wrapEmail('<p>Corpo</p>', footer).match(/\/email\/assinatura\.png/g) || []).length === 1, 'wrapEmail adds one signature');
+const wrapped = wrapEmail('<p>Corpo</p>', footer);
+assert(wrapped.includes('max-width:100%'), 'wrapEmail shrinks on small screens');
+assert(wrapped.includes(`width="${EMAIL_WIDTH}"`), 'wrapEmail table width 720');
+assert(wrapped.includes(`width:${EMAIL_WIDTH}px`), 'wrapEmail css width 720');
+assert(!wrapped.includes('max-width:560px'), 'wrapEmail no longer 560');
+assert(wrapped.includes('role="presentation"'), 'wrapEmail uses presentation tables');
+assert(!bridalBlock({ servicos_procurados: 'Makeup' }, PRICING_FALLBACKS).includes('display:flex'), 'price rows are not flex');
+assert(bridalBlock({ servicos_procurados: 'Makeup' }, PRICING_FALLBACKS).includes('align="right"'), 'price aligned right in table');
+assert(bridalBlock({ servicos_procurados: 'Makeup' }, PRICING_FALLBACKS).includes('width="88"'), 'price column has fixed width');
+assert(EMAIL_STYLE.h3.includes('font-size:16px') && EMAIL_STYLE.h3.includes('font-weight:700'), 'section titles are 16px bold');
+assert(EMAIL_STYLE.h2 === EMAIL_STYLE.h3, 'h2 matches h3 so there is no fourth size');
+const sigNoPhone = emailSignatureHtml({ ...footer, phone: '' });
+assert(!sigNoPhone.includes('tel:'), 'signature hides empty phone');
 
 for (const id of EMAIL_TEMPLATE_IDS) {
   assert(!EMAIL_COPY_FALLBACKS[id].body.includes('assinatura.png'), `PT ${id} body has no signature image`);
@@ -296,7 +318,7 @@ for (const id of EMAIL_TEMPLATE_IDS) {
   assert(fields.includes('nome'), `${id} includes nome`);
 }
 const CONTACT = 'nome,email,telefone,locale';
-assert(EMAIL_TEMPLATE_FIELDS.bridal.join(',') === `${CONTACT},opcao_servico,data_casamento,hora_pronta,local_preparacao,local_prova,servicos_procurados,guests_makeup,guests_hair,guests_pack,addon_skin_call,mensagem,valor_deslocacao,sinal_reserva`, 'bridal field list');
+assert(EMAIL_TEMPLATE_FIELDS.bridal.join(',') === `${CONTACT},opcao_servico,data_casamento,hora_pronta,local_preparacao,local_prova,data_prova,servicos_procurados,guests_makeup,guests_hair,guests_pack,addon_skin_call,mensagem,valor_deslocacao,sinal_reserva`, 'bridal field list');
 assert(EMAIL_TEMPLATE_FIELDS.bridal_intro.includes('telefone') && EMAIL_TEMPLATE_FIELDS.bridal_intro.includes('mensagem') && !EMAIL_TEMPLATE_FIELDS.bridal_intro.includes('bloco'), 'bridal intro has all lead fields');
 assert(EMAIL_TEMPLATE_FIELDS.beauty.includes('sinal_reserva') && EMAIL_TEMPLATE_FIELDS.beauty.includes('data_evento') && !EMAIL_TEMPLATE_FIELDS.beauty.includes('bloco'), 'beauty fields');
 assert(EMAIL_TEMPLATE_FIELDS.skin_call.includes('rotina') && !EMAIL_TEMPLATE_FIELDS.skin_call.includes('sinal_reserva') && !EMAIL_TEMPLATE_FIELDS.skin_call.includes('valor_deslocacao'), 'skin_call has no deposit or travel field');
@@ -311,14 +333,15 @@ assert(person.nome === 'Ana' && person.email === 'ana@test.pt' && person.telefon
 assert(EMAIL_QUOTE_TEMPLATE_IDS.join(',') === 'bridal,beauty,skin_call,education', 'quote ids for Tabela de Preço');
 assert(emailFieldLabel('nome') === 'Nome', 'friendly label nome');
 assert(emailFieldLabel('data_casamento') === 'Data do casamento', 'friendly label wedding date');
+assert(emailFieldLabel('data_prova') === 'Data da prova', 'friendly label trial date');
 assert(emailFieldLabel('quando') === 'Data e hora da sessão', 'friendly label quando');
 assert(emailFieldLabel('telefone') === 'Telefone', 'friendly label telefone');
 assert(emailFieldLabel('rotina') === 'Rotina', 'friendly label rotina');
 assert(emailFieldLabel('opcao_servico') === 'Opção de serviço', 'friendly label opcao_servico');
 assert(emailFieldLabel('sinal_reserva') === 'Valor sinal', 'friendly label sinal');
-assert(bodyFromEditor('<p>Olá</p><!--miana-block-start--><div data-miana-block="1"><p>editado</p></div><!--miana-block-end-->') === '<p>Olá</p>{{bloco}}', 'edited block still restores {{bloco}}');
+assert(bodyFromEditor('<p>Olá</p><!--miana-block-start--><div data-miana-block="1"><p>editado</p></div><!--miana-block-end-->') === `${styledP('Olá')}{{bloco}}`, 'edited block still restores {{bloco}}');
 assert(
-  bodyFromEditor('<p>Olá</p><!--miana-block-start:botao_chamada--><div data-miana-block="botao_chamada"><a>x</a></div><!--miana-block-end:botao_chamada-->') === `<p>Olá</p>${EMAIL_BOTAO_CHAMADA}`,
+  bodyFromEditor('<p>Olá</p><!--miana-block-start:botao_chamada--><div data-miana-block="botao_chamada"><a>x</a></div><!--miana-block-end:botao_chamada-->') === `${styledP('Olá')}${EMAIL_BOTAO_CHAMADA}`,
   'edited meet button still restores token',
 );
 
@@ -333,6 +356,28 @@ assert(confirmHtml.includes('https://miana.pt/diagnostico?token=xyz'), 'confirma
 assert(confirmHtml.includes('Entrar na Chamada'), 'confirmation has Meet button label');
 assert(confirmHtml.includes('Abrir formulário'), 'confirmation has form button label');
 assert(!confirmHtml.includes('{{botao_chamada}}') && !confirmHtml.includes('{{botao_formulario}}'), 'confirmation has no leftover button tokens');
+assert(
+  (confirmHtml.match(/<a [^>]*>\s*Entrar na Chamada\s*<\/a>/g) || []).length === 1,
+  'confirmation has a single Meet button',
+);
+assert(
+  (confirmHtml.match(/<a [^>]*>\s*Abrir formulário\s*<\/a>/g) || []).length === 1,
+  'confirmation has a single form button',
+);
+assert(
+  collapseDuplicatePlaceholders(`{{botao_chamada}}<p>{{botao_chamada}}</p>{{botao_formulario}}{{botao_formulario}}`)
+    === `${EMAIL_BOTAO_CHAMADA}<p></p>${EMAIL_BOTAO_FORMULARIO}`,
+  'duplicate button tokens collapse to one each',
+);
+const dupConfirm = scheduleFormEmail({
+  nome: 'Ana',
+  whenLabel: 'terça',
+  meetUrl: 'https://meet.google.com/abc-defg-hij',
+  formUrl: 'https://miana.pt/diagnostico?token=xyz',
+  copy: { subject: 'x', body: `${EMAIL_BOTAO_CHAMADA}<p>${EMAIL_BOTAO_CHAMADA}</p>${EMAIL_BOTAO_FORMULARIO}${EMAIL_BOTAO_FORMULARIO}` },
+});
+assert((dupConfirm.match(/<a [^>]*>\s*Entrar na Chamada\s*<\/a>/g) || []).length === 1, 'dirty copy still sends one Meet button');
+assert((dupConfirm.match(/<a [^>]*>\s*Abrir formulário\s*<\/a>/g) || []).length === 1, 'dirty copy still sends one form button');
 assert(confirmHtml.includes('contenteditable="false"'), 'confirmation template locks button labels in the editor');
 assert(!stripEditorLocks(confirmHtml).includes('contenteditable'), 'outbound strip removes editor locks');
 
@@ -369,15 +414,16 @@ const enQuote = bridalEmail(
   },
   'en',
 );
-assert(enQuote.includes('Amount'), 'EN bridal block uses Amount');
+assert(enQuote.includes('Quote'), 'EN bridal block uses Quote');
 assert(!enQuote.includes('Investimento'), 'EN bridal block has no Investimento');
 assert(enQuote.includes('Total amount'), 'EN bridal block uses Total amount');
-assert(!enQuote.includes('Wedding date'), 'EN bridal block has no date row');
+assert(!enQuote.includes('Wedding date'), 'EN bridal block has no wedding date row');
+assert(!enQuote.includes('Trial date'), 'EN bridal block has no trial date row');
 
 const enBlock = bridalBlock({ nome: 'Ana', data_casamento: '2026-10-15' }, PRICING_FALLBACKS, undefined, 'en');
 assert(!bridalBlock({ servicos_procurados: 'Makeup' }, PRICING_FALLBACKS).includes('border-top'), 'price table has no divider line');
 assert(!bridalBlock({ servicos_procurados: 'Makeup' }, PRICING_FALLBACKS).includes('border-bottom'), 'price table has no section line');
-assert(enBlock.includes('Amount'), 'bridalBlock en amount');
+assert(enBlock.includes('Quote'), 'bridalBlock en quote title');
 assert(enBlock.includes('to be calculated'), 'EN travel pending when empty');
 assert(!enBlock.includes('Getting-ready location'), 'bridalBlock has no location row');
 assert(diagnosticBlock('https://example.com/diagnostico', 'en').includes('Open skin assessment'), 'diagnosticBlock en button');
@@ -387,6 +433,10 @@ const withTravel = bridalQuoteTotal(
   { servicos_procurados: 'Makeup', guests_makeup: '1', valor_deslocacao: '40' },
   PRICING_FALLBACKS,
 );
+assert(parseTravelFee({ valor_deslocacao: '40.50' }) === 40.5, 'travel keeps cents');
+assert(formatEuro(250, 'pt') === '250€' && formatEuro(250, 'en') === '250€', 'whole euros have no decimals');
+assert(formatEuro(237.5, 'pt') === '237,50€', 'cents use comma in PT');
+assert(formatEuro(237.5, 'en') === '237.50€', 'cents use dot in EN');
 assert(withTravel.travel === 40, 'bridal travel parsed');
 assert(withTravel.total === withTravel.bridePrice + withTravel.guestTotal + 40, 'bridal total includes travel');
 assert(bridalBlock({ nome: 'Ana', valor_deslocacao: '40' }, PRICING_FALLBACKS).includes('Deslocação'), 'PT travel row');
@@ -427,27 +477,49 @@ const bridalSinal = reservationDeposit(
   PRICING_FALLBACKS,
 );
 assert(
-  bridalSinal === 40 + PRICING_FALLBACKS.skin_call.session2 + Math.round(PRICING_FALLBACKS.bridal.makeup / 2),
+  bridalSinal === 40 + PRICING_FALLBACKS.skin_call.session2 + PRICING_FALLBACKS.bridal.makeup / 2,
   'bridal deposit is travel + addon + half bride',
 );
 assert(
+  reservationDeposit('bridal', { servicos_procurados: 'Pack' }, PRICING_FALLBACKS)
+    === PRICING_FALLBACKS.bridal.pack / 2,
+  'bridal pack deposit keeps half cents',
+);
+assert(
   reservationDeposit('beauty', { guests_makeup: '2' }, PRICING_FALLBACKS)
-    === Math.round((2 * PRICING_FALLBACKS.beauty.makeup) / 2),
+    === (2 * PRICING_FALLBACKS.beauty.makeup) / 2,
   'beauty deposit is half total',
 );
 assert(
   reservationDeposit('education', { valor_deslocacao: '20' }, PRICING_FALLBACKS)
-    === Math.round((PRICING_FALLBACKS.education.workshop + 20) / 2),
+    === (PRICING_FALLBACKS.education.workshop + 20) / 2,
   'education deposit is half total',
 );
 assert(reservationDeposit('skin-call', { plano: 'Duo Call (Plano 6M)' }, PRICING_FALLBACKS) === null, 'skin-call has no deposit');
 assert(bridalBlock({ servicos_procurados: 'Makeup' }, PRICING_FALLBACKS).includes('Valor sinal'), 'PT deposit row under total');
+assert(!bridalBlock({ servicos_procurados: 'Makeup' }, PRICING_FALLBACKS).includes('Data da prova'), 'PT bridal block has no trial date row');
+assert(bridalBlock({ servicos_procurados: 'Makeup' }, PRICING_FALLBACKS).includes('font-size:20px'), 'bridal quote title is larger');
+assert(beautyBlock({ guests_makeup: '2' }, PRICING_FALLBACKS).includes('font-size:20px'), 'beauty quote title is larger');
+assert(bridalBlock({ servicos_procurados: 'Pack' }, PRICING_FALLBACKS).includes('237,50€'), 'PT pack deposit shows cents');
+assert(bridalBlock({ servicos_procurados: 'Pack' }, PRICING_FALLBACKS, undefined, 'en').includes('237.50€'), 'EN pack deposit shows cents');
+assert(bridalBlock({ servicos_procurados: 'Makeup' }, PRICING_FALLBACKS).includes('125€'), 'whole deposit has no decimals');
 assert(bridalBlock({ servicos_procurados: 'Makeup' }, PRICING_FALLBACKS, undefined, 'en').includes('Deposit amount'), 'EN deposit row');
+assert(!bridalBlock({ servicos_procurados: 'Makeup' }, PRICING_FALLBACKS, undefined, 'en').includes('Trial date'), 'EN bridal block has no trial date row');
+assert(educationBlock({}, PRICING_FALLBACKS).includes('font-size:20px'), 'education quote title is larger');
 assert(educationBlock({}, PRICING_FALLBACKS).includes('Valor sinal'), 'education block has deposit');
 assert(!skinCallBlock({ plano: 'Duo Call (Plano 6M)' }, PRICING_FALLBACKS).includes('Valor sinal'), 'skin-call block has no deposit');
 assert(!skinCallBlock({ plano: 'Duo Call (Plano 6M)', valor_deslocacao: '40' }, PRICING_FALLBACKS).includes('Deslocação'), 'skin-call block has no travel');
 assert(!skinCallBlock({ plano: 'Duo Call (Plano 6M)' }, PRICING_FALLBACKS).includes('Valor total'), 'skin-call block has no total');
+assert(!skinCallBlock({ plano: 'Duo Call (Plano 6M)' }, PRICING_FALLBACKS).includes('<h3'), 'skin-call block has no section title');
+assert(skinCallBlock({ plano: 'Duo Call (Plano 6M)' }, PRICING_FALLBACKS).includes('<strong>Plano</strong>'), 'skin-call block has bold plan row');
+assert(skinCallBlock({ plano: 'Duo Call (Plano 6M)' }, PRICING_FALLBACKS).includes('Duo Call (Plano 6M)'), 'skin-call block has plan name');
+assert(skinCallBlock({ plano: 'Duo Call (Plano 6M)' }, PRICING_FALLBACKS).includes('<strong>Valor</strong>'), 'skin-call block has bold amount row');
 assert(skinCallBlock({ plano: 'Duo Call (Plano 6M)' }, PRICING_FALLBACKS).includes(`${PRICING_FALLBACKS.skin_call.session2}€`), 'skin-call block has service price');
+assert(skinCallBlock({ plano: 'Duo Call (Plano 6M)' }, PRICING_FALLBACKS, undefined, 'en').includes('<strong>Plan</strong>'), 'EN skin-call block has bold plan row');
+assert(skinCallBlock({ plano: 'Duo Call (Plano 6M)' }, PRICING_FALLBACKS, undefined, 'en').includes('<strong>Amount</strong>'), 'EN skin-call block has bold amount row');
+assert(skinCallBlock({}, PRICING_FALLBACKS, undefined, 'pt', true).includes('<strong>Plano</strong>'), 'skin-call preview keeps plan row');
+assert(skinCallBlock({}, PRICING_FALLBACKS, undefined, 'pt', true).includes('<strong>Valor</strong>'), 'skin-call preview keeps amount row');
+assert(!skinCallBlock({}, PRICING_FALLBACKS).includes('<strong>Plano</strong>'), 'skin-call send without plan has empty table');
 assert(bridalIntroEmail({ servicos_procurados: 'Makeup' }, { subject: '', body: '<p>{{sinal_reserva}}</p>' }).includes('125€'), 'intro interpolates deposit');
 
 const pdfBytes = new TextEncoder().encode('%PDF-1.4 placeholder');
@@ -493,7 +565,7 @@ assert(overflow.length === MAX_CUSTOM_TEMPLATES, 'parse caps at max extras');
 const roundtrip = parseCustomRegistry(serializeCustomRegistry(parsed));
 assert(roundtrip.length === 2 && roundtrip[1].flow === 'beauty', 'serialize roundtrip');
 assert(customTemplatesForFlow(parsed, 'bridal').length === 1, 'filter extras by flow');
-assert(fieldsForFlow('bridal').includes('sinal_reserva') && fieldsForFlow('bridal').includes('data_casamento'), 'bridal extra fields');
+assert(fieldsForFlow('bridal').includes('sinal_reserva') && fieldsForFlow('bridal').includes('data_casamento') && fieldsForFlow('bridal').includes('data_prova'), 'bridal extra fields');
 assert(fieldsForFlow('beauty').includes('sinal_reserva') && fieldsForFlow('education').includes('sinal_reserva'), 'beauty/education extras have sinal');
 assert(!fieldsForFlow('skin-call').includes('sinal_reserva') && !fieldsForFlow('skin-call').includes('valor_deslocacao') && fieldsForFlow('skin-call').includes('rotina'), 'skin-call extras have no sinal or travel');
 assert(!fieldsForFlow('bridal').includes('titular'), 'extras have no payment fields');
@@ -508,5 +580,23 @@ const customCopy = customTemplateFromMap({
 }, 'c_a1b2c3d4', 'en');
 assert(customCopy.subject === 'Hi {{nome}}' && customCopy.body === '<p>EN</p>', 'custom EN copy from map');
 assert(customTemplateFromMap({}, 'c_a1b2c3d4', 'pt').subject === '', 'missing custom copy is empty');
+
+assert(snapFontSize(15) === 16 && snapFontSize(12) === 13 && snapFontSize(19) === 20, 'font size snaps to 13/16/20');
+assert(snapColor('rgb(138, 40, 49)') === '#8a2831', 'rgb snaps to brand hex');
+assert(snapColor('#111111') === '#3b2a2a', 'off-palette color snaps to nearest');
+assert(snapColor('#fbf5ef') === '#fbf5ef', 'button cream is kept');
+
+const normalized = normalizeEmailBodyHtml(
+  '<div>Alô {{nome}}</div><p style="font-size:15px;color:rgb(200,20,20)">Nota</p><font color="#00ff00">x</font>',
+);
+assert(normalized.includes('{{nome}}'), 'normalize keeps placeholders');
+assert(normalized.includes('<p') && normalized.includes('Alô {{nome}}'), 'div paragraph becomes p');
+assert(normalized.includes('font-size:16px'), '15px snaps to 16');
+assert(normalized.includes('color:#8a2831'), 'red snaps to brand');
+assert(!normalized.includes('<font'), 'font tags become spans');
+assert(normalizeEmailBodyHtml('<div style="max-width:560px"><p>Hi</p></div>').includes('max-width:720px'), 'legacy 560 wrapper becomes 720');
+assert(normalizeEmailBodyHtml('<h2>Valor</h2>').includes('<h3') && !normalizeEmailBodyHtml('<h2>Valor</h2>').includes('<h2'), 'h2 section titles become h3');
+assert(normalizeEmailBodyHtml('<h2>Valor</h2>').includes('font-size:16px') && normalizeEmailBodyHtml('<h2>Valor</h2>').includes('font-weight:700'), 'section titles stay 16px bold');
+assert(normalizeEmailBodyHtml('<h2>Alô Noiva {{nome}},</h2>').includes('<p') && !normalizeEmailBodyHtml('<h2>Alô Noiva {{nome}},</h2>').includes('<h3'), 'greeting heading becomes paragraph');
 
 if (!process.exitCode) console.log('email-copy: all passed');

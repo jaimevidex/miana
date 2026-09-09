@@ -4,7 +4,7 @@ import type { Env, LeadType } from './lib';
 import { TYPE_LABELS } from './lib';
 import { fromEmail, fromName, ownerEmail, adminLeadUrl, adminClientUrl } from './config';
 import { getContacts } from './pricing';
-import { stripEditorLocks } from './email-sanitize';
+import { normalizeEmailBodyHtml, stripEditorLocks } from './email-sanitize';
 import { formatRfcMessageId } from './email-match';
 
 export type EmailAttachment = {
@@ -195,7 +195,7 @@ async function sendMailpit(env: Env, payload: SendEmailInput, messageId: string)
 
 export async function sendEmail(env: Env, payload: SendEmailInput): Promise<SendEmailResult> {
   const messageId = payload.messageId || newRfcMessageId(env, crypto.randomUUID());
-  const withId = { ...payload, messageId, html: stripEditorLocks(payload.html) };
+  const withId = { ...payload, messageId, html: normalizeEmailBodyHtml(stripEditorLocks(payload.html)) };
   if (isLocal(env)) {
     return sendMailpit(env, withId, messageId);
   }

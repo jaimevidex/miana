@@ -16,7 +16,7 @@ export function beautyEmail(
   locale: Locale = DEFAULT_LOCALE,
 ): string {
   const block = beautyBlock(formData, pricing, notes, locale);
-  const body = fillTemplateBody(copy.body, block, templateVars(formData, attachSinalVars('beauty', formData, pricing)));
+  const body = fillTemplateBody(copy.body, block, templateVars(formData, attachSinalVars('beauty', formData, pricing, locale)));
   return wrapEmail(body, footer);
 }
 

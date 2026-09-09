@@ -13,6 +13,7 @@ import {
   isSyntheticMessageId,
   pickThreadParent,
 } from '../worker/email-match.ts';
+import { splitQuotedReply } from '../worker/email-sanitize.ts';
 
 function assert(cond: boolean, msg: string) {
   if (!cond) {
@@ -63,5 +64,14 @@ assert(parent?.rfcMessageId === '<a@x>', 'reply to last message with the thread 
 assert(pickThreadParent([
   { rfcMessageId: '<z@x>', subject: 'Livre' },
 ], 'Orçamento - Bridal')?.rfcMessageId === '<z@x>', 'fallback to last id when subjects differ');
+
+const gmailSplit = splitQuotedReply('<p>Sim, quero</p><div class="gmail_quote">On wrote:<blockquote>orçamento</blockquote></div>');
+assert(gmailSplit.main.includes('Sim, quero') && gmailSplit.quoted.includes('gmail_quote'), 'split gmail quote');
+const appleSplit = splitQuotedReply('<p>Ok</p><blockquote type="cite"><p>anterior</p></blockquote>');
+assert(appleSplit.main === '<p>Ok</p>' && appleSplit.quoted.includes('blockquote'), 'split blockquote quote');
+const plainSplit = splitQuotedReply('<p>Só texto novo</p>');
+assert(plainSplit.main.includes('Só texto novo') && !plainSplit.quoted, 'no quote stays main');
+const emptySplit = splitQuotedReply('<blockquote>tudo citado</blockquote>');
+assert(emptySplit.main.includes('blockquote') && !emptySplit.quoted, 'full quote stays open');
 
 if (!process.exitCode) console.log('email-match: all passed');

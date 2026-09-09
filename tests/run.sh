@@ -64,7 +64,7 @@ assert_contains() {
 echo -e "\n${YELLOW}═══ 1. Formulário Skin Call ═══${NC}"
 
 RESP=$(curl_req -X POST "$BASE/api/lead" \
-  -d "form_type=skin-call&nome=Ana Silva&telefone=912345678&email=ana@teste.com&plano=Duo+Call+(Plano+6M)&rotina=Diaria&rotina_frequencia=Quase+todos+os+dias&pele_tipo=Oleosa&preocupacoes=Borbulhas")
+  -d "form_type=skin-call&nome=Ana Silva&telefone=%2B351912345678&email=ana@teste.com&plano=Duo+Call+(Plano+6M)&rotina=Diaria&rotina_frequencia=Quase+todos+os+dias&pele_tipo=Oleosa&preocupacoes=Borbulhas")
 STATUS=$(echo "$RESP" | head -1)
 BODY=$(echo "$RESP" | sed '1,/^---BODY---$/d')
 assert_status "Skin Call lead criado" "200" "$STATUS" "$BODY"
@@ -74,7 +74,7 @@ assert_contains "Resposta contém success" '"success":true' "$BODY"
 echo -e "\n${YELLOW}═══ 2. Formulário Bridal & Beauty ═══${NC}"
 
 RESP=$(curl_req -X POST "$BASE/api/lead" \
-  -d "form_type=bridal-beauty&nome=Maria Santos&telefone=913456789&email=maria@teste.com&subject=Pedido+-+Bridal+%26+Beauty&opcao_servico=Bride&data_casamento=2026-10-15&hora_pronta=09:00&local_preparacao=Hotel&local_prova=Salao")
+  -d "form_type=bridal-beauty&nome=Maria Santos&telefone=%2B351913456789&email=maria@teste.com&subject=Pedido+-+Bridal+%26+Beauty&opcao_servico=Bride&data_casamento=2026-10-15&hora_pronta=09:00&local_preparacao=Hotel&local_prova=Salao")
 STATUS=$(echo "$RESP" | head -1)
 BODY=$(echo "$RESP" | sed '1,/^---BODY---$/d')
 assert_status "Bridal lead criado" "200" "$STATUS" "$BODY"
@@ -84,7 +84,7 @@ assert_contains "Resposta contém success" '"success":true' "$BODY"
 echo -e "\n${YELLOW}═══ 3. Formulário Education ═══${NC}"
 
 RESP=$(curl_req -X POST "$BASE/api/lead" \
-  -d "form_type=education&nome=Joana Costa&telefone=914567890&email=joana@teste.com&subject=Pedido+-+Education&formato=Automaquilhagem&local_workshop=Centro&data_hora=2026-09-20T14:00&tipo=Particular&mensagem=Quero+aprender")
+  -d "form_type=education&nome=Joana Costa&telefone=%2B351914567890&email=joana@teste.com&subject=Pedido+-+Education&formato=Automaquilhagem&local_workshop=Centro&data_hora=2026-09-20T14:00&tipo=Particular&mensagem=Quero+aprender")
 STATUS=$(echo "$RESP" | head -1)
 BODY=$(echo "$RESP" | sed '1,/^---BODY---$/d')
 assert_status "Education lead criado" "200" "$STATUS" "$BODY"
@@ -100,16 +100,22 @@ BODY=$(echo "$RESP" | sed '1,/^---BODY---$/d')
 assert_status "Rejeita nome curto" "400" "$STATUS" "$BODY"
 
 RESP=$(curl_req -X POST "$BASE/api/lead" \
-  -d "form_type=bridal-beauty&nome=Teste&telefone=912345678&email=sem-email")
+  -d "form_type=bridal-beauty&nome=Teste&telefone=%2B351912345678&email=sem-email")
 STATUS=$(echo "$RESP" | head -1)
 BODY=$(echo "$RESP" | sed '1,/^---BODY---$/d')
 assert_status "Rejeita email inválido" "400" "$STATUS" "$BODY"
+
+RESP=$(curl_req -X POST "$BASE/api/lead" \
+  -d "form_type=skin-call&nome=Ana Silva&telefone=912345678&email=ana@teste.com")
+STATUS=$(echo "$RESP" | head -1)
+BODY=$(echo "$RESP" | sed '1,/^---BODY---$/d')
+assert_status "Rejeita telefone sem indicativo" "400" "$STATUS" "$BODY"
 
 # ─── 5. Honeypot - bot detection ────────────────────────────────────────────
 echo -e "\n${YELLOW}═══ 5. Honeypot - bot detection ═══${NC}"
 
 RESP=$(curl_req -X POST "$BASE/api/lead" \
-  -d "form_type=skin-call&nome=Bot&telefone=912345678&email=bot@teste.com&plano=Teste&botcheck=spam")
+  -d "form_type=skin-call&nome=Bot&telefone=%2B351912345678&email=bot@teste.com&plano=Teste&botcheck=spam")
 STATUS=$(echo "$RESP" | head -1)
 BODY=$(echo "$RESP" | sed '1,/^---BODY---$/d')
 assert_status "Bot detectado (honeypot)" "200" "$STATUS" "$BODY"
@@ -131,7 +137,7 @@ fi
 echo -e "\n${YELLOW}═══ 7. Rate limit ═══${NC}"
 
 RESP=$(curl_req -X POST "$BASE/api/lead" \
-  -d "form_type=skin-call&nome=Rate Test&telefone=912345678&email=rate@teste.com&plano=Teste")
+  -d "form_type=skin-call&nome=Rate Test&telefone=%2B351912345678&email=rate@teste.com&plano=Teste")
 STATUS=$(echo "$RESP" | head -1)
 BODY=$(echo "$RESP" | sed '1,/^---BODY---$/d')
 if [ "$STATUS" = "200" ] || [ "$STATUS" = "429" ]; then
@@ -170,7 +176,7 @@ echo -e "\n${YELLOW}═══ 10. Locale EN - lead e templates ═══${NC}"
 
 EN_EMAIL="locale-en-${RANDOM}@teste.com"
 RESP=$(curl_req -X POST "$BASE/api/lead" \
-  -d "form_type=bridal-beauty&nome=Emma+Stone&telefone=915678901&email=${EN_EMAIL}&subject=Pedido+-+Bridal+%26+Beauty&opcao_servico=Bride&data_casamento=2026-11-20&hora_pronta=10:00&local_preparacao=Hotel&local_prova=Salao&locale=en")
+  -d "form_type=bridal-beauty&nome=Emma+Stone&telefone=%2B351915678901&email=${EN_EMAIL}&subject=Pedido+-+Bridal+%26+Beauty&opcao_servico=Bride&data_casamento=2026-11-20&hora_pronta=10:00&local_preparacao=Hotel&local_prova=Salao&locale=en")
 STATUS=$(echo "$RESP" | head -1)
 BODY=$(echo "$RESP" | sed '1,/^---BODY---$/d')
 assert_status "Lead EN criada" "200" "$STATUS" "$BODY"
@@ -191,12 +197,12 @@ if [ "$LOGIN_STATUS" = "200" ]; then
   LEAD_ID=$(echo "$LEADS_HTML" | grep -oE "/admin/lead/[0-9a-f-]{36}" | head -1 | sed 's|/admin/lead/||')
   if [ -n "$LEAD_ID" ]; then
     DEFAULT_TPL=$(curl -s -b "$COOKIE_JAR" "$BASE/api/admin/templates/quote?leadId=${LEAD_ID}")
-    assert_contains "Template default usa locale da lead (EN)" 'Amount' "$DEFAULT_TPL"
+    assert_contains "Template default usa locale da lead (EN)" 'Quote' "$DEFAULT_TPL"
     assert_contains "Template default EN subject" 'Bridal quote' "$DEFAULT_TPL"
     PT_OVERRIDE=$(curl -s -b "$COOKIE_JAR" "$BASE/api/admin/templates/quote?leadId=${LEAD_ID}&locale=pt")
-    assert_contains "Override ?locale=pt usa Valor" 'Valor' "$PT_OVERRIDE"
+    assert_contains "Override ?locale=pt usa Orçamento" 'Orçamento' "$PT_OVERRIDE"
     EN_OVERRIDE=$(curl -s -b "$COOKIE_JAR" "$BASE/api/admin/templates/quote?leadId=${LEAD_ID}&locale=en")
-    assert_contains "Override ?locale=en usa Amount" 'Amount' "$EN_OVERRIDE"
+    assert_contains "Override ?locale=en usa Quote" 'Quote' "$EN_OVERRIDE"
   else
     echo -e "  ${YELLOW}⊘${NC} Não encontrei lead ID no admin (skip templates)"
   fi

@@ -43,7 +43,6 @@ import {
   educationBlock,
   formCallButton,
   meetCallButton,
-  scheduleFormBlock,
   skinCallBlock,
   termsBlock,
 } from '../templates/blocks';
@@ -85,7 +84,7 @@ function priceField(id: string, label: string, value: string): string {
   return `
     <div style="flex:1;min-width:140px">
       <label class="lbl" for="${id}">${label}</label>
-      <div style="display:flex;align-items:center;gap:4px"><input id="${id}" class="in" type="number" value="${htmlEscape(value)}" style="flex:1" /><span style="color:#8a7a74">€</span></div>
+      <div style="display:flex;align-items:center;gap:4px"><input id="${id}" class="in" type="number" step="0.01" value="${htmlEscape(value)}" style="flex:1" /><span style="color:#8a7a74">€</span></div>
     </div>`;
 }
 
@@ -135,7 +134,7 @@ function demoBlockFor(
     case 'schedule':
       return '';
     case 'schedule_form':
-      return scheduleFormBlock({ meetUrl: '#', formUrl: `${site}/diagnostico` }, locale);
+      return '';
   }
 }
 

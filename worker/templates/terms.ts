@@ -26,16 +26,17 @@ export function termsEmail(opts: {
   pricing?: Pricing;
 }): string {
   const copy = opts.copy ?? EMAIL_COPY_FALLBACKS.bridal_terms;
+  const locale = opts.locale ?? DEFAULT_LOCALE;
   const block = termsBlock({
     iban: opts.iban,
     accountName: opts.accountName,
     mbway: opts.mbway,
     notes: opts.notes,
-  }, opts.locale ?? DEFAULT_LOCALE);
+  }, locale);
   const sinal = opts.type && opts.pricing
-    ? attachSinalVars(opts.type, opts.formData || {}, opts.pricing)
+    ? attachSinalVars(opts.type, opts.formData || {}, opts.pricing, locale)
     : opts.type
-      ? attachSinalVars(opts.type, opts.formData || {}, PRICING_FALLBACKS)
+      ? attachSinalVars(opts.type, opts.formData || {}, PRICING_FALLBACKS, locale)
       : {};
   const body = fillTemplateBody(copy.body, block, templateVars(opts.formData, {
     nome: opts.nome,

@@ -3,7 +3,8 @@
 import { FIELD_LABELS, htmlEscape, type Env, type LeadType } from './lib';
 import { CONTACT_FALLBACKS, loadSettingsMap } from './pricing';
 import { siteUrl } from './config';
-import { sanitizeEmailHtml } from './email-sanitize';
+import { EMAIL_STYLE } from './email-style';
+import { normalizeEmailBodyHtml, sanitizeEmailHtml } from './email-sanitize';
 import { DEFAULT_LOCALE, parseLocale, type Locale } from './locale';
 
 export type EmailTemplateId =
@@ -41,6 +42,7 @@ const BRIDAL_FORM_FIELDS = [
   'hora_pronta',
   'local_preparacao',
   'local_prova',
+  'data_prova',
   'servicos_procurados',
   'guests_makeup',
   'guests_hair',
@@ -311,6 +313,19 @@ export interface EmailTemplateCopy {
 export const EMAIL_BLOCO = '{{bloco}}';
 export const EMAIL_BOTAO_CHAMADA = '{{botao_chamada}}';
 export const EMAIL_BOTAO_FORMULARIO = '{{botao_formulario}}';
+const LIVE_PLACEHOLDERS = [EMAIL_BLOCO, EMAIL_BOTAO_CHAMADA, EMAIL_BOTAO_FORMULARIO] as const;
+
+/** Mantém a primeira ocorrência de cada token gerado; remove duplicados. */
+export function collapseDuplicatePlaceholders(html: string): string {
+  let out = html;
+  for (const needle of LIVE_PLACEHOLDERS) {
+    const first = out.indexOf(needle);
+    if (first < 0) continue;
+    const after = first + needle.length;
+    out = out.slice(0, after) + out.slice(after).split(needle).join('');
+  }
+  return out;
+}
 const BLOCO_START = '<!--miana-block-start-->';
 const BLOCO_END = '<!--miana-block-end-->';
 
@@ -322,7 +337,7 @@ export function isQuoteTemplate(id: EmailTemplateId): boolean {
 
 function styledHeading(title: string): string {
   if (!title.trim()) return '';
-  return `<h2 style="font-size:20px;color:#8a2831;margin:0 0 16px">${title}</h2>`;
+  return `<h3 style="${EMAIL_STYLE.h3}">${title}</h3>`;
 }
 
 const EMPTY_COPY: EmailTemplateCopy = { subject: '', body: '' };
@@ -332,11 +347,12 @@ function blockOnly(subject: string): EmailTemplateCopy {
 }
 
 function p(text: string): string {
-  return `<p>${text}</p>`;
+  return `<p style="${EMAIL_STYLE.p}">${text}</p>`;
 }
 
 export interface EmailWrapFooter {
   email: string;
+  phone?: string;
   instagram: string;
   website: string;
   assetBase: string;
@@ -363,6 +379,7 @@ export const SIG_WEBSITE_FALLBACK = 'https://marianapita.pt';
 export const EMAIL_COPY_FALLBACKS: EmailCopy = {
   wrapFooter: {
     email: CONTACT_FALLBACKS.email,
+    phone: CONTACT_FALLBACKS.phone,
     instagram: SIG_INSTAGRAM_FALLBACK,
     website: SIG_WEBSITE_FALLBACK,
     assetBase: SIG_WEBSITE_FALLBACK,
@@ -514,7 +531,7 @@ export function fillTemplateBody(
   vars: Record<string, string> = {},
   extras: Record<string, string> = {},
 ): string {
-  let html = (body || '').trim();
+  let html = collapseDuplicatePlaceholders((body || '').trim());
   if (html.includes(EMAIL_BLOCO)) html = html.split(EMAIL_BLOCO).join(block);
   for (const [token, htmlBlock] of Object.entries(extras)) {
     const needle = `{{${token}}}`;
@@ -538,7 +555,7 @@ export function previewTemplateBody(
   block: string,
   extras: Record<string, string> = {},
 ): string {
-  let html = (body || '').trim();
+  let html = collapseDuplicatePlaceholders((body || '').trim());
   const wrappedBloco = wrapPreviewBlock(block);
   if (!html) return wrappedBloco ? EMPTY_P + wrappedBloco + EMPTY_P : '';
   if (html.includes(EMAIL_BLOCO)) html = html.split(EMAIL_BLOCO).join(wrappedBloco);
@@ -567,7 +584,7 @@ export function bodyFromEditor(html: string): string {
     ));
   out = out.replace(new RegExp(`${EMPTY_P_RE}\\s*\\{\\{bloco\\}\\}`, 'gi'), EMAIL_BLOCO);
   out = out.replace(new RegExp(`\\{\\{bloco\\}\\}\\s*${EMPTY_P_RE}`, 'gi'), EMAIL_BLOCO);
-  return out;
+  return normalizeEmailBodyHtml(collapseDuplicatePlaceholders(out));
 }
 
 export async function getEmailCopy(env: Env, locale: Locale = DEFAULT_LOCALE): Promise<EmailCopy> {
@@ -578,6 +595,7 @@ export async function getEmailCopy(env: Env, locale: Locale = DEFAULT_LOCALE): P
   return {
     wrapFooter: {
       email: map.contact_email || CONTACT_FALLBACKS.email,
+      phone: map.contact_phone || CONTACT_FALLBACKS.phone,
       instagram: SIG_INSTAGRAM_FALLBACK,
       website: SIG_WEBSITE_FALLBACK,
       assetBase: siteUrl(env).replace(/\/$/, ''),
@@ -648,7 +666,7 @@ export function textToHtml(text: string, vars: Record<string, string> = {}): str
   const trimmed = text.trim();
   if (!trimmed || isBlankHtml(trimmed)) return '';
   if (looksLikeHtml(trimmed)) {
-    return sanitizeEmailHtml(interpolateHtml(trimmed, vars));
+    return sanitizeEmailHtml(normalizeEmailBodyHtml(interpolateHtml(trimmed, vars)));
   }
   const escaped = htmlEscape(interpolate(trimmed, vars));
   return escaped
@@ -660,6 +678,6 @@ export function textToHtml(text: string, vars: Record<string, string> = {}): str
 /** HTML seguro para o editor nas Settings. */
 export function toEditorHtml(text: string): string {
   if (!text.trim() || isBlankHtml(text)) return '';
-  if (looksLikeHtml(text)) return sanitizeEmailHtml(text);
+  if (looksLikeHtml(text)) return sanitizeEmailHtml(normalizeEmailBodyHtml(text));
   return textToHtml(text);
 }

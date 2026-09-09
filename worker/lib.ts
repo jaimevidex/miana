@@ -2,6 +2,7 @@
 // Sem dependências externas: usa APIs nativas do runtime Cloudflare Workers.
 
 import { LEAD_TTL, RATE_WINDOW, RATE_MAX, RATE_KEY_PREFIX } from './constants';
+import { DEFAULT_LOCALE, type Locale } from './locale';
 
 export { LEAD_TTL, RATE_WINDOW, RATE_MAX };
 
@@ -132,6 +133,22 @@ export interface DiagnosticData {
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_RE = /^\+\d{8,15}$/;
+
+const LEAD_ERRORS = {
+  pt: {
+    name: 'O nome deve ter pelo menos 2 caracteres.',
+    phone: 'O telefone deve incluir o indicativo e o número, sem espaços (ex.: +351912345678).',
+    email: 'O email não é válido.',
+    type: 'Tipo de formulário inválido.',
+  },
+  en: {
+    name: 'The name must have at least 2 characters.',
+    phone: 'The phone number must include the country code and digits only (e.g. +351912345678).',
+    email: 'The email is not valid.',
+    type: 'Invalid form type.',
+  },
+} as const;
 
 export function generateToken(): string {
   const bytes = new Uint8Array(16);
@@ -159,12 +176,17 @@ export function isValidEmail(email: string): boolean {
   return EMAIL_RE.test(email);
 }
 
+export function isValidPhone(telefone: string): boolean {
+  return PHONE_RE.test(telefone.trim());
+}
+
 /** Validação básica - nome, telefone, email são sempre obrigatórios. */
-export function validateLead(body: LeadInput): string | null {
-  if (!body.nome || body.nome.trim().length < 2) return 'O nome deve ter pelo menos 2 caracteres.';
-  if (!body.telefone || body.telefone.trim().length < 6) return 'O telefone deve ter pelo menos 6 caracteres.';
-  if (!body.email || !isValidEmail(body.email.trim())) return 'O email não é válido.';
-  if (!body.type) return 'Tipo de formulário inválido.';
+export function validateLead(body: LeadInput, locale: Locale = DEFAULT_LOCALE): string | null {
+  const t = LEAD_ERRORS[locale] ?? LEAD_ERRORS.pt;
+  if (!body.nome || body.nome.trim().length < 2) return t.name;
+  if (!isValidPhone(body.telefone || '')) return t.phone;
+  if (!body.email || !isValidEmail(body.email.trim())) return t.email;
+  if (!body.type) return t.type;
   return null;
 }
 
@@ -253,6 +275,7 @@ export const FIELD_LABELS: Record<string, string> = {
   hora_pronta: 'Hora de estar pronta',
   local_preparacao: 'Local da preparação',
   local_prova: 'Local da prova',
+  data_prova: 'Data da prova',
   servicos_procurados: 'Serviço da noiva',
   guests_makeup: 'Guests makeup',
   guests_hair: 'Guests hair',

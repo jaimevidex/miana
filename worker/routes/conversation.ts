@@ -322,7 +322,7 @@ export async function handleQuoteTemplate(env: Env, request: Request): Promise<R
     const html = await generateQuoteHtml(env, type, ctx.formData, pricing, undefined, locale);
     const subject = interpolate(await generateQuoteSubject(env, type, locale), {
       ...ctx.formData,
-      ...attachSinalVars(type, ctx.formData, pricing),
+      ...attachSinalVars(type, ctx.formData, pricing, locale),
     });
     const atts = await attachmentsPayload(env, quoteTemplateId(type), locale);
     return json({ success: true, subject, html, nome: ctx.nome, templateKind: 'quote', ...atts });
@@ -347,12 +347,12 @@ export async function handleBridalIntroTemplate(env: Env, request: Request): Pro
   const locale = templateLocale(request, ctx.locale);
   const copy = await getEmailCopy(env, locale);
   const pricing = await getPricing(env);
-  const vars = { ...ctx.formData, ...attachSinalVars('bridal', ctx.formData, pricing) };
+  const vars = { ...ctx.formData, ...attachSinalVars('bridal', ctx.formData, pricing, locale) };
   const atts = await attachmentsPayload(env, 'bridal_intro', locale);
   return json({
     success: true,
     subject: interpolate(bridalIntroSubject(copy.bridal_intro), vars),
-    html: bridalIntroEmail(ctx.formData, copy.bridal_intro, copy.wrapFooter, pricing),
+    html: bridalIntroEmail(ctx.formData, copy.bridal_intro, copy.wrapFooter, pricing, locale),
     templateKind: 'bridal_intro',
     ...atts,
   });
@@ -377,7 +377,7 @@ export async function handleTermsTemplate(env: Env, request: Request): Promise<R
     titular: pay.accountName,
     iban: pay.iban,
     mbway: pay.mbway,
-    ...(type ? attachSinalVars(type, formData, pricing) : {}),
+    ...(type ? attachSinalVars(type, formData, pricing, locale) : {}),
   };
   const termsId = type ? termsTemplateId(type) : 'bridal_terms';
   const atts = await attachmentsPayload(env, termsId, locale);
@@ -446,7 +446,7 @@ export async function handleCustomTemplate(env: Env, request: Request): Promise<
   const copy = customTemplateFromMap(map, id, locale);
   const pricing = await getPricing(env);
   const emailCopy = await getEmailCopy(env, locale);
-  const vars = { ...ctx.formData, ...attachSinalVars(ctx.type as LeadType, ctx.formData, pricing) };
+  const vars = { ...ctx.formData, ...attachSinalVars(ctx.type as LeadType, ctx.formData, pricing, locale) };
   const atts = await attachmentsPayload(env, id, locale);
   return json({
     success: true,

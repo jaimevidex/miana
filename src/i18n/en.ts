@@ -127,7 +127,7 @@ export const en: SiteCopy = {
       },
       {
         texto:
-          'Mariana helped me uncomplicate skincare. I realised I did not need a thousand products - my skin cannot handle that much. With a simple routine, my skin is less oily and more hydrated. And my wallet thanked me too. Mariana explains everything so clearly and practically, and she is a sweetheart',
+          'Mariana helped me simplify skincare. I realised I did not need a thousand products - my skin cannot handle that much. With a simple routine, my skin is less oily and more hydrated. And my wallet thanked me too. Mariana explains everything so clearly and practically, and she is a sweetheart',
         autor: 'Cristiana',
       },
       {
@@ -140,9 +140,9 @@ export const en: SiteCopy = {
   sobre: {
     eyebrow: 'The knowledge and artistry behind us',
     title: 'Meet Mariana',
-    p1: 'We were born from the union of a passion for beauty and a fascination with skin biology. We believe beauty should not be led by trends, but rooted in balance and intentional, uncomplicated care.',
+    p1: 'We were born from the union of a passion for beauty and a fascination with skin biology. We believe beauty should not be led by trends, but rooted in balance and intentional, simplified care.',
     p2: 'I\'m Mariana, with a degree in Biochemistry and a Master\'s in Advanced Cosmetology. I felt the skincare world was, more often than not, far too overwhelming for the clients and friends I met. That\'s when I decided to bring my two worlds together: science and beauty.',
-    p3: 'I believe education is the key to healthy skin. I help you uncomplicate cosmetology and build skincare rituals that truly work for your skin and your routine. With skin in balance, makeup comes out naturally glowy, sunkissed and made to highlight your authenticity, effortlessly.',
+    p3: 'I believe education is the key to healthy skin. I help you simplify cosmetology and build skincare rituals that truly work for your skin and your routine. With skin in balance, makeup comes out naturally glowy, sunkissed and made to highlight your authenticity, effortlessly.',
     valuesTitle: 'Our Values',
     pilares: [
       {
@@ -158,7 +158,7 @@ export const en: SiteCopy = {
       {
         num: '03',
         title: 'Beauty Education',
-        desc: 'Learn to own your routine. We uncomplicate the world of cosmetics so you have the knowledge and autonomy you need.',
+        desc: 'Learn to own your routine. We simplify the world of cosmetics so you have the knowledge and autonomy you need.',
       },
     ],
     lookingTitle: 'What are you looking for?',
@@ -220,7 +220,7 @@ export const en: SiteCopy = {
     heroSub:
       'Your skin analysed through science. A simplified, intentional skincare routine designed for your day-to-day and your needs.',
     quote:
-      'The skincare world can be overwhelming. Between dozens of products, trends and complex routines, it is easy to pile on steps without knowing what your skin actually needs. The Skin Call exists to uncomplicate that. Combining Biochemistry with Advanced Cosmetology, we look at the science behind your products and the biology of your skin to build a simplified, effective routine made for you.',
+      'The skincare world can be overwhelming. Between dozens of products, trends and complex routines, it is easy to pile on steps without knowing what your skin actually needs. The Skin Call exists to simplify that. Combining Biochemistry with Advanced Cosmetology, we look at the science behind your products and the biology of your skin to build a simplified, effective routine made for you.',
     howTitle: 'How it works',
     process: [
       {
@@ -300,9 +300,9 @@ export const en: SiteCopy = {
     heroEyebrow: 'Workshops & Masterclasses',
     heroTitle: 'Beauty Education',
     heroSub:
-      'Learn to own your skincare routine and your makeup. Knowledge, autonomy and technique, grounded in science and uncomplicated practice.',
+      'Learn to own your skincare routine and your makeup. Knowledge, autonomy and technique, grounded in science and simplified practice.',
     quote:
-      'We believe education gives you the autonomy to reach beautiful skin and wear impeccable makeup. More than following trends, we want to teach you to understand your skin\'s needs and use makeup to highlight what you already have. Uncomplicated, always.',
+      'We believe education gives you the autonomy to reach beautiful skin and wear impeccable makeup. More than following trends, we want to teach you to understand your skin\'s needs and use makeup to highlight what you already have. simplified, always.',
     workshops: [
       {
         num: '#1',
@@ -383,6 +383,18 @@ export const en: SiteCopy = {
     skinCallSuccess: 'Request sent! I will review it and get back to you with a quote.',
     error: 'Something went wrong. Please try again or write to {email}.',
     requiredNote: 'Required fields',
+    validation: {
+      required: 'Fill in this field.',
+      name: 'The name must have at least 2 characters.',
+      email: 'Enter a valid email, for example name@email.com.',
+      phoneEmpty: 'Enter the number, digits only.',
+      phonePt: 'A Portuguese number has 9 digits, with no spaces.',
+      phoneOther: 'The number must have at least 6 digits, with no spaces.',
+      dialCode: 'Choose the country calling code.',
+      chooseOne: 'Choose at least one option.',
+      guests: 'Enter at least 1 person in one of the services.',
+      dialSearch: 'Search country or calling code',
+    },
     submit: 'Request a quote',
     fullName: 'Full name',
     phone: 'Phone number',
