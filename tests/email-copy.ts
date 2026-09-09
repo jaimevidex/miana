@@ -234,8 +234,8 @@ const footer = {
 const sig = emailSignatureHtml(footer);
 assert(sig.includes('align="left"'), 'signature logo stays left aligned');
 assert(sig.includes('valign="middle"'), 'signature columns sit side by side');
-assert(sig.includes('align="left"'), 'signature icons sit next to the logo');
-assert(sig.includes('width="1%"'), 'signature icons cell shrinks to content');
+assert(sig.includes('width:auto'), 'signature table hugs logo and icons');
+assert(!sig.includes('width="100%"'), 'signature table does not stretch across the email');
 assert(!sig.includes('align="center"'), 'signature icons are not centered in leftover space');
 assert(sig.includes('tel:+351912345678'), 'signature phone is a tel link');
 assert(sig.includes('+351 912 345 678'), 'signature shows phone under icons');

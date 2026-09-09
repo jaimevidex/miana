@@ -17,7 +17,7 @@ export function emailHeading(title: string): string {
 }
 
 function iconLink(href: string, src: string, alt: string): string {
-  return `<a href="${htmlEscape(href)}" style="display:inline-block;margin:0 6px;text-decoration:none" target="_blank" rel="noopener noreferrer"><img src="${htmlEscape(src)}" width="28" height="28" alt="${htmlEscape(alt)}" style="display:block;border:0;width:28px;height:28px" /></a>`;
+  return `<a href="${htmlEscape(href)}" style="display:inline-block;margin:0 8px 0 0;text-decoration:none" target="_blank" rel="noopener noreferrer"><img src="${htmlEscape(src)}" width="28" height="28" alt="${htmlEscape(alt)}" style="display:block;border:0;width:28px;height:28px" /></a>`;
 }
 
 function telHref(phone: string): string {
@@ -42,12 +42,12 @@ export function emailSignatureHtml(footer?: EmailWrapFooter): string {
     : '';
 
   return `
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin:16px 0 0;border-collapse:collapse">
+    <table role="presentation" align="left" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin:16px 0 0;width:auto">
       <tr>
         <td valign="middle" align="left" style="padding:0;border:0">
           <img src="${htmlEscape(logo)}" alt="Mariana Pita" width="190" style="display:block;max-width:190px;width:190px;height:auto;border:0" />
         </td>
-        <td valign="middle" align="left" width="1%" style="padding:0 0 0 16px;border:0;width:1%">
+        <td valign="middle" align="left" style="padding:0 0 0 10px;border:0">
           <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin:0">
             <tr>
               <td align="left" style="padding:0;border:0;font-size:0;line-height:0;text-align:left">
