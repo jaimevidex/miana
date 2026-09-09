@@ -5,6 +5,7 @@ import { TYPE_LABELS } from './lib';
 import { fromEmail, fromName, ownerEmail, adminLeadUrl, adminClientUrl } from './config';
 import { getContacts } from './pricing';
 import { stripEditorLocks } from './email-sanitize';
+import { formatRfcMessageId } from './email-match';
 
 export type EmailAttachment = {
   filename: string;
@@ -56,12 +57,42 @@ function toBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
-function buildHeaders(payload: SendEmailInput): Record<string, string> {
+function buildHeaders(payload: SendEmailInput, includeMessageId: boolean): Record<string, string> {
   const headers: Record<string, string> = {};
-  if (payload.messageId) headers['Message-ID'] = payload.messageId;
+  if (includeMessageId && payload.messageId) headers['Message-ID'] = payload.messageId;
   if (payload.inReplyTo) headers['In-Reply-To'] = payload.inReplyTo;
   if (payload.references) headers['References'] = payload.references;
   return headers;
+}
+
+async function fetchResendRfcMessageId(apiKey: string, resendId: string): Promise<string | undefined> {
+  try {
+    const res = await fetch(`https://api.resend.com/emails/${encodeURIComponent(resendId)}`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+    if (!res.ok) {
+      console.error(`[resend] get ${res.status} for ${resendId}`);
+      return undefined;
+    }
+    const parsed = await res.json() as { message_id?: string };
+    const id = (parsed.message_id || '').trim();
+    return id ? formatRfcMessageId(id) : undefined;
+  } catch (err) {
+    console.error('[resend] get message_id error:', err);
+    return undefined;
+  }
+}
+
+export async function resolveSentRfcMessageId(
+  env: Env,
+  resendId: string | null | undefined,
+  fallback: string,
+): Promise<string> {
+  if (isLocal(env) || !resendId) return fallback;
+  const apiKey = env.RESEND_API_KEY;
+  if (!apiKey || apiKey.startsWith('REPLACE')) return fallback;
+  const real = await fetchResendRfcMessageId(apiKey, resendId);
+  return real || fallback;
 }
 
 // ─── Envio via Resend (produção) ────────────────────────────────────────────
@@ -78,7 +109,7 @@ async function sendResend(env: Env, payload: SendEmailInput, messageId: string):
     text: payload.text,
   };
   if (payload.replyTo) body.reply_to = payload.replyTo;
-  const headers = buildHeaders({ ...payload, messageId });
+  const headers = buildHeaders(payload, false);
   if (Object.keys(headers).length) body.headers = headers;
   if (payload.attachments?.length) {
     body.attachments = payload.attachments.map((a) => ({
@@ -103,13 +134,16 @@ async function sendResend(env: Env, payload: SendEmailInput, messageId: string):
       return { ok: false, messageId };
     }
     let resendId: string | undefined;
+    let rfcFromSend: string | undefined;
     try {
-      const parsed = JSON.parse(raw) as { id?: string };
+      const parsed = JSON.parse(raw) as { id?: string; message_id?: string };
       resendId = parsed.id;
+      if (parsed.message_id) rfcFromSend = formatRfcMessageId(parsed.message_id);
     } catch {
       /* ignore */
     }
-    return { ok: true, messageId, resendId };
+    const rfcId = rfcFromSend || (resendId ? await fetchResendRfcMessageId(apiKey, resendId) : undefined);
+    return { ok: true, messageId: rfcId || messageId, resendId };
   } catch (err) {
     console.error('[resend] error:', err);
     return { ok: false, messageId };

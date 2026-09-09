@@ -11,14 +11,18 @@ import {
 } from './db/schema';
 import type { Env } from './lib';
 import { fromEmail, replyToForConversation } from './config';
-import { sendEmail, newRfcMessageId, type EmailAttachment } from './email';
+import { sendEmail, newRfcMessageId, resolveSentRfcMessageId, type EmailAttachment } from './email';
 import { htmlToPlain } from './email-sanitize';
 import {
+  buildReplyHeaders,
   extractEmailAddress,
   isInternalFrom,
   isOwnerNotificationSubject,
+  isSyntheticMessageId,
   normalizeMessageId,
   parsePlusConversationId,
+  pickThreadParent,
+  resolveConversationSubject,
   splitReferences,
 } from './email-match';
 import { EMAIL_ATTACHMENTS_FOLDER, MAX_CHAT_EXTRA_ATTACHMENTS, MAX_EMAIL_ATTACHMENT_BYTES } from './constants';
@@ -234,19 +238,36 @@ export async function unreadByClientIds(env: Env): Promise<Map<string, number>> 
   return map;
 }
 
-async function lastOutboundHeaders(env: Env, conversationId: string): Promise<{ inReplyTo?: string; references?: string }> {
+async function lastThreadContext(
+  env: Env,
+  conversationId: string,
+): Promise<{ firstSubject: string | null; inReplyTo?: string; references?: string }> {
   const db = createDb(env);
-  const last = await db
-    .select({ rfcMessageId: emailMessages.rfcMessageId, referencesHeader: emailMessages.referencesHeader })
+  const msgs = await db
+    .select({
+      id: emailMessages.id,
+      rfcMessageId: emailMessages.rfcMessageId,
+      referencesHeader: emailMessages.referencesHeader,
+      subject: emailMessages.subject,
+      resendId: emailMessages.resendId,
+    })
     .from(emailMessages)
     .where(eq(emailMessages.conversationId, conversationId))
-    .orderBy(desc(emailMessages.sentAt))
-    .limit(1);
-  const prev = last[0]?.rfcMessageId || undefined;
-  if (!prev) return {};
-  const prevRefs = last[0]?.referencesHeader || '';
-  const references = prevRefs ? `${prevRefs} ${prev}` : prev;
-  return { inReplyTo: prev, references };
+    .orderBy(emailMessages.sentAt);
+
+  const firstWithSubject = msgs.find((m) => (m.subject || '').trim());
+  const firstSubject = firstWithSubject?.subject?.trim() || null;
+  let lastWithId = pickThreadParent(msgs, firstSubject);
+
+  if (lastWithId?.resendId && (!lastWithId.rfcMessageId || isSyntheticMessageId(lastWithId.rfcMessageId))) {
+    const real = await resolveSentRfcMessageId(env, lastWithId.resendId, lastWithId.rfcMessageId || '');
+    if (real && real !== lastWithId.rfcMessageId) {
+      await db.update(emailMessages).set({ rfcMessageId: real }).where(eq(emailMessages.id, lastWithId.id));
+      lastWithId = { ...lastWithId, rfcMessageId: real };
+    }
+  }
+
+  return { firstSubject, ...buildReplyHeaders(lastWithId) };
 }
 
 async function storeAttachment(
@@ -304,7 +325,10 @@ export async function sendConversationMessage(
   const conv = convRows[0];
   if (!conv) return { ok: false, error: 'Conversa não encontrada.' };
 
-  const threading = await lastOutboundHeaders(env, conv.id);
+  const threading = await lastThreadContext(env, conv.id);
+  const subject = resolveConversationSubject(opts.subject, threading.firstSubject);
+  if (!subject) return { ok: false, error: 'Assunto e corpo do email são obrigatórios.' };
+
   const messageRowId = crypto.randomUUID();
   const rfcId = newRfcMessageId(env, messageRowId);
   const replyTo = replyToForConversation(env, conv.id);
@@ -338,7 +362,7 @@ export async function sendConversationMessage(
 
   const result = await sendEmail(env, {
     to: opts.to,
-    subject: opts.subject,
+    subject,
     html: opts.html,
     text: htmlToPlain(opts.html),
     replyTo,
@@ -355,7 +379,7 @@ export async function sendConversationMessage(
     id: messageRowId,
     conversationId: conv.id,
     direction: 'outbound',
-    subject: opts.subject,
+    subject,
     html: opts.html,
     text: htmlToPlain(opts.html),
     fromAddress: fromEmail(env),

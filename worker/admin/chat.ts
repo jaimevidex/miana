@@ -3,6 +3,7 @@
 import { escapeHtml, sanitizeEmailHtml } from '../email-sanitize';
 import type { MessageWithAttachments } from '../conversation';
 import { rteFormatBindJs, rteFormatButtons } from './rte';
+import { threadReplySubject } from '../email-match';
 
 export const CHAT_CSS = `
 .chat-panel{display:flex;flex-direction:column;min-height:420px}
@@ -28,6 +29,8 @@ export const CHAT_CSS = `
 .chat-file-list{list-style:none;padding:0;margin:8px 0 0;display:flex;flex-direction:column;gap:6px}
 .chat-file-list li{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;color:#3b2a2a;background:rgba(138,40,49,.06);padding:6px 10px;border-radius:8px}
 .chat-file-list button{font-size:12px;background:none;border:none;color:#8a2831;cursor:pointer;font-weight:600}
+.chat-thread-subject{margin:0 0 12px;padding:10px 12px;background:rgba(138,40,49,.06);border-radius:10px;font-size:13px;color:#3b2a2a}
+.chat-thread-subject span{display:block;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:#8a7a74;margin-bottom:4px}
 `;
 
 function formatChatDate(ts: number): string {
@@ -84,10 +87,17 @@ export function renderChatPanel(opts: {
   const isSkin = opts.leadType === 'skin-call' && !!opts.showBookingTemplates;
   const isBridal = opts.leadType === 'bridal';
   const locale = opts.locale === 'en' ? 'en' : 'pt';
+  const firstSubject = (opts.messages.find((m) => (m.subject || '').trim())?.subject || '').trim();
+  const replySubject = firstSubject ? threadReplySubject(firstSubject) : '';
+  const subjectLocked = !!replySubject;
+  const subjectField = subjectLocked
+    ? `<div class="chat-thread-subject"><span>A responder no mesmo fio</span>${escapeHtml(replySubject)}</div>
+      <input type="hidden" id="chat-subject" value="${escapeHtml(replySubject)}" data-locked="1" />`
+    : `<label class="lbl" for="chat-subject">Assunto</label>
+      <input id="chat-subject" class="in" style="margin-bottom:12px" placeholder="Assunto do email" />`;
   const composer = opts.canCompose ? `
     <div class="chat-composer" style="margin-top:16px">
-      <label class="lbl" for="chat-subject">Assunto</label>
-      <input id="chat-subject" class="in" style="margin-bottom:12px" placeholder="Assunto do email" />
+      ${subjectField}
       <div class="rte">
         <div class="rte-toolbar" role="toolbar" aria-label="Formatação e templates">
           <button type="button" class="rte-btn" data-cmd="bold" title="Negrito"><b>B</b></button>
@@ -280,7 +290,7 @@ export function chatScript(): string {
             if (msg) { msg.textContent = data.error || 'Erro no template.'; msg.className = 'status err'; }
             return;
           }
-          if (subjectEl) subjectEl.value = data.subject || '';
+          if (subjectEl && subjectEl.getAttribute('data-locked') !== '1') subjectEl.value = data.subject || '';
           setBody(data.html || '');
           pendingKind = kind;
           setTemplateAttachments(data.templateId || '', data.attachments || []);
@@ -332,7 +342,7 @@ export function chatScript(): string {
             st.className = 'status err';
             return;
           }
-          if (subjectEl) subjectEl.value = data.subject || '';
+          if (subjectEl && subjectEl.getAttribute('data-locked') !== '1') subjectEl.value = data.subject || '';
           setBody(data.html || '');
           pendingKind = 'schedule_form';
           setTemplateAttachments(data.templateId || 'schedule_form', data.attachments || []);
@@ -349,9 +359,10 @@ export function chatScript(): string {
       if (sendBtn) sendBtn.addEventListener('click', async function(){
         const msg = document.getElementById('chat-status');
         const html = (editor && editor.innerHTML || '').trim();
+        const subjectLocked = subjectEl && subjectEl.getAttribute('data-locked') === '1';
         const subject = (subjectEl && subjectEl.value || '').trim();
-        if (!subject || !html) {
-          msg.textContent = 'Assunto e corpo são obrigatórios.';
+        if (!html || (!subjectLocked && !subject)) {
+          msg.textContent = subjectLocked ? 'O corpo do email é obrigatório.' : 'Assunto e corpo são obrigatórios.';
           msg.className = 'status err';
           return;
         }

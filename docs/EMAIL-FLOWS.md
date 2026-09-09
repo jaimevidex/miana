@@ -4,6 +4,8 @@ Fonte de verdade da hierarquia de templates. O registry no código é [`EMAIL_FL
 
 O cliente **não recebe email** ao submeter um formulário. Mariana recebe a notificação interna (`lead_notification`) e envia no chat. Contacto (`/contacto`) não existe.
 
+Depois do primeiro email da conversa, os seguintes são sempre **reply no mesmo fio**: mesmo assunto com `Re:`, headers `In-Reply-To` / `References`, e o `Message-ID` real do Resend. Templates só mudam o corpo (e anexos), não abrem um email novo.
+
 ## Idioma dos emails ao cliente
 
 - A lead/cliente tem `locale` (`pt` | `en`), gravado no formulário público e editável em Dados Pessoais.

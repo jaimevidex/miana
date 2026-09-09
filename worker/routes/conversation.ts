@@ -265,7 +265,7 @@ export async function handleSendConversationMessage(
     const parsed = await parseSendPayload(request);
     if ('error' in parsed) return json({ error: parsed.error }, parsed.status);
     const { subject, html, templateKind, templateId, locale, attachmentIds, extraAttachments } = parsed;
-    if (!subject || !html) return json({ error: 'Assunto e corpo do email são obrigatórios.' }, 400);
+    if (!html) return json({ error: 'Corpo do email é obrigatório.' }, 400);
 
     const db = createDb(env);
     const convRows = await db.select().from(conversations).where(eq(conversations.id, conversationId)).limit(1);
@@ -294,7 +294,12 @@ export async function handleSendConversationMessage(
       attachmentIds,
       extraAttachments,
     });
-    if (!result.ok) return json({ error: result.error || 'Falha ao enviar.' }, 502);
+    if (!result.ok) {
+      const status = result.error?.includes('obrigatório') ? 400
+        : result.error === 'Conversa não encontrada.' ? 404
+        : 502;
+      return json({ error: result.error || 'Falha ao enviar.' }, status);
+    }
     return json({ success: true, messageId: result.messageId });
   } catch (e) {
     console.error('[api/admin/conversation/send]', e);

@@ -51,3 +51,67 @@ export function isOwnerNotificationSubject(subject: string | undefined | null): 
   if (!subject) return false;
   return subject.includes('🔔');
 }
+
+const SUBJECT_PREFIX = /^(re|res|fw|fwd)\s*:\s*/i;
+
+export function stripSubjectPrefixes(subject: string): string {
+  let s = subject.trim();
+  while (SUBJECT_PREFIX.test(s)) s = s.replace(SUBJECT_PREFIX, '').trim();
+  return s;
+}
+
+export function threadReplySubject(original: string): string {
+  const base = stripSubjectPrefixes(original);
+  return base ? `Re: ${base}` : '';
+}
+
+export function resolveConversationSubject(provided: string, firstSubject: string | null | undefined): string {
+  const existing = (firstSubject || '').trim();
+  if (existing) return threadReplySubject(existing);
+  return provided.trim();
+}
+
+export function formatRfcMessageId(id: string): string {
+  const t = id.trim();
+  if (!t) return t;
+  if (t.startsWith('<') && t.endsWith('>')) return t;
+  return `<${t.replace(/^<|>$/g, '')}>`;
+}
+
+export function isSyntheticMessageId(id: string | null | undefined): boolean {
+  if (!id) return false;
+  return /^<?msg\.[a-z0-9-]+@mail\./i.test(id.trim());
+}
+
+export function buildReplyHeaders(
+  prev: { rfcMessageId?: string | null; referencesHeader?: string | null } | null | undefined,
+): { inReplyTo?: string; references?: string } {
+  const prevId = (prev?.rfcMessageId || '').trim();
+  if (!prevId) return {};
+  const id = formatRfcMessageId(prevId);
+  const prevRefs = (prev?.referencesHeader || '').trim();
+  return {
+    inReplyTo: id,
+    references: prevRefs ? `${prevRefs} ${id}` : id,
+  };
+}
+
+export function pickThreadParent<T extends {
+  rfcMessageId?: string | null;
+  resendId?: string | null;
+  subject?: string | null;
+}>(msgs: T[], firstSubject: string | null): T | undefined {
+  const threadKey = firstSubject ? stripSubjectPrefixes(firstSubject) : '';
+  let lastWithId: T | undefined;
+  let lastMatching: T | undefined;
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    const m = msgs[i];
+    if (!(m.rfcMessageId || m.resendId)) continue;
+    if (!lastWithId) lastWithId = m;
+    if (threadKey && stripSubjectPrefixes(m.subject || '') === threadKey) {
+      lastMatching = m;
+      break;
+    }
+  }
+  return lastMatching || lastWithId;
+}
