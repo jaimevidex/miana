@@ -3,7 +3,7 @@
 import { eq, desc, like, or, gte, lte, and } from 'drizzle-orm';
 import { allowRequest, generateToken, isBot, isValidEmail, json, readForm, validateLead, type Env, type LeadType } from '../lib';
 import { createDb } from '../db';
-import { leads, diagnostics, users, clients, settings as settingsTable } from '../db/schema';
+import { leads, diagnostics, users, clients } from '../db/schema';
 import { sendLeadNotification, sendDiagnosticComplete } from '../email';
 import { renderDiagnosticError, renderDiagnosticPage } from '../diagnostico';
 import { createSession, destroySession, generateCsrfToken } from '../auth/session';
@@ -636,20 +636,20 @@ export async function handleEditClient(request: Request, env: Env, id: string | 
 export async function handleUpdateSettings(request: Request, env: Env): Promise<Response> {
   try {
     const body = await request.json() as Record<string, string>;
-    const db = createDb(env);
     const now = Date.now();
+    const stmts: D1PreparedStatement[] = [];
 
     for (const [key, raw] of Object.entries(body)) {
       if (key === 'google_calendar_refresh_token') continue;
       if (key === EMAIL_CUSTOM_REGISTRY_KEY) continue;
       if (isAttachmentsSettingKey(key)) continue;
-      const value = /^email_.+_body(_en)?$/.test(key) ? normalizeEmailBodyHtml(raw) : raw;
-      await db.insert(settingsTable).values({ key, value, updatedAt: now }).onConflictDoUpdate({
-        target: settingsTable.key,
-        set: { value, updatedAt: now },
-      });
+      const value = /^email_.+_body(_en)?$/.test(key) ? normalizeEmailBodyHtml(raw) : String(raw ?? '');
+      stmts.push(env.DB.prepare(
+        'INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at',
+      ).bind(key, value, now));
     }
 
+    if (stmts.length) await env.DB.batch(stmts);
     return json({ success: true });
   } catch (e) {
     console.error('[api/admin/settings] error:', e);

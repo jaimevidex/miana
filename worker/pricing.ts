@@ -66,8 +66,7 @@ function money(map: Record<string, string>, key: string, fallback: number): numb
   return Number.isFinite(n) ? n : fallback;
 }
 
-export async function getPricing(env: Env): Promise<Pricing> {
-  const map = await loadSettingsMap(env);
+export function pricingFromMap(map: Record<string, string>): Pricing {
   const F = PRICING_FALLBACKS;
   return {
     bridal: {
@@ -90,6 +89,10 @@ export async function getPricing(env: Env): Promise<Pricing> {
       workshop: money(map, 'price_education_workshop', F.education.workshop),
     },
   };
+}
+
+export async function getPricing(env: Env): Promise<Pricing> {
+  return pricingFromMap(await loadSettingsMap(env));
 }
 
 export async function getTiming(env: Env): Promise<Timing> {
@@ -123,11 +126,14 @@ export const PAYMENT_FALLBACKS: PaymentDetails = {
   mbway: '[MB Way - substituir]',
 };
 
-export async function getPaymentDetails(env: Env): Promise<PaymentDetails> {
-  const map = await loadSettingsMap(env);
+export function paymentFromMap(map: Record<string, string>): PaymentDetails {
   return {
     iban: map.payment_iban || PAYMENT_FALLBACKS.iban,
     accountName: map.payment_account_name || PAYMENT_FALLBACKS.accountName,
     mbway: map.payment_mbway || PAYMENT_FALLBACKS.mbway,
   };
+}
+
+export async function getPaymentDetails(env: Env): Promise<PaymentDetails> {
+  return paymentFromMap(await loadSettingsMap(env));
 }

@@ -3,6 +3,7 @@
 import { json, type Env } from './lib';
 import { CORS, requireAuth, getCookieValue, validateCsrf } from './http';
 import { renderLoginPage, renderDashboard, renderLeadsList, renderLeadDetail, renderClientsList, renderClientDetail, renderSettingsPage } from './admin';
+import { handleGetEmailPanel } from './admin/settings';
 import {
   handleLogin,
   handleLogout,
@@ -94,7 +95,9 @@ export default {
           page: parseInt(url.searchParams.get('page') || '1', 10),
         }, csrfToken);
       }
-      if (path === '/admin/settings' && method === 'GET') return renderSettingsPage(env, csrfToken);
+      if (path === '/admin/settings' && method === 'GET') {
+        return renderSettingsPage(env, csrfToken, url.searchParams.get('email'));
+      }
       if (path.startsWith('/admin/lead/') && method === 'GET') {
         return renderLeadDetail(env, path.split('/admin/lead/')[1], csrfToken);
       }
@@ -131,6 +134,9 @@ export default {
         return handleEditClient(request, env, path.split('/api/admin/client/')[1]);
       }
       if (path === '/api/admin/settings' && method === 'PUT') return handleUpdateSettings(request, env);
+      if (path === '/api/admin/settings/email-panel' && method === 'GET') {
+        return handleGetEmailPanel(env, url.searchParams.get('id') || '');
+      }
       if (path === '/api/admin/settings/templates' && method === 'POST') return handleCreateCustomTemplate(request, env);
       if (path === '/api/admin/settings/templates' && method === 'DELETE') return handleDeleteCustomTemplate(request, env);
       if (path === '/api/admin/settings/attachments' && method === 'POST') return handleAddTemplateAttachment(request, env);

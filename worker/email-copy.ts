@@ -621,9 +621,12 @@ export function bodyFromEditor(html: string): string {
   return normalizeEmailBodyHtml(collapseDuplicatePlaceholders(out));
 }
 
-export async function getEmailCopy(env: Env, locale: Locale = DEFAULT_LOCALE): Promise<EmailCopy> {
+export async function emailCopyFromMap(
+  map: Record<string, string>,
+  locale: Locale = DEFAULT_LOCALE,
+  assetBase = SIG_WEBSITE_FALLBACK,
+): Promise<EmailCopy> {
   const resolved = parseLocale(locale);
-  const map = await loadSettingsMap(env);
   const { EMAIL_COPY_FALLBACKS_EN } = await import('./email-copy-en');
   const F = resolved === 'en' ? EMAIL_COPY_FALLBACKS_EN : EMAIL_COPY_FALLBACKS;
   return {
@@ -632,7 +635,7 @@ export async function getEmailCopy(env: Env, locale: Locale = DEFAULT_LOCALE): P
       phone: map.contact_phone || CONTACT_FALLBACKS.phone,
       instagram: SIG_INSTAGRAM_FALLBACK,
       website: SIG_WEBSITE_FALLBACK,
-      assetBase: siteUrl(env).replace(/\/$/, ''),
+      assetBase,
     },
     bridal_intro: templateFromMap(map, 'bridal_intro', F.bridal_intro, resolved),
     bridal: templateFromMap(map, 'bridal', F.bridal, resolved),
@@ -646,6 +649,10 @@ export async function getEmailCopy(env: Env, locale: Locale = DEFAULT_LOCALE): P
     schedule: templateFromMap(map, 'schedule', F.schedule, resolved),
     schedule_form: templateFromMap(map, 'schedule_form', F.schedule_form, resolved),
   };
+}
+
+export async function getEmailCopy(env: Env, locale: Locale = DEFAULT_LOCALE): Promise<EmailCopy> {
+  return emailCopyFromMap(await loadSettingsMap(env), locale, siteUrl(env).replace(/\/$/, ''));
 }
 
 export function quoteCopyForType(copy: EmailCopy, type: LeadType): EmailTemplateCopy {

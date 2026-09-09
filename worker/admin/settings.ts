@@ -2,8 +2,7 @@
 
 import { createDb } from '../db';
 import { settings as settingsTable } from '../db/schema';
-import { htmlEscape, type Env } from '../lib';
-import { getGoogleStatus } from '../google-calendar';
+import { htmlEscape, json, type Env } from '../lib';
 import {
   EMAIL_COPY_SETTING_KEYS,
   EMAIL_CUSTOM_REGISTRY_KEY,
@@ -11,11 +10,12 @@ import {
   EMAIL_TEMPLATE_FIELDS,
   customCopySettingKeys,
   customTemplateFromMap,
+  emailCopyFromMap,
   emailFieldLabel,
   fieldsForFlow,
-  getEmailCopy,
   isBuiltinTemplateId,
   isCustomEmailFlow,
+  isCustomTemplateId,
   isQuoteTemplate,
   parseCustomRegistry,
   previewTemplateBody,
@@ -29,10 +29,8 @@ import {
 } from '../email-copy';
 import { siteUrl } from '../config';
 import {
-  getPaymentDetails,
-  getPricing,
-  PAYMENT_FALLBACKS,
-  PRICING_FALLBACKS,
+  paymentFromMap,
+  pricingFromMap,
   type PaymentDetails,
   type Pricing,
 } from '../pricing';
@@ -226,7 +224,83 @@ function emailTemplateFields(
     ${renderAttachmentZone(id, locale, attachments)}`;
 }
 
-export async function buildSettingsPage(env: Env): Promise<{ content: string; script: string }> {
+async function copiesForPanel(
+  settingsMap: Record<string, string>,
+  id: string,
+  assetBase: string,
+): Promise<{ pt: EmailTemplateCopy; en: EmailTemplateCopy }> {
+  if (isBuiltinTemplateId(id)) {
+    const [copyPt, copyEn] = await Promise.all([
+      emailCopyFromMap(settingsMap, 'pt', assetBase),
+      emailCopyFromMap(settingsMap, 'en', assetBase),
+    ]);
+    return { pt: copyPt[id], en: copyEn[id] };
+  }
+  return {
+    pt: customTemplateFromMap(settingsMap, id, 'pt'),
+    en: customTemplateFromMap(settingsMap, id, 'en'),
+  };
+}
+
+async function renderEmailPanelHtml(
+  env: Env,
+  settingsMap: Record<string, string>,
+  panel: EmailPanel,
+  active: boolean,
+): Promise<string> {
+  const builtinId = isBuiltinTemplateId(panel.id) ? panel.id : null;
+  const flow = isCustomEmailFlow(panel.flow) ? panel.flow : 'bridal';
+  const fields = builtinId ? EMAIL_TEMPLATE_FIELDS[builtinId] : fieldsForFlow(flow);
+  const assetBase = siteUrl(env).replace(/\/$/, '');
+  const pricing = pricingFromMap(settingsMap);
+  const pay = paymentFromMap(settingsMap);
+  const copies = await copiesForPanel(settingsMap, panel.id, assetBase);
+  const demoPt = builtinId ? demoBlockFor(builtinId, pricing, pay, assetBase, 'pt') : '';
+  const demoEn = builtinId ? demoBlockFor(builtinId, pricing, pay, assetBase, 'en') : '';
+  const extrasPt = builtinId ? demoExtrasFor(builtinId, assetBase, 'pt') : {};
+  const extrasEn = builtinId ? demoExtrasFor(builtinId, assetBase, 'en') : {};
+  const showPrice = builtinId ? isQuoteTemplate(builtinId) : false;
+  const removeBtn = panel.custom
+    ? `<button type="button" class="btn btn-outline btn-sm" data-remove-template="${htmlEscape(panel.id)}">Remover template</button>`
+    : '';
+  return `
+        <div class="settings-email-panel${active ? ' active' : ''}" data-email="${htmlEscape(panel.id)}" data-email-flow="${htmlEscape(panel.flow)}">
+          <div class="settings-email-panel-head">
+            <h3>${htmlEscape(panel.label)}</h3>
+            ${removeBtn}
+          </div>
+          <div data-email-locale="pt">${emailTemplateFields(panel.id, copies.pt, demoPt, 'pt', extrasPt, publicAttachmentList(listTemplateAttachmentsFromMap(settingsMap, panel.id, 'pt')), fields, showPrice)}</div>
+          <div data-email-locale="en" hidden>${emailTemplateFields(panel.id, copies.en, demoEn, 'en', extrasEn, publicAttachmentList(listTemplateAttachmentsFromMap(settingsMap, panel.id, 'en')), fields, showPrice)}</div>
+        </div>`;
+}
+
+function lazyEmailPanel(panel: EmailPanel, active: boolean): string {
+  return `
+        <div class="settings-email-panel${active ? ' active' : ''}" data-email="${htmlEscape(panel.id)}" data-email-flow="${htmlEscape(panel.flow)}" data-email-lazy="1">
+          <p class="settings-hint">A carregar template…</p>
+        </div>`;
+}
+
+export async function handleGetEmailPanel(env: Env, id: string): Promise<Response> {
+  if (!isBuiltinTemplateId(id) && !isCustomTemplateId(id)) {
+    return json({ error: 'Template inválido.' }, 400);
+  }
+  const db = createDb(env);
+  const settingsMap: Record<string, string> = {};
+  try {
+    const allSettings = await db.select().from(settingsTable);
+    for (const s of allSettings) settingsMap[s.key] = s.value;
+  } catch {
+    return json({ error: 'Settings indisponíveis.' }, 500);
+  }
+  const customRegistry = parseCustomRegistry(settingsMap[EMAIL_CUSTOM_REGISTRY_KEY]);
+  const panel = emailSettingsPanels(customRegistry).find((p) => p.id === id);
+  if (!panel) return json({ error: 'Template não encontrado.' }, 404);
+  const html = await renderEmailPanelHtml(env, settingsMap, panel, true);
+  return json({ success: true, html });
+}
+
+export async function buildSettingsPage(env: Env, initialEmail?: string | null): Promise<{ content: string; script: string }> {
   const db = createDb(env);
   let settingsMap: Record<string, string> = {};
   try {
@@ -241,12 +315,7 @@ export async function buildSettingsPage(env: Env): Promise<{ content: string; sc
   const get = (key: string, fallback: string = '') =>
     Object.prototype.hasOwnProperty.call(settingsMap, key) ? settingsMap[key] : fallback;
 
-  const google = await getGoogleStatus(env).catch(() => ({ configured: false, connected: false, email: '' }));
-  const googleLine = !google.configured
-    ? 'Falta configurar GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET no Worker.'
-    : google.connected
-      ? `Ligado${google.email ? ` (${htmlEscape(google.email)})` : ''}.`
-      : 'Por ligar.';
+  const googleLine = 'A verificar…';
 
   const nav = SECTIONS.map((s, i) =>
     `<button type="button" class="filter-btn${i === 0 ? ' active' : ''}" data-section-btn="${s.id}">${s.label}</button>`,
@@ -277,36 +346,12 @@ export async function buildSettingsPage(env: Env): Promise<{ content: string; sc
     ),
   );
 
-  const emailCopyPt = await getEmailCopy(env, 'pt');
-  const emailCopyEn = await getEmailCopy(env, 'en');
-  const pricing = await getPricing(env).catch(() => PRICING_FALLBACKS);
-  const pay = await getPaymentDetails(env).catch(() => PAYMENT_FALLBACKS);
-  const assetBase = siteUrl(env).replace(/\/$/, '');
-  const emailPanels = emailPanelsMeta.map((p, i) => {
-    const active = i === 0 ? ' active' : '';
-    const builtinId = isBuiltinTemplateId(p.id) ? p.id : null;
-    const flow = isCustomEmailFlow(p.flow) ? p.flow : 'bridal';
-    const fields = builtinId ? EMAIL_TEMPLATE_FIELDS[builtinId] : fieldsForFlow(flow);
-    const copyPt = builtinId ? emailCopyPt[builtinId] : customTemplateFromMap(settingsMap, p.id, 'pt');
-    const copyEn = builtinId ? emailCopyEn[builtinId] : customTemplateFromMap(settingsMap, p.id, 'en');
-    const demoPt = builtinId ? demoBlockFor(builtinId, pricing, pay, assetBase, 'pt') : '';
-    const demoEn = builtinId ? demoBlockFor(builtinId, pricing, pay, assetBase, 'en') : '';
-    const extrasPt = builtinId ? demoExtrasFor(builtinId, assetBase, 'pt') : {};
-    const extrasEn = builtinId ? demoExtrasFor(builtinId, assetBase, 'en') : {};
-    const showPrice = builtinId ? isQuoteTemplate(builtinId) : false;
-    const removeBtn = p.custom
-      ? `<button type="button" class="btn btn-outline btn-sm" data-remove-template="${htmlEscape(p.id)}">Remover template</button>`
-      : '';
-    return `
-        <div class="settings-email-panel${active}" data-email="${htmlEscape(p.id)}" data-email-flow="${htmlEscape(p.flow)}">
-          <div class="settings-email-panel-head">
-            <h3>${htmlEscape(p.label)}</h3>
-            ${removeBtn}
-          </div>
-          <div data-email-locale="pt">${emailTemplateFields(p.id, copyPt, demoPt, 'pt', extrasPt, publicAttachmentList(listTemplateAttachmentsFromMap(settingsMap, p.id, 'pt')), fields, showPrice)}</div>
-          <div data-email-locale="en" hidden>${emailTemplateFields(p.id, copyEn, demoEn, 'en', extrasEn, publicAttachmentList(listTemplateAttachmentsFromMap(settingsMap, p.id, 'en')), fields, showPrice)}</div>
-        </div>`;
-  }).join('');
+  const eagerId = emailPanelsMeta.some((p) => p.id === initialEmail) ? initialEmail! : emailPanelsMeta[0]?.id;
+  const emailPanels = (await Promise.all(emailPanelsMeta.map(async (p) => {
+    const active = p.id === eagerId;
+    if (p.id === eagerId) return renderEmailPanelHtml(env, settingsMap, p, active);
+    return lazyEmailPanel(p, active);
+  }))).join('');
 
   const content = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
@@ -515,6 +560,77 @@ export async function buildSettingsPage(env: Env): Promise<{ content: string; sc
         if (hint) hint.textContent = flowHints[flowId] || '';
         showEmail(panelId || flowFirstPanel[flowId]);
       }
+      function bindEmailEditors(root) {
+        if (!root) return;
+        root.querySelectorAll('.rte').forEach(function (box) {
+          var editor = box.querySelector('.rte-editor');
+          if (!editor || editor.getAttribute('data-bound')) return;
+          editor.setAttribute('data-bound', '1');
+          box.querySelectorAll('[data-cmd]').forEach(function (btn) {
+            btn.addEventListener('mousedown', function (ev) { ev.preventDefault(); });
+            btn.addEventListener('click', function () {
+              editor.focus();
+              document.execCommand(btn.getAttribute('data-cmd'), false, null);
+            });
+          });
+          mianaBindRteFormat(box, editor);
+        });
+        root.querySelectorAll('[data-insert-field]').forEach(function (btn) {
+          if (btn.getAttribute('data-bound')) return;
+          btn.setAttribute('data-bound', '1');
+          btn.addEventListener('mousedown', function (ev) { ev.preventDefault(); });
+          btn.addEventListener('click', function () {
+            var targetId = btn.getAttribute('data-rte-target');
+            var editor = document.querySelector('[data-rte-for="' + targetId + '"]');
+            if (!editor) return;
+            editor.focus();
+            document.execCommand('insertText', false, '{{' + btn.getAttribute('data-insert-field') + '}}');
+          });
+        });
+        root.querySelectorAll('[data-insert-live]').forEach(function (btn) {
+          if (btn.getAttribute('data-bound')) return;
+          btn.setAttribute('data-bound', '1');
+          btn.addEventListener('mousedown', function (ev) { ev.preventDefault(); });
+          btn.addEventListener('click', function () {
+            var targetId = btn.getAttribute('data-rte-target');
+            var token = btn.getAttribute('data-live-token');
+            var editor = document.querySelector('[data-rte-for="' + targetId + '"]');
+            var tpl = document.querySelector('template[data-live-for="' + targetId + ':' + token + '"]');
+            if (!editor || !tpl) return;
+            editor.focus();
+            document.execCommand('insertHTML', false, tpl.innerHTML);
+          });
+        });
+      }
+      function loadEmailPanel(panel, id) {
+        if (!panel || panel.getAttribute('data-email-loading')) return;
+        panel.setAttribute('data-email-loading', '1');
+        fetch('/api/admin/settings/email-panel?id=' + encodeURIComponent(id), { credentials: 'same-origin' })
+          .then(function (res) { return res.json(); })
+          .then(function (data) {
+            if (!data || !data.html) {
+              panel.innerHTML = '<p class="settings-hint">Não foi possível carregar este template.</p>';
+              return;
+            }
+            var wrap = document.createElement('div');
+            wrap.innerHTML = data.html.trim();
+            var next = wrap.firstElementChild;
+            if (!next) {
+              panel.innerHTML = '<p class="settings-hint">Não foi possível carregar este template.</p>';
+              return;
+            }
+            next.classList.add('active');
+            panel.replaceWith(next);
+            bindEmailEditors(next);
+            bindTplAtts(next);
+            var localeBtn = document.querySelector('[data-email-locale-btn].active');
+            showEmailLocale(localeBtn ? localeBtn.getAttribute('data-email-locale-btn') : 'pt');
+          })
+          .catch(function () {
+            panel.removeAttribute('data-email-loading');
+            panel.innerHTML = '<p class="settings-hint">Erro ao carregar o template.</p>';
+          });
+      }
       function showEmail(id) {
         if (!id) return;
         document.querySelectorAll('[data-email]').forEach(function (el) {
@@ -523,6 +639,8 @@ export async function buildSettingsPage(env: Env): Promise<{ content: string; sc
         document.querySelectorAll('[data-email-btn]').forEach(function (el) {
           el.classList.toggle('active', el.getAttribute('data-email-btn') === id);
         });
+        var panel = document.querySelector('[data-email="' + id + '"]');
+        if (panel && panel.getAttribute('data-email-lazy') === '1') loadEmailPanel(panel, id);
       }
       var emailParam = params.get('email');
       if (emailParam && /^[a-z0-9_]+$/.test(emailParam)) {
@@ -549,40 +667,7 @@ export async function buildSettingsPage(env: Env): Promise<{ content: string; sc
         btn.addEventListener('click', function () { showEmailLocale(btn.getAttribute('data-email-locale-btn')); });
       });
 
-      document.querySelectorAll('.rte').forEach(function (box) {
-        var editor = box.querySelector('.rte-editor');
-        if (!editor) return;
-        box.querySelectorAll('[data-cmd]').forEach(function (btn) {
-          btn.addEventListener('mousedown', function (ev) { ev.preventDefault(); });
-          btn.addEventListener('click', function () {
-            editor.focus();
-            document.execCommand(btn.getAttribute('data-cmd'), false, null);
-          });
-        });
-        mianaBindRteFormat(box, editor);
-      });
-      document.querySelectorAll('[data-insert-field]').forEach(function (btn) {
-        btn.addEventListener('mousedown', function (ev) { ev.preventDefault(); });
-        btn.addEventListener('click', function () {
-          var targetId = btn.getAttribute('data-rte-target');
-          var editor = document.querySelector('[data-rte-for="' + targetId + '"]');
-          if (!editor) return;
-          editor.focus();
-          document.execCommand('insertText', false, '{{' + btn.getAttribute('data-insert-field') + '}}');
-        });
-      });
-      document.querySelectorAll('[data-insert-live]').forEach(function (btn) {
-        btn.addEventListener('mousedown', function (ev) { ev.preventDefault(); });
-        btn.addEventListener('click', function () {
-          var targetId = btn.getAttribute('data-rte-target');
-          var token = btn.getAttribute('data-live-token');
-          var editor = document.querySelector('[data-rte-for="' + targetId + '"]');
-          var tpl = document.querySelector('template[data-live-for="' + targetId + ':' + token + '"]');
-          if (!editor || !tpl) return;
-          editor.focus();
-          document.execCommand('insertHTML', false, tpl.innerHTML);
-        });
-      });
+      bindEmailEditors(document);
 
       function escapeAtt(text) {
         return String(text || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -601,68 +686,74 @@ export async function buildSettingsPage(env: Env): Promise<{ content: string; sc
           return '<li><a href="' + href + '" target="_blank" rel="noopener">' + escapeAtt(item.filename) + '</a><button type="button" data-remove-att="' + escapeAtt(item.id) + '">Remover</button></li>';
         }).join('');
       }
-      document.querySelectorAll('[data-tpl-atts]').forEach(function (box) {
-        var input = box.querySelector('input[type="file"]');
-        var status = box.querySelector('.tpl-atts-status');
-        function setStatus(text, err) {
-          if (!status) return;
-          status.textContent = text || '';
-          status.className = err ? 'status err' : 'status';
-        }
-        box.addEventListener('click', async function (e) {
-          var btn = e.target.closest('[data-remove-att]');
-          if (!btn) return;
-          e.preventDefault();
-          setStatus('A remover...');
-          try {
-            var res = await fetch('/api/admin/settings/attachments', {
-              method: 'DELETE',
-              credentials: 'same-origin',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                templateId: box.getAttribute('data-template-id'),
-                locale: box.getAttribute('data-locale'),
-                id: btn.getAttribute('data-remove-att'),
-              }),
-            });
-            var data = await res.json();
-            if (!data.success) {
-              setStatus(data.error || 'Erro ao remover.', true);
-              return;
-            }
-            renderTplAtts(box, data.attachments || []);
-            setStatus('Removido.');
-          } catch (err) {
-            setStatus('Erro ao remover.', true);
+      function bindTplAtts(root) {
+        if (!root) return;
+        root.querySelectorAll('[data-tpl-atts]').forEach(function (box) {
+          if (box.getAttribute('data-bound')) return;
+          box.setAttribute('data-bound', '1');
+          var input = box.querySelector('input[type="file"]');
+          var status = box.querySelector('.tpl-atts-status');
+          function setStatus(text, err) {
+            if (!status) return;
+            status.textContent = text || '';
+            status.className = err ? 'status err' : 'status';
           }
-        });
-        if (input) input.addEventListener('change', async function () {
-          var file = input.files && input.files[0];
-          input.value = '';
-          if (!file) return;
-          var fd = new FormData();
-          fd.append('templateId', box.getAttribute('data-template-id') || '');
-          fd.append('locale', box.getAttribute('data-locale') || 'pt');
-          fd.append('file', file);
-          setStatus('A carregar...');
-          try {
-            var res = await fetch('/api/admin/settings/attachments', {
-              method: 'POST',
-              credentials: 'same-origin',
-              body: fd,
-            });
-            var data = await res.json();
-            if (!data.success) {
-              setStatus(data.error || 'Erro ao adicionar.', true);
-              return;
+          box.addEventListener('click', async function (e) {
+            var btn = e.target.closest('[data-remove-att]');
+            if (!btn) return;
+            e.preventDefault();
+            setStatus('A remover...');
+            try {
+              var res = await fetch('/api/admin/settings/attachments', {
+                method: 'DELETE',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  templateId: box.getAttribute('data-template-id'),
+                  locale: box.getAttribute('data-locale'),
+                  id: btn.getAttribute('data-remove-att'),
+                }),
+              });
+              var data = await res.json();
+              if (!data.success) {
+                setStatus(data.error || 'Erro ao remover.', true);
+                return;
+              }
+              renderTplAtts(box, data.attachments || []);
+              setStatus('Removido.');
+            } catch (err) {
+              setStatus('Erro ao remover.', true);
             }
-            renderTplAtts(box, data.attachments || []);
-            setStatus('Adicionado.');
-          } catch (err) {
-            setStatus('Erro ao adicionar.', true);
-          }
+          });
+          if (input) input.addEventListener('change', async function () {
+            var file = input.files && input.files[0];
+            input.value = '';
+            if (!file) return;
+            var fd = new FormData();
+            fd.append('templateId', box.getAttribute('data-template-id') || '');
+            fd.append('locale', box.getAttribute('data-locale') || 'pt');
+            fd.append('file', file);
+            setStatus('A carregar...');
+            try {
+              var res = await fetch('/api/admin/settings/attachments', {
+                method: 'POST',
+                credentials: 'same-origin',
+                body: fd,
+              });
+              var data = await res.json();
+              if (!data.success) {
+                setStatus(data.error || 'Erro ao adicionar.', true);
+                return;
+              }
+              renderTplAtts(box, data.attachments || []);
+              setStatus('Adicionado.');
+            } catch (err) {
+              setStatus('Erro ao adicionar.', true);
+            }
+          });
         });
-      });
+      }
+      bindTplAtts(document);
 
       function openOverlay(id) {
         var el = document.getElementById(id);

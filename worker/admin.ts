@@ -1270,7 +1270,7 @@ export async function renderClientDetail(env: Env, id: string, csrfToken: string
 }
 
 // ─── Settings ──────────────────────────────────────────────────────────────
-export async function renderSettingsPage(env: Env, csrfToken: string = ''): Promise<Response> {
-  const { content, script } = await buildSettingsPage(env);
+export async function renderSettingsPage(env: Env, csrfToken: string = '', initialEmail?: string | null): Promise<Response> {
+  const { content, script } = await buildSettingsPage(env, initialEmail);
   return htmlShell('Settings', content, script, 'settings', csrfToken);
 }
