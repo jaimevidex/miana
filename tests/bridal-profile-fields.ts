@@ -84,7 +84,10 @@ assert(!('servicos_procurados' in beauty), 'beauty omits bride service');
 assert(!('addon_skin_call' in beauty), 'beauty omits addon plan');
 assert(!('data_prova' in beauty), 'beauty omits trial date');
 
+const emptySkin = Object.fromEntries(visibleFormEntries('skin-call', {}));
+assert(emptySkin.plano === '', 'skin-call empty profile injects plano');
 assert(!('valor_deslocacao' in Object.fromEntries(visibleFormEntries('skin-call', { valor_deslocacao: '40' }))), 'skin-call has no travel fee');
+assert(fieldKind('plano') === 'select', 'skin-call plan is a select');
 assert(Object.fromEntries(visibleFormEntries('education', {})).valor_deslocacao === '', 'education has travel fee');
 assert(fieldKind('valor_deslocacao') === 'number', 'travel fee is a number');
 
@@ -112,3 +115,19 @@ assert(card.includes('Duo Call (Plano 6M)'), 'addon select has Duo');
 assert(card.includes('Triple Call (Plano 9M)'), 'addon select has Triple');
 assert(card.includes('Full Year Call (Plano 12M)'), 'addon select has Full Year');
 assert(card.includes('>-<'), 'empty select option is -');
+
+const skinCard = renderEditableCard({
+  id: 'card-lead-form',
+  title: 'Dados do Formulário',
+  fields: visibleFormEntries('skin-call', {}).map(([key, value]) => ({ key, value })),
+  editable: true,
+  saveUrl: '/api/admin/lead/1',
+  saveKind: 'form-lead',
+  originalJson: {},
+});
+assert(skinCard.includes('name="plano"'), 'skin-call card has plan control');
+assert(skinCard.includes('One Time Call (Plano 3M)'), 'skin-call select has One Time');
+assert(skinCard.includes('Duo Call (Plano 6M)'), 'skin-call select has Duo');
+assert(skinCard.includes('Triple Call (Plano 9M)'), 'skin-call select has Triple');
+assert(skinCard.includes('Full Year Call (Plano 12M)'), 'skin-call select has Full Year');
+assert(skinCard.includes('Ainda não sei'), 'skin-call select has unknown option');

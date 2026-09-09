@@ -9,7 +9,7 @@ Browser (Astro pages: PT unprefixed, EN under `/en/`)
        ├── Public: leads, diagnostic funnel
        ├── Admin SSR (worker/admin/*) + Admin API
        ├── D1 (Drizzle schema in worker/db/schema.ts)
-       ├── R2 DIAG_PHOTOS (diagnostics/ + email-attachments/ + template-attachments/)
+       ├── R2 DIAG_PHOTOS (template_attachments/ + leads/{token}/avaliacao-de-pele/ + leads/{token}/attachments/)
        └── Email (Resend / Mailpit outbound; Cloudflare Email Routing inbound)
   → Fallback: env.ASSETS → Astro dist/
 ```
@@ -29,9 +29,9 @@ Env vars: `EMAIL_ENABLED`, `OWNER_EMAIL`, `SITE_URL`, `FROM_EMAIL` (hello@), `FR
 - **Lead** - form submission (`skin-call` | `bridal` | `beauty` | `education`). Status: `novo` | `pendente` | `aceite` | `eliminado`. Type-specific fields in `form_data` JSON. `locale` is `pt` | `en` (from the public form hidden field; default `pt`).
 - **Client** - created when a quote is accepted (or manually). Optional `lead_id` (nullable for manual clients). `locale` is copied from the lead on accept (editable in Dados Pessoais).
 - **Conversation** - email thread per lead (continues on the client after accept).
-- **Email messages / attachments** - outbound and inbound, stored in D1 + R2.
-- **Diagnostic** - Skin Call questionnaire; photos in R2; linked to lead and/or client.
-- **Settings** - key/value prices, timing, contacts, payment placeholders, Google refresh token, and editable client-email copy (subject + constructed body with `{{bloco}}` for generated tables and `{{botao_chamada}}` / `{{botao_formulario}}` for Skin Call confirmation buttons). PT keys stay `email_*_subject` / `email_*_body`; EN keys are `*_en`. Template default attachments are `email_{id}_attachments` / `*_en` (JSON) with files in R2 `template-attachments/`. Settings → Emails has a PT | EN toggle. A fixed logo signature (email / Instagram / site icons) is appended by `wrapEmail`, not stored in the body.
+- **Email messages / attachments** - outbound and inbound in D1. Template files live once in R2 `template_attachments/` and conversations reference that key. New files in a thread go to `leads/{token}/attachments/` (manual clients: `clients/{id}/attachments/`).
+- **Diagnostic** - Skin Call questionnaire; photos in R2 `leads/{token}/avaliacao-de-pele/`; linked to lead and/or client.
+- **Settings** - key/value prices, timing, contacts, payment placeholders, Google refresh token, and editable client-email copy (subject + constructed body with `{{bloco}}` for generated tables and `{{botao_chamada}}` / `{{botao_formulario}}` for Skin Call confirmation buttons). PT keys stay `email_*_subject` / `email_*_body`; EN keys are `*_en`. Template default attachments are `email_{id}_attachments` / `*_en` (JSON) with files in R2 `template_attachments/`. Removing a template attachment drops the settings ref only - the blob stays. Settings → Emails has a PT | EN toggle. A fixed logo signature (email / Instagram / site icons) is appended by `wrapEmail`, not stored in the body.
 - **Sessions / rate_limits** - auth and abuse control in D1 (not KV).
 
 Timestamps are **milliseconds** since epoch (`Date.now()`).

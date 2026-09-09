@@ -42,6 +42,13 @@ const EXTRA_LABELS: Record<string, string> = {
 
 type SelectOption = string | { value: string; label: string };
 
+const SKIN_CALL_PLANS: SelectOption[] = [
+  { value: 'One Time Call (Plano 3M)', label: 'One Time Call - Plano 3M' },
+  { value: 'Duo Call (Plano 6M)', label: 'Duo Call - Plano 6M' },
+  { value: 'Triple Call (Plano 9M)', label: 'Triple Call - Plano 9M' },
+  { value: 'Full Year Call (Plano 12M)', label: 'Full Year Call - Plano 12M' },
+];
+
 const SELECT_OPTIONS: Record<string, SelectOption[]> = {
   formato: ['Automaquilhagem', 'Skincare Education', 'Friends & Bachelorette Parties'],
   tipo: ['Empresa', 'Particular'],
@@ -59,10 +66,12 @@ const SELECT_OPTIONS: Record<string, SelectOption[]> = {
   ],
   addon_skin_call: [
     { value: '', label: '-' },
-    { value: 'One Time Call (Plano 3M)', label: 'One Time Call - Plano 3M' },
-    { value: 'Duo Call (Plano 6M)', label: 'Duo Call - Plano 6M' },
-    { value: 'Triple Call (Plano 9M)', label: 'Triple Call - Plano 9M' },
-    { value: 'Full Year Call (Plano 12M)', label: 'Full Year Call - Plano 12M' },
+    ...SKIN_CALL_PLANS,
+  ],
+  plano: [
+    { value: '', label: '-' },
+    ...SKIN_CALL_PLANS,
+    { value: 'Ainda não sei', label: 'Ainda não sei' },
   ],
 };
 
@@ -94,6 +103,8 @@ export const BEAUTY_PROFILE_KEYS = [
 ] as const;
 
 export const COMMON_PROFILE_KEYS = ['valor_deslocacao'] as const;
+
+export const SKIN_CALL_PROFILE_KEYS = ['plano'] as const;
 
 const BEAUTY_ONLY = ['data_evento', 'hora_pronta_evento', 'local_evento', 'numero_pessoas'];
 
@@ -181,7 +192,7 @@ export function visibleFormEntries(type: string, data: Record<string, unknown>):
     entries = withKeys(entries, BRIDAL_PROFILE_KEYS);
   }
   if (type === 'beauty') entries = withKeys(entries, BEAUTY_PROFILE_KEYS);
-  if (type === 'skin-call') return entries;
+  if (type === 'skin-call') return withKeys(entries, SKIN_CALL_PROFILE_KEYS);
   return withKeys(entries, COMMON_PROFILE_KEYS);
 }
 

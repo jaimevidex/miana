@@ -32,10 +32,19 @@ import {
   interpolate,
   isCustomTemplateId,
   parseCustomRegistry,
+  templateVars,
+  formatEmailDateTime,
   termsCopyForType,
 } from '../email-copy';
 import { wrapEmail } from '../templates/base';
-import { quoteTemplateId, termsTemplateId } from '../template-attachments';
+import {
+  BUILTIN_BRIDAL_SERVICES,
+  BUILTIN_TERMOS,
+  quoteTemplateId,
+  termsTemplateId,
+} from '../template-attachments';
+import { bridalServicesPlaceholderPdf, BRIDAL_SERVICES_PLACEHOLDER_FILENAME, BRIDAL_SERVICES_PLACEHOLDER_TYPE } from '../assets/bridal-services-placeholder';
+import { termosPlaceholderPdf, TERMOS_PLACEHOLDER_FILENAME, TERMOS_PLACEHOLDER_TYPE } from '../assets/termos-placeholder';
 import { attachmentsPayload } from './template-attachments';
 import { termsEmail, termsSubject } from '../templates/terms';
 import { scheduleEmail, scheduleSubject } from '../templates/schedule';
@@ -52,7 +61,7 @@ import {
   createMeetEvent,
 } from '../google-calendar';
 import { sanitizeEmailHtml, escapeHtml } from '../email-sanitize';
-import { localeDateTag, parseLocale, type Locale } from '../locale';
+import { parseLocale, type Locale } from '../locale';
 
 function templateLocale(request: Request, stored?: string | null): Locale {
   const url = new URL(request.url);
@@ -320,10 +329,10 @@ export async function handleQuoteTemplate(env: Env, request: Request): Promise<R
     const locale = templateLocale(request, ctx.locale);
     const pricing = await getPricing(env);
     const html = await generateQuoteHtml(env, type, ctx.formData, pricing, undefined, locale);
-    const subject = interpolate(await generateQuoteSubject(env, type, locale), {
-      ...ctx.formData,
-      ...attachSinalVars(type, ctx.formData, pricing, locale),
-    });
+    const subject = interpolate(
+      await generateQuoteSubject(env, type, locale),
+      templateVars(ctx.formData, attachSinalVars(type, ctx.formData, pricing, locale)),
+    );
     const atts = await attachmentsPayload(env, quoteTemplateId(type), locale);
     return json({ success: true, subject, html, nome: ctx.nome, templateKind: 'quote', ...atts });
   } catch (e) {
@@ -347,7 +356,7 @@ export async function handleBridalIntroTemplate(env: Env, request: Request): Pro
   const locale = templateLocale(request, ctx.locale);
   const copy = await getEmailCopy(env, locale);
   const pricing = await getPricing(env);
-  const vars = { ...ctx.formData, ...attachSinalVars('bridal', ctx.formData, pricing, locale) };
+  const vars = templateVars(ctx.formData, attachSinalVars('bridal', ctx.formData, pricing, locale));
   const atts = await attachmentsPayload(env, 'bridal_intro', locale);
   return json({
     success: true,
@@ -372,13 +381,12 @@ export async function handleTermsTemplate(env: Env, request: Request): Promise<R
   const pricing = await getPricing(env);
   const copy = await getEmailCopy(env, locale);
   const termsCopy = type ? termsCopyForType(copy, type) : copy.bridal_terms;
-  const vars = {
-    ...formData,
+  const vars = templateVars(formData, {
     titular: pay.accountName,
     iban: pay.iban,
     mbway: pay.mbway,
     ...(type ? attachSinalVars(type, formData, pricing, locale) : {}),
-  };
+  });
   const termsId = type ? termsTemplateId(type) : 'bridal_terms';
   const atts = await attachmentsPayload(env, termsId, locale);
   return json({
@@ -417,7 +425,7 @@ export async function handleScheduleTemplate(env: Env, request: Request): Promis
   const atts = await attachmentsPayload(env, 'schedule', locale);
   return json({
     success: true,
-    subject: interpolate(scheduleSubject(copy.schedule), formData),
+    subject: interpolate(scheduleSubject(copy.schedule), templateVars(formData)),
     html: scheduleEmail(formData, copy.schedule, copy.wrapFooter),
     templateKind: 'schedule',
     ...atts,
@@ -446,7 +454,7 @@ export async function handleCustomTemplate(env: Env, request: Request): Promise<
   const copy = customTemplateFromMap(map, id, locale);
   const pricing = await getPricing(env);
   const emailCopy = await getEmailCopy(env, locale);
-  const vars = { ...ctx.formData, ...attachSinalVars(ctx.type as LeadType, ctx.formData, pricing, locale) };
+  const vars = templateVars(ctx.formData, attachSinalVars(ctx.type as LeadType, ctx.formData, pricing, locale));
   const atts = await attachmentsPayload(env, id, locale);
   return json({
     success: true,
@@ -488,20 +496,12 @@ export async function handleScheduleFormTemplate(
       attendeeEmail: recipient.email,
     });
     const locale = parseLocale(body.locale || recipient.locale);
-    const whenLabel = startsAt.toLocaleString(localeDateTag(locale), {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'Europe/Lisbon',
-    });
+    const whenLabel = formatEmailDateTime(startsAt);
     const formUrl = `${siteUrl(env)}/diagnostico?token=${encodeURIComponent(recipient.token)}`;
     const copy = await getEmailCopy(env, locale);
     const ctx = await loadTemplateContext(env, conv.leadId, conv.clientId);
     const formData = ctx?.formData || { nome: recipient.nome, email: recipient.email, locale: recipient.locale };
-    const vars = { ...formData, quando: whenLabel };
+    const vars = templateVars(formData, { quando: whenLabel });
     const atts = await attachmentsPayload(env, 'schedule_form', locale);
     return json({
       success: true,
@@ -527,26 +527,43 @@ export async function handleScheduleFormTemplate(
   }
 }
 
+function serveInlineFile(bytes: ArrayBuffer | Uint8Array, contentType: string, filename: string): Response {
+  const source = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  const body = new Uint8Array(source.byteLength);
+  body.set(source);
+  const headers = new Headers();
+  headers.set('Content-Type', contentType);
+  headers.set('Cache-Control', 'private, max-age=3600');
+  headers.set('Content-Disposition', `inline; filename="${filename.replace(/"/g, '')}"`);
+  return new Response(body, { headers });
+}
+
 export async function handleServeEmailAttachment(env: Env, key: string): Promise<Response> {
-  if (!env.DIAG_PHOTOS) return json({ error: 'R2 não configurado' }, 503);
-  if (!isSafeAttachmentKey(key)) return json({ error: 'Key inválida' }, 400);
   let decoded = key;
   try {
     decoded = decodeURIComponent(key);
   } catch {
     return json({ error: 'Key inválida' }, 400);
   }
+  if (decoded === BUILTIN_TERMOS) {
+    return serveInlineFile(termosPlaceholderPdf(), TERMOS_PLACEHOLDER_TYPE, TERMOS_PLACEHOLDER_FILENAME);
+  }
+  if (decoded === BUILTIN_BRIDAL_SERVICES) {
+    return serveInlineFile(
+      bridalServicesPlaceholderPdf(),
+      BRIDAL_SERVICES_PLACEHOLDER_TYPE,
+      BRIDAL_SERVICES_PLACEHOLDER_FILENAME,
+    );
+  }
+  if (!env.DIAG_PHOTOS) return json({ error: 'R2 não configurado' }, 503);
+  if (!isSafeAttachmentKey(decoded)) return json({ error: 'Key inválida' }, 400);
   const object = await env.DIAG_PHOTOS.get(decoded);
   if (!object) return json({ error: 'Anexo não encontrado' }, 404);
   const bytes = await object.arrayBuffer();
   const contentType = object.httpMetadata?.contentType
     || sniffImageType(new Uint8Array(bytes), 'application/octet-stream');
-  const headers = new Headers();
-  headers.set('Content-Type', contentType);
-  headers.set('Cache-Control', 'private, max-age=3600');
   const filename = decoded.split('/').pop() || 'anexo';
-  headers.set('Content-Disposition', `inline; filename="${filename.replace(/"/g, '')}"`);
-  return new Response(bytes, { headers });
+  return serveInlineFile(bytes, contentType, filename);
 }
 
 export async function handleGoogleConnect(request: Request, env: Env): Promise<Response> {

@@ -32,6 +32,8 @@ import {
   settingsEmailEntries,
   settingsPanelId,
   fillTemplateBody,
+  formatEmailDateTime,
+  formatEmailDateValue,
   interpolate,
   previewTemplateBody,
   templateFromMap,
@@ -152,17 +154,22 @@ assert(quoteHtml.includes('Orçamento'), 'generated price block stays');
 assert(!quoteHtml.includes('<script>'), 'no raw script from copy');
 assert(!quoteHtml.includes('{{bloco}}'), 'sent email has no placeholder');
 
+assert(formatEmailDateValue('2026-10-15') === '15-10-2026', 'ISO date becomes DD-MM-YYYY');
+assert(formatEmailDateValue('2026-10-15T14:30') === '15-10-2026 14:30', 'ISO datetime keeps time');
+assert(formatEmailDateValue('{{data_casamento}}') === '{{data_casamento}}', 'date helper leaves tokens');
+assert(formatEmailDateTime(new Date('2026-01-15T10:30:00.000Z')) === '15-01-2026 10:30', 'quando uses Lisbon DD-MM-YYYY HH:mm');
 const vars = templateVars(
-  { nome: 'Ana', data_casamento: '2026-10-15' },
+  { nome: 'Ana', data_casamento: '2026-10-15', data_hora: '2026-11-20T09:00' },
   { quando: 'terça' },
 );
-assert(vars.nome === 'Ana' && vars.data_casamento === '2026-10-15' && vars.quando === 'terça', 'templateVars merges fields');
+assert(vars.nome === 'Ana' && vars.data_casamento === '15-10-2026' && vars.quando === 'terça', 'templateVars formats dates');
+assert(vars.data_hora === '20-11-2026 09:00', 'templateVars formats data_hora');
 const withDate = fillTemplateBody(
   '<p>Casamento em {{data_casamento}}</p>{{bloco}}',
   '<p>ok</p>',
   vars,
 );
-assert(withDate.includes('Casamento em 2026-10-15'), 'fill interpolates form fields');
+assert(withDate.includes('Casamento em 15-10-2026'), 'fill interpolates form fields');
 
 assert(EMAIL_COPY_SETTING_KEYS.includes('email_bridal_intro_subject'), 'settings key subject');
 assert(EMAIL_COPY_SETTING_KEYS.includes('email_bridal_intro_body'), 'settings key body');
@@ -209,7 +216,7 @@ const introHtml = bridalIntroEmail(
   },
 );
 assert(introHtml.includes('Alô Noiva Ana!!!'), 'intro interpolates nome');
-assert(introHtml.includes('2026-10-15'), 'intro interpolates wedding date');
+assert(introHtml.includes('15-10-2026'), 'intro interpolates wedding date');
 assert(introHtml.includes('Hotel Pestana'), 'intro interpolates prep location');
 assert(introHtml.includes('14:00'), 'intro interpolates ready time');
 assert(!introHtml.includes('{{nome}}'), 'intro leaves no nome placeholder');
@@ -227,7 +234,9 @@ const footer = {
 const sig = emailSignatureHtml(footer);
 assert(sig.includes('align="left"'), 'signature logo stays left aligned');
 assert(sig.includes('valign="middle"'), 'signature columns sit side by side');
-assert(sig.includes('align="center"'), 'signature icons are centered');
+assert(sig.includes('align="left"'), 'signature icons sit next to the logo');
+assert(sig.includes('width="1%"'), 'signature icons cell shrinks to content');
+assert(!sig.includes('align="center"'), 'signature icons are not centered in leftover space');
 assert(sig.includes('tel:+351912345678'), 'signature phone is a tel link');
 assert(sig.includes('+351 912 345 678'), 'signature shows phone under icons');
 assert(!sig.includes('margin:16px auto'), 'signature block is not centered');
@@ -438,7 +447,8 @@ assert(formatEuro(250, 'pt') === '250€' && formatEuro(250, 'en') === '250€',
 assert(formatEuro(237.5, 'pt') === '237,50€', 'cents use comma in PT');
 assert(formatEuro(237.5, 'en') === '237.50€', 'cents use dot in EN');
 assert(withTravel.travel === 40, 'bridal travel parsed');
-assert(withTravel.total === withTravel.bridePrice + withTravel.guestTotal + 40, 'bridal total includes travel');
+assert(withTravel.guestTotal > 0, 'bridal still computes guest total');
+assert(withTravel.total === withTravel.bridePrice + 40, 'bridal total excludes guests');
 assert(bridalBlock({ nome: 'Ana', valor_deslocacao: '40' }, PRICING_FALLBACKS).includes('Deslocação'), 'PT travel row');
 assert(bridalBlock({ nome: 'Ana' }, PRICING_FALLBACKS).includes('a calcular'), 'empty travel shows pending');
 assert(bridalQuoteTotal({ servicos_procurados: 'Makeup' }, PRICING_FALLBACKS).travel === 0, 'empty travel is 0 in total');
@@ -452,8 +462,8 @@ assert(withAddon.total === withAddon.bridePrice + withAddon.addonPrice, 'bridal 
 assert(bridalBlock({ servicos_procurados: 'Makeup', addon_skin_call: 'Duo Call (Plano 6M)' }, PRICING_FALLBACKS).includes('Add-on Skin Call'), 'live addon row');
 assert(!bridalBlock({ servicos_procurados: 'Makeup' }, PRICING_FALLBACKS).includes('Add-on Skin Call'), 'empty addon hidden on send');
 assert(bridalBlock({ servicos_procurados: 'Makeup' }, PRICING_FALLBACKS, undefined, 'pt', true).includes('Add-on Skin Call'), 'preview keeps empty addon row');
-assert(!bridalBlock({ guests_makeup: '0' }, PRICING_FALLBACKS).includes('Guests makeup'), 'zero guests hidden on send');
-assert(bridalBlock({ guests_makeup: '0' }, PRICING_FALLBACKS, undefined, 'pt', true).includes('Guests makeup × 0'), 'preview shows zero guest row');
+assert(!bridalBlock({ guests_makeup: '2' }, PRICING_FALLBACKS).includes('Guests makeup'), 'bridal send has no guest rows');
+assert(!bridalBlock({ guests_makeup: '2' }, PRICING_FALLBACKS, undefined, 'pt', true).includes('Guests makeup'), 'bridal preview has no guest rows');
 
 const beautyNew = beautyQuoteTotal(
   { guests_makeup: '2', guests_hair: '1', guests_pack: '0' },

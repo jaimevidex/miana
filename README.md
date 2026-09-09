@@ -12,7 +12,7 @@ Site e backoffice da maquilhadora profissional [marianapita.pt](https://marianap
 | API / funil | Worker (`worker/`) | Leads, diagnóstico, orçamentos, emails |
 | Admin | Worker SSR HTML | Dashboard leads/clientes/settings |
 | Dados | Cloudflare D1 (Drizzle) | users, leads, clients, diagnostics, sessions, settings |
-| Fotos | R2 bucket `media` | Diagnósticos (`diagnostics/`) |
+| Fotos / anexos | R2 bucket `media` | `template_attachments/` + `leads/{token}/` |
 | Email | Resend (prod) / Mailpit (local) | Notificações + orçamentos |
 
 ## Documentação

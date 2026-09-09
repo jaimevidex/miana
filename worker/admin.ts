@@ -6,7 +6,7 @@ import { createDb } from './db';
 import { leads as leadsTable, diagnostics as diagnosticsTable, clients as clientsTable } from './db/schema';
 import { htmlEscape, TYPE_LABELS, type Env, type LeadType } from './lib';
 import { calculateDuration, formatDuration, suggestTimeRange, suggestBridalDualSchedule } from './scheduling';
-import { beautyHeadcount, formatSinalReserva, reservationDeposit } from './bridal-pricing';
+import { beautyHeadcount, formatEuro, formatSinalReserva, reservationDeposit, skinCallPlanPrice } from './bridal-pricing';
 import { getPricing, getTiming, PRICING_FALLBACKS, type Pricing } from './pricing';
 import { photoAdminUrl } from './photos';
 import { CHAT_CSS, renderChatPanel, chatScript } from './admin/chat';
@@ -173,11 +173,26 @@ function badgeTypeClass(type: string): string {
   return type in TYPE_LABELS ? type : 'unknown';
 }
 
-function sinalCardField(type: string, data: Record<string, unknown>, pricing: Pricing) {
-  if (type === 'skin-call' || !(type in TYPE_LABELS)) return [];
+function formDataFromUnknown(data: Record<string, unknown>): Record<string, string> {
   const formData: Record<string, string> = {};
   for (const [key, value] of Object.entries(data)) {
     if (value != null) formData[key] = String(value);
+  }
+  return formData;
+}
+
+function sinalCardField(type: string, data: Record<string, unknown>, pricing: Pricing) {
+  if (!(type in TYPE_LABELS)) return [];
+  const formData = formDataFromUnknown(data);
+  if (type === 'skin-call') {
+    const plan = skinCallPlanPrice(formData.plano, pricing);
+    const value = plan ? formatEuro(plan.price) : '—';
+    return [{
+      key: 'valor',
+      value,
+      label: 'Valor',
+      readOnlyHtml: htmlEscape(value),
+    }];
   }
   const value = formatSinalReserva(reservationDeposit(type as LeadType, formData, pricing)) || '—';
   return [{

@@ -31,8 +31,8 @@ binding = "DB"
 database_name = "miana-db"
 database_id = "96baa0e0-4f83-4b29-a3fd-676202d7c173"
 
-# Bucket R2 para fotos do diagnóstico.
-# As fotos ficam na pasta "diagnostics" dentro do bucket (definido em worker/constants.ts).
+# Bucket R2 para fotos e anexos.
+# Layout: template_attachments/ + leads/{token}/avaliacao-de-pele/ + leads/{token}/attachments/
 [[r2_buckets]]
 binding = "DIAG_PHOTOS"
 bucket_name = "media"

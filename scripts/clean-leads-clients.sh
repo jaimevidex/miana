@@ -84,4 +84,4 @@ done
 
 echo
 echo "Feito. users / sessions / settings / rate_limits mantidos."
-echo "Fotos e anexos no R2 não são apagados por este script."
+echo "Fotos e anexos no R2 (template_attachments/ e leads/) não são apagados por este script."

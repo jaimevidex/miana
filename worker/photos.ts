@@ -1,7 +1,7 @@
 // Diagnostic photos in R2. HEIC is stored as-is; the admin page converts it
 // in the browser (Chrome cannot display HEIC in <img>).
 
-import { R2_FOLDER } from './constants';
+import { LEADS_FOLDER, LEAD_PHOTOS_SUBFOLDER } from './constants';
 
 export const MAX_PHOTO_BYTES = 20 * 1024 * 1024;
 export const MAX_PHOTOS = 3;
@@ -24,7 +24,7 @@ export function isSafePhotoKey(key: string): boolean {
     return false;
   }
   if (!decoded || decoded.includes('..') || decoded.includes('\\')) return false;
-  return decoded.startsWith(`${R2_FOLDER}/`);
+  return decoded.startsWith(`${LEADS_FOLDER}/`) && decoded.includes(`/${LEAD_PHOTOS_SUBFOLDER}/`);
 }
 
 export function photoAdminUrl(key: string): string {
@@ -91,7 +91,7 @@ export async function prepareStoredPhoto(
   const bytes = await file.arrayBuffer();
   const contentType = sniffImageType(new Uint8Array(bytes), file.type || 'application/octet-stream');
   return {
-    key: `${R2_FOLDER}/${token}/photo-${index}.${safeExt(file.name, contentType)}`,
+    key: `${LEADS_FOLDER}/${token}/${LEAD_PHOTOS_SUBFOLDER}/photo-${index}.${safeExt(file.name, contentType)}`,
     body: bytes,
     contentType,
   };

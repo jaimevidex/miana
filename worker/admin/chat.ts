@@ -206,7 +206,7 @@ export function chatScript(): string {
       let tplLocale = panel.getAttribute('data-locale') || 'pt';
       let pendingAttachments = [];
       const MAX_EXTRA = 5;
-      const MAX_BYTES = 10 * 1024 * 1024;
+      const MAX_BYTES = 20 * 1024 * 1024;
       const ALLOWED_EXT = { pdf:1, jpg:1, jpeg:1, png:1, webp:1, gif:1 };
       const ALLOWED_TYPE = { 'application/pdf':1, 'image/jpeg':1, 'image/png':1, 'image/webp':1, 'image/gif':1 };
       const fileInput = document.getElementById('chat-files');
@@ -256,7 +256,7 @@ export function chatScript(): string {
             continue;
           }
           if (file.size > MAX_BYTES) {
-            if (msg) { msg.textContent = file.name + ': demasiado grande (máx. 10 MB).'; msg.className = 'status err'; }
+            if (msg) { msg.textContent = file.name + ': demasiado grande (máx. 20 MB).'; msg.className = 'status err'; }
             continue;
           }
           pendingAttachments.push({ kind: 'file', file: file, name: file.name });

@@ -178,7 +178,7 @@ export function bridalQuoteTotal(formData: Record<string, string>, pricing: Pric
     travel,
     addonPrice,
     addonLabel: addon?.label || '',
-    total: bridePrice + guestTotal + travel + addonPrice,
+    total: bridePrice + travel + addonPrice,
     guests,
     brideLabel: brideServiceLabel(formData.servicos_procurados || ''),
   };

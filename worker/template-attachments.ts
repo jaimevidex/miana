@@ -262,9 +262,6 @@ export async function removeTemplateAttachment(
   if (!found) return { ok: false, error: 'Anexo não encontrado.' };
 
   const next = current.filter((item) => item.id !== attachmentId);
-  if (found.r2Key && isSafeTemplateAttachmentKey(found.r2Key) && env.DIAG_PHOTOS) {
-    await env.DIAG_PHOTOS.delete(found.r2Key);
-  }
   await writeAttachmentList(env, id, locale, next);
   return { ok: true, attachments: publicAttachmentList(next) };
 }
@@ -301,38 +298,38 @@ export async function resolveTemplateAttachmentBytes(
   };
 }
 
+export type ResolvedTemplateAttachment = EmailAttachment & { r2Key: string };
+
+export function templateAttachmentStorageKey(item: TemplateAttachmentRef): string {
+  if (item.id === BUILTIN_TERMOS || item.id === BUILTIN_BRIDAL_SERVICES) return item.id;
+  return item.r2Key || item.id;
+}
+
 export async function resolveSelectedTemplateAttachments(
   env: Env,
   id: string,
   locale: Locale,
   ids: string[],
-): Promise<{ ok: true; attachments: EmailAttachment[] } | { ok: false; error: string }> {
+): Promise<{ ok: true; attachments: ResolvedTemplateAttachment[] } | { ok: false; error: string }> {
   if (ids.length > MAX_CHAT_EXTRA_ATTACHMENTS) {
     return { ok: false, error: `Máximo de ${MAX_CHAT_EXTRA_ATTACHMENTS} anexos por envio.` };
   }
   const stored = await listTemplateAttachments(env, id, locale);
   const byId = new Map(stored.map((item) => [item.id, item]));
-  const out: EmailAttachment[] = [];
+  const out: ResolvedTemplateAttachment[] = [];
   for (const attId of ids) {
     const item = byId.get(attId);
     if (!item) return { ok: false, error: 'Um dos anexos do template já não existe.' };
     const resolved = await resolveTemplateAttachmentBytes(env, item);
     if ('error' in resolved) return { ok: false, error: resolved.error };
-    out.push(resolved);
+    out.push({ ...resolved, r2Key: templateAttachmentStorageKey(item) });
   }
   return { ok: true, attachments: out };
 }
 
-export async function deleteAllTemplateAttachments(env: Env, id: string): Promise<void> {
-  if (!env.DIAG_PHOTOS || !isEmailTemplateId(id)) return;
-  const prefix = `${TEMPLATE_ATTACHMENTS_FOLDER}/${id}/`;
-  let cursor: string | undefined;
-  do {
-    const listed = await env.DIAG_PHOTOS.list({ prefix, cursor });
-    const keys = listed.objects.map((obj) => obj.key).filter(isSafeTemplateAttachmentKey);
-    await Promise.all(keys.map((key) => env.DIAG_PHOTOS!.delete(key)));
-    cursor = listed.truncated ? listed.cursor : undefined;
-  } while (cursor);
+/** Settings refs are removed elsewhere; blobs stay in template_attachments. */
+export async function deleteAllTemplateAttachments(_env: Env, _id: string): Promise<void> {
+  return;
 }
 
 export function parseTemplateLocale(raw: string | null | undefined): Locale {

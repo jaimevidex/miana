@@ -25,7 +25,15 @@ import {
   resolveConversationSubject,
   splitReferences,
 } from './email-match';
-import { EMAIL_ATTACHMENTS_FOLDER, MAX_CHAT_EXTRA_ATTACHMENTS, MAX_EMAIL_ATTACHMENT_BYTES } from './constants';
+import {
+  CLIENTS_FOLDER,
+  LEAD_ATTACHMENTS_SUBFOLDER,
+  LEADS_FOLDER,
+  MAX_CHAT_EXTRA_ATTACHMENTS,
+  MAX_EMAIL_ATTACHMENT_BYTES,
+  MAX_EMAIL_ATTACHMENTS_TOTAL_BYTES,
+  TEMPLATE_ATTACHMENTS_FOLDER,
+} from './constants';
 import { resolveSelectedTemplateAttachments, isEmailTemplateId } from './template-attachments';
 import { parseLocale, type Locale } from './locale';
 
@@ -96,7 +104,7 @@ export function validateOutgoingAttachment(
 ): string | null {
   const label = filename.trim() || 'anexo';
   if (!bytes.byteLength) return `${label}: ficheiro vazio.`;
-  if (bytes.byteLength > MAX_EMAIL_ATTACHMENT_BYTES) return `${label}: demasiado grande (máx. 10 MB).`;
+  if (bytes.byteLength > MAX_EMAIL_ATTACHMENT_BYTES) return `${label}: demasiado grande (máx. 20 MB).`;
   if (!resolveOutgoingAttachmentType(filename, contentType, bytes)) {
     return `${label}: tipo não permitido (PDF, JPEG, PNG, WebP ou GIF).`;
   }
@@ -111,7 +119,10 @@ export function isSafeAttachmentKey(key: string): boolean {
     return false;
   }
   if (!decoded || decoded.includes('..') || decoded.includes('\\')) return false;
-  return decoded.startsWith(`${EMAIL_ATTACHMENTS_FOLDER}/`);
+  if (decoded.startsWith(`${TEMPLATE_ATTACHMENTS_FOLDER}/`)) return true;
+  if (decoded.startsWith(`${LEADS_FOLDER}/`) && decoded.includes(`/${LEAD_ATTACHMENTS_SUBFOLDER}/`)) return true;
+  if (decoded.startsWith(`${CLIENTS_FOLDER}/`) && decoded.includes(`/${LEAD_ATTACHMENTS_SUBFOLDER}/`)) return true;
+  return false;
 }
 
 export async function getOrCreateConversationForLead(env: Env, leadId: string): Promise<ConversationRow> {
@@ -270,9 +281,46 @@ async function lastThreadContext(
   return { firstSubject, ...buildReplyHeaders(lastWithId) };
 }
 
+async function conversationAttachmentFolder(env: Env, conv: ConversationRow): Promise<string> {
+  const db = createDb(env);
+  let leadId = conv.leadId;
+  if (!leadId && conv.clientId) {
+    const clientRows = await db.select({ leadId: clients.leadId }).from(clients).where(eq(clients.id, conv.clientId)).limit(1);
+    leadId = clientRows[0]?.leadId ?? null;
+  }
+  if (leadId) {
+    const leadRows = await db.select({ token: leads.token }).from(leads).where(eq(leads.id, leadId)).limit(1);
+    const token = leadRows[0]?.token;
+    if (token) return `${LEADS_FOLDER}/${token}/${LEAD_ATTACHMENTS_SUBFOLDER}`;
+    return `${LEADS_FOLDER}/${leadId}/${LEAD_ATTACHMENTS_SUBFOLDER}`;
+  }
+  if (conv.clientId) return `${CLIENTS_FOLDER}/${conv.clientId}/${LEAD_ATTACHMENTS_SUBFOLDER}`;
+  return `${CLIENTS_FOLDER}/unknown/${LEAD_ATTACHMENTS_SUBFOLDER}`;
+}
+
+async function recordAttachment(
+  env: Env,
+  messageId: string,
+  filename: string,
+  contentType: string,
+  size: number,
+  r2Key: string,
+): Promise<void> {
+  const db = createDb(env);
+  await db.insert(emailAttachments).values([{
+    id: crypto.randomUUID(),
+    messageId,
+    filename: filename.slice(0, 180),
+    contentType,
+    size,
+    r2Key,
+  }]);
+}
+
 async function storeAttachment(
   env: Env,
   messageId: string,
+  folder: string,
   filename: string,
   contentType: string,
   bytes: Uint8Array,
@@ -282,17 +330,9 @@ async function storeAttachment(
   const type = contentType.split(';')[0].trim().toLowerCase();
   if (!ALLOWED_ATTACHMENT_TYPES.has(type) && !filename.toLowerCase().endsWith('.pdf')) return;
   const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80) || 'anexo';
-  const key = `${EMAIL_ATTACHMENTS_FOLDER}/${messageId}/${crypto.randomUUID()}-${safeName}`;
+  const key = `${folder}/${crypto.randomUUID()}-${safeName}`;
   await env.DIAG_PHOTOS.put(key, bytes, { httpMetadata: { contentType: type || 'application/octet-stream' } });
-  const db = createDb(env);
-  await db.insert(emailAttachments).values([{
-    id: crypto.randomUUID(),
-    messageId,
-    filename: filename.slice(0, 180),
-    contentType: type || 'application/octet-stream',
-    size: bytes.byteLength,
-    r2Key: key,
-  }]);
+  await recordAttachment(env, messageId, filename, type || 'application/octet-stream', bytes.byteLength, key);
 }
 
 export async function sendConversationMessage(
@@ -334,6 +374,7 @@ export async function sendConversationMessage(
   const replyTo = replyToForConversation(env, conv.id);
 
   const attachments: EmailAttachment[] = [];
+  const templateRefs: { filename: string; contentType: string; size: number; r2Key: string }[] = [];
   if (attachmentIds.length) {
     if (!opts.templateId || !isEmailTemplateId(opts.templateId)) {
       return { ok: false, error: 'Template de anexos inválido.' };
@@ -345,19 +386,34 @@ export async function sendConversationMessage(
       attachmentIds,
     );
     if (!selected.ok) return { ok: false, error: selected.error };
-    attachments.push(...selected.attachments);
+    for (const att of selected.attachments) {
+      attachments.push({
+        filename: att.filename,
+        contentType: att.contentType,
+        content: att.content,
+      });
+      templateRefs.push({
+        filename: att.filename,
+        contentType: att.contentType,
+        size: att.content.byteLength,
+        r2Key: att.r2Key,
+      });
+    }
   }
+  const extraStored: EmailAttachment[] = [];
   for (const extra of extras) {
     const type = resolveOutgoingAttachmentType(extra.filename, extra.contentType, extra.content);
-    attachments.push({
+    const stored: EmailAttachment = {
       filename: extra.filename.slice(0, 180) || 'anexo',
       contentType: type || extra.contentType,
       content: extra.content,
-    });
+    };
+    attachments.push(stored);
+    extraStored.push(stored);
   }
   const totalBytes = attachments.reduce((sum, att) => sum + att.content.byteLength, 0);
-  if (totalBytes > MAX_EMAIL_ATTACHMENT_BYTES * 4) {
-    return { ok: false, error: 'Total de anexos demasiado grande (máx. 40 MB).' };
+  if (totalBytes > MAX_EMAIL_ATTACHMENTS_TOTAL_BYTES) {
+    return { ok: false, error: 'Total de anexos demasiado grande (máx. 80 MB).' };
   }
 
   const result = await sendEmail(env, {
@@ -393,8 +449,14 @@ export async function sendConversationMessage(
     sentAt: now,
   }]);
 
-  for (const att of attachments) {
-    await storeAttachment(env, messageRowId, att.filename, att.contentType, att.content);
+  for (const ref of templateRefs) {
+    await recordAttachment(env, messageRowId, ref.filename, ref.contentType, ref.size, ref.r2Key);
+  }
+  if (extraStored.length) {
+    const folder = await conversationAttachmentFolder(env, conv);
+    for (const att of extraStored) {
+      await storeAttachment(env, messageRowId, folder, att.filename, att.contentType, att.content);
+    }
   }
 
   await db.update(conversations).set({ lastMessageAt: now, updatedAt: now }).where(eq(conversations.id, conv.id));
@@ -469,8 +531,11 @@ export async function ingestParsedInbound(env: Env, parsed: InboundParsed): Prom
     sentAt: now,
   }]);
 
-  for (const att of parsed.attachments) {
-    await storeAttachment(env, messageId, att.filename, att.contentType, att.content);
+  if (parsed.attachments.length) {
+    const folder = await conversationAttachmentFolder(env, conv);
+    for (const att of parsed.attachments) {
+      await storeAttachment(env, messageId, folder, att.filename, att.contentType, att.content);
+    }
   }
 
   await db.update(conversations).set({

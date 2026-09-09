@@ -9,10 +9,13 @@ import {
   publicAttachmentList,
   quoteTemplateId,
   serializeAttachmentList,
+  templateAttachmentStorageKey,
   termsTemplateId,
   BUILTIN_BRIDAL_SERVICES,
   BUILTIN_TERMOS,
 } from '../worker/template-attachments.ts';
+import { isSafeAttachmentKey } from '../worker/conversation.ts';
+import { isSafePhotoKey } from '../worker/photos.ts';
 import { TERMOS_PLACEHOLDER_FILENAME } from '../worker/assets/termos-placeholder.ts';
 import { BRIDAL_SERVICES_PLACEHOLDER_FILENAME } from '../worker/assets/bridal-services-placeholder.ts';
 
@@ -56,7 +59,7 @@ assert(parseAttachmentList('[]', 'bridal_terms', true).length === 0, 'removed te
 const saved = parseAttachmentList(
   serializeAttachmentList([
     { id: BUILTIN_TERMOS, filename: TERMOS_PLACEHOLDER_FILENAME, contentType: 'application/pdf', size: 10 },
-    { id: 'abc', filename: 'extra.pdf', contentType: 'application/pdf', size: 20, r2Key: 'template-attachments/bridal_terms/pt/abc-extra.pdf' },
+    { id: 'abc', filename: 'extra.pdf', contentType: 'application/pdf', size: 20, r2Key: 'template_attachments/bridal_terms/pt/abc-extra.pdf' },
   ]),
   'bridal_terms',
   true,
@@ -71,8 +74,34 @@ const clearedEn = listTemplateAttachmentsFromMap({ email_bridal_intro_attachment
 assert(clearedEn.length === 0, 'EN empty list does not restore default');
 assert(listTemplateAttachmentsFromMap({}, 'bridal', 'pt').length === 0, 'quote missing key is empty');
 
-assert(isSafeTemplateAttachmentKey('template-attachments/bridal/pt/id-file.pdf'), 'safe template key');
-assert(!isSafeTemplateAttachmentKey('email-attachments/x'), 'rejects other folder');
-assert(!isSafeTemplateAttachmentKey('template-attachments/../secret'), 'rejects traversal');
+assert(isSafeTemplateAttachmentKey('template_attachments/bridal/pt/id-file.pdf'), 'safe template key');
+assert(!isSafeTemplateAttachmentKey('leads/token/attachments/x'), 'rejects lead folder as template');
+assert(!isSafeTemplateAttachmentKey('template_attachments/../secret'), 'rejects traversal');
+
+assert(
+  templateAttachmentStorageKey({ id: BUILTIN_TERMOS, filename: 't.pdf', contentType: 'application/pdf', size: 1 }) === BUILTIN_TERMOS,
+  'builtin storage key is id',
+);
+assert(
+  templateAttachmentStorageKey({
+    id: 'abc',
+    filename: 'extra.pdf',
+    contentType: 'application/pdf',
+    size: 20,
+    r2Key: 'template_attachments/bridal_terms/pt/abc-extra.pdf',
+  }) === 'template_attachments/bridal_terms/pt/abc-extra.pdf',
+  'uploaded storage key is r2 key',
+);
+
+assert(isSafeAttachmentKey('template_attachments/bridal/pt/id-file.pdf'), 'conversation can serve template key');
+assert(isSafeAttachmentKey('leads/tok/attachments/uuid-file.pdf'), 'conversation can serve lead attachment');
+assert(isSafeAttachmentKey('clients/cid/attachments/uuid-file.pdf'), 'conversation can serve manual client attachment');
+assert(!isSafeAttachmentKey('leads/tok/avaliacao-de-pele/photo-1.jpg'), 'photo key is not an email attachment');
+assert(!isSafeAttachmentKey('email-attachments/old/file.pdf'), 'rejects old email-attachments prefix');
+
+assert(isSafePhotoKey('leads/tok/avaliacao-de-pele/photo-1.jpg'), 'safe diagnostic photo key');
+assert(!isSafePhotoKey('diagnostics/tok/photo-1.jpg'), 'rejects old diagnostics prefix');
+assert(!isSafePhotoKey('leads/tok/attachments/file.pdf'), 'lead attachment is not a photo');
+assert(!isSafePhotoKey('leads/../avaliacao-de-pele/photo-1.jpg'), 'rejects photo traversal');
 
 if (!process.exitCode) console.log('template-attachments: all passed');

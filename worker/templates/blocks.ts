@@ -166,7 +166,6 @@ export function bridalBlock(
     ${sectionTitle(t.investment, 'title')}
     ${priceTable(`
     ${priceRow('Bridal - ' + quote.brideLabel, quote.bridePrice, locale)}
-    ${guestPriceRows(quote.guests, pricing, locale, preview)}
     ${addonRow}
     ${travelRow(formData, locale)}
     ${totalRow(t.total, quote.total, locale)}

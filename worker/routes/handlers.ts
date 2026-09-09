@@ -12,7 +12,7 @@ import { verifyPassword } from '../auth/password';
 import { getPricing } from '../pricing';
 import { getCookieValue } from '../http';
 import { attachSinalVars } from '../bridal-pricing';
-import { attachPersonFields, interpolate, EMAIL_CUSTOM_REGISTRY_KEY } from '../email-copy';
+import { attachPersonFields, interpolate, templateVars, EMAIL_CUSTOM_REGISTRY_KEY } from '../email-copy';
 import { normalizeEmailBodyHtml } from '../email-sanitize';
 import { isAttachmentsSettingKey } from '../template-attachments';
 import { generateQuoteHtml, generateQuoteSubject } from '../services/quotes';
@@ -540,7 +540,7 @@ export async function handlePreviewQuote(request: Request, env: Env, id: string 
     const html = await generateQuoteHtml(env, lead.type as LeadType, formData, pricing, undefined, locale);
     const subject = interpolate(
       await generateQuoteSubject(env, lead.type as LeadType, locale),
-      { ...formData, ...attachSinalVars(lead.type as LeadType, formData, pricing, locale) },
+      templateVars(formData, attachSinalVars(lead.type as LeadType, formData, pricing, locale)),
     );
 
     return json({ success: true, subject, html });

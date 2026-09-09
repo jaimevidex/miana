@@ -513,6 +513,36 @@ export function templateFromMap(
   };
 }
 
+const EMAIL_DATE_KEYS = new Set(['data_casamento', 'data_prova', 'data_evento', 'data_hora']);
+
+/** ISO `YYYY-MM-DD` / `YYYY-MM-DDTHH:mm` → `DD-MM-YYYY` (com hora se existir). */
+export function formatEmailDateValue(value: string): string {
+  if (/^\{\{\w+\}\}$/.test(value)) return value;
+  const m = value.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/);
+  if (!m) return value;
+  const [, year, month, day, hour, minute] = m;
+  return hour ? `${day}-${month}-${year} ${hour}:${minute}` : `${day}-${month}-${year}`;
+}
+
+/** Data/hora em `Europe/Lisbon` para `{{quando}}`: `DD-MM-YYYY HH:mm`. */
+export function formatEmailDateTime(date: Date, timeZone = 'Europe/Lisbon'): string {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone,
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date);
+  const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === type)?.value || '';
+  return `${get('day')}-${get('month')}-${get('year')} ${get('hour')}:${get('minute')}`;
+}
+
+function formatEmailField(key: string, value: string): string {
+  return EMAIL_DATE_KEYS.has(key) ? formatEmailDateValue(value) : value;
+}
+
 /** Junta campos do formulário + extras para {{nome}}, {{data_casamento}}, etc. */
 export function templateVars(
   formData: Record<string, string> = {},
@@ -520,9 +550,13 @@ export function templateVars(
 ): Record<string, string> {
   const vars: Record<string, string> = {};
   for (const [key, value] of Object.entries(formData)) {
-    if (value != null) vars[key] = String(value);
+    if (value != null) vars[key] = formatEmailField(key, String(value));
   }
-  return { ...vars, ...extra };
+  const extras: Record<string, string> = {};
+  for (const [key, value] of Object.entries(extra)) {
+    extras[key] = formatEmailField(key, value);
+  }
+  return { ...vars, ...extras };
 }
 
 export function fillTemplateBody(

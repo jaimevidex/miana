@@ -35,7 +35,7 @@ export function emailSignatureHtml(footer?: EmailWrapFooter): string {
   const phoneHref = telHref(phone);
   const phoneRow = phoneHref
     ? `<tr>
-          <td align="center" style="padding:8px 0 0;border:0;text-align:center">
+          <td align="left" style="padding:8px 0 0;border:0;text-align:left">
             <a href="${htmlEscape(phoneHref)}" style="font-family:${EMAIL_STYLE.font};font-size:13px;line-height:1.2;color:#8a2831;text-decoration:none;white-space:nowrap">${htmlEscape(phone)}</a>
           </td>
         </tr>`
@@ -47,10 +47,10 @@ export function emailSignatureHtml(footer?: EmailWrapFooter): string {
         <td valign="middle" align="left" style="padding:0;border:0">
           <img src="${htmlEscape(logo)}" alt="Mariana Pita" width="190" style="display:block;max-width:190px;width:190px;height:auto;border:0" />
         </td>
-        <td valign="middle" align="center" style="padding:0 0 0 16px;border:0">
-          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin:0 auto">
+        <td valign="middle" align="left" width="1%" style="padding:0 0 0 16px;border:0;width:1%">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin:0">
             <tr>
-              <td align="center" style="padding:0;border:0;font-size:0;line-height:0;text-align:center">
+              <td align="left" style="padding:0;border:0;font-size:0;line-height:0;text-align:left">
                 ${iconLink(`mailto:${email}`, `${base}/email/icon-email.png`, 'Email')}
                 ${iconLink(instagram, `${base}/email/icon-instagram.png`, 'Instagram')}
                 ${iconLink(website, `${base}/email/icon-web.png`, 'Website')}

@@ -3,13 +3,13 @@
 // Isto elimina hardcoded values espalhados pelo código.
 
 import type { Env } from './lib';
+import { LEADS_FOLDER } from './constants';
 
 const DEFAULTS = {
   SITE_URL: 'https://marianapita.pt',
   FROM_EMAIL: 'hello@marianapita.pt',
   FROM_NAME: 'Mariana Pita Makeup',
   OWNER_EMAIL: 'hello@marianapita.pt',
-  R2_FOLDER: 'diagnostics',
 } as const;
 
 export const OWNER_EMAIL = DEFAULTS.OWNER_EMAIL;
@@ -59,7 +59,7 @@ export function adminClientUrl(env: Env, id: string): string {
   return `${adminUrl(env)}/client/${encodeURIComponent(id)}`;
 }
 
-/** Prefixo da pasta no bucket R2 onde ficam os diagnósticos. */
+/** Prefixo da pasta no bucket R2 onde ficam os ficheiros por lead. */
 export function r2Folder(): string {
-  return DEFAULTS.R2_FOLDER;
+  return LEADS_FOLDER;
 }

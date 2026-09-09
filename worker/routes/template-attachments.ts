@@ -26,7 +26,7 @@ export async function handleAddTemplateAttachment(request: Request, env: Env): P
   if (!isEmailTemplateId(templateId)) return json({ error: 'Template inválido.' }, 400);
   if (!file || !isFormFile(file) || !(file.name || file.size)) return json({ error: 'Escolhe um ficheiro.' }, 400);
   if (file.size > MAX_EMAIL_ATTACHMENT_BYTES) {
-    return json({ error: `${file.name}: demasiado grande (máx. 10 MB).` }, 400);
+    return json({ error: `${file.name}: demasiado grande (máx. 20 MB).` }, 400);
   }
   const bytes = new Uint8Array(await file.arrayBuffer());
   const invalid = validateOutgoingAttachment(file.name, file.type || '', bytes);
