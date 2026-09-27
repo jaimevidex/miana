@@ -36,6 +36,7 @@ import {
 } from './constants';
 import { resolveSelectedTemplateAttachments, isEmailTemplateId } from './template-attachments';
 import { parseLocale, type Locale } from './locale';
+import { statusAfterSuccessfulOutbound } from './lead-status';
 
 export type TemplateKind =
   | 'free'
@@ -461,10 +462,17 @@ export async function sendConversationMessage(
 
   await db.update(conversations).set({ lastMessageAt: now, updatedAt: now }).where(eq(conversations.id, conv.id));
 
-  if (opts.templateKind === 'quote' && conv.leadId) {
+  if (conv.leadId) {
     const leadRows = await db.select({ status: leads.status }).from(leads).where(eq(leads.id, conv.leadId)).limit(1);
-    if (leadRows[0] && leadRows[0].status !== 'aceite' && leadRows[0].status !== 'eliminado') {
-      await db.update(leads).set({ status: 'pendente', updatedAt: now }).where(eq(leads.id, conv.leadId));
+    const currentStatus = leadRows[0]?.status;
+    if (currentStatus) {
+      const nextStatus = statusAfterSuccessfulOutbound(currentStatus);
+      if (nextStatus !== currentStatus) {
+        await db
+          .update(leads)
+          .set({ status: nextStatus, updatedAt: now })
+          .where(and(eq(leads.id, conv.leadId), eq(leads.status, currentStatus)));
+      }
     }
   }
 
